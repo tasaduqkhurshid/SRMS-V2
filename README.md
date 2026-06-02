@@ -23,15 +23,15 @@ Before you begin, ensure you have installed:
 ```
 school-result-system/
 +-- srmsapi/                  # Backend server (Node.js/Express)
-¦   +-- Dockerfile            # Multi-stage Docker build for server
-¦   +-- docker-compose.yml    # MongoDB, Redis, and server services
-¦   +-- start-server.sh       # Script to build and run server container
-¦   +-- server/               # Source code
-¦       +-- src/
-¦       +-- public/
-¦       +-- db/
-¦       +-- package.json
-¦       +-- ...
+ï¿½   +-- Dockerfile            # Multi-stage Docker build for server
+ï¿½   +-- docker-compose.yml    # MongoDB, Redis, and server services
+ï¿½   +-- start-server.sh       # Script to build and run server container
+ï¿½   +-- server/               # Source code
+ï¿½       +-- src/
+ï¿½       +-- public/
+ï¿½       +-- db/
+ï¿½       +-- package.json
+ï¿½       +-- ...
 +-- srmsclient/               # Frontend client (Vue.js)
     +-- Dockerfile            # Multi-stage Docker build (Vite ? nginx)
     +-- docker-compose.yml    # Client service only
@@ -147,6 +147,4 @@ cd srmsclient
 docker-compose down
 ```
 
-## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
