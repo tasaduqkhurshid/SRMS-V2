@@ -1,0 +1,147 @@
+ 
+ //  loan page //
+ .card-content{
+    &-wrapper{
+      width: 100%;
+      overflow-x: hidden;
+      height: calc(100vh - 105px);
+      background-color: $background-base;
+    }
+    &-card{
+      border: none!important;
+      border-radius: 8px!important;
+    }
+    &-header{
+      padding: 20px 20px 13px!important;
+      background-color: $white-base!important;
+      border-bottom: solid 1px $background-base!important;
+    }
+    &-title{
+      @include content-text()
+    }
+    &-textarea{
+     min-height: 100px;
+     resize: none;
+    }
+    &-border-dark{
+      border: 1px solid $grey-x-light;
+      border-radius: 8px;
+    }
+    &-border-top{
+      border-top: solid 1px $grey-x-light!important;
+     }
+     &-file-icon{
+      font-size: $font-xl-regular!important;
+      color: $primary-light;
+     }
+     &-width-87{
+      min-width: 87px;
+     }
+     &-background{
+      background-color: $background-base!important;
+      border: none!important;
+     }
+     &-height-38{
+       height: 38px;
+     }
+     &-img-border{
+      border: solid 1px $grey-x-light;
+      min-height: 210px;
+      border-radius: 4px;
+      flex-direction: column;
+      &:hover, &.active{
+        background-color: $primary-x-light;
+        border: solid 1px $primary-radio;
+        outline: none;
+        cursor: pointer;
+    }
+    &:focus,&:active{
+      background-color:$primary-x-light;
+      outline: none;
+      border: solid 1px $primary;
+    }
+     }
+     &-img-letter{
+      width: 80px;
+      height: 80px;
+      border-radius: 10px;
+      background-color: $background-base;
+      font-size: $font-xs-large;
+       font-family: $primary-font;
+    }
+     &-img-top img{
+       width: 80px;
+       height: 80px;
+       border-radius: 10px;
+       background-color: $background-base;
+       font-size: $font-xs-large;
+        font-family: $primary-font;
+     }
+     &-img-heading{
+      font-size: $font-xs-regular;
+      font-family: $primary-font;
+      color: $secondary;
+    }
+    &-img-email{
+      font-size: $font-small;
+      font-family: $primary-font;
+      color: $dark-base;
+    }
+    &-img-phone{
+      font-size:$font-small;
+      font-family: $primary-font;
+      color: $dark-base;
+    }
+    &-height-137{
+      min-height: calc(100vh - 137px);
+    }
+     .card-header:first-child {
+      border-radius: 8px 8px 0px 0px!important;
+    }
+    .col {
+      padding-left: 0px;
+      @media only screen and (min-width: 320px) and (max-width: 575px) {
+        padding-left: 15px;
+      }
+    }
+  }
+
+  #submit___BV_tab_button__{
+    background-color: #41cf53!important;
+    color:#fff!important;
+    border-radius: 8px!important;
+    font-family: "Poppins-SemiBold";
+    font-size: 12px;
+    padding-top: 10px;
+    padding-bottom:5px;
+    text-align: center;
+    margin:5px;
+   }
+  
+   #submit___BV_tab_button__::after {
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    right: 12px;
+    top: 13px;
+    content: "" !important;
+    font-family: FontAwesome !important;
+    font-size: 16px!important;
+    color: $secondary!important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #submit___BV_tab_button__.active::after {
+    background-color: transparent!important;
+    color: $white-base;
+  }
+  #submit___BV_tab_button__.active::before {
+    position: absolute;
+    height: 100%;
+    width: 6px;
+    bottom: 0px;
+    left: 0px;
+    background-color: transparent!important;
+    content: "";
+  }

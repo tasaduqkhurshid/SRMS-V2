@@ -1,0 +1,256 @@
+ //  loan process //
+
+ .loan-process {
+   &-wrapper-header {
+     width           : 100%;
+     overflow-x      : hidden;
+     height          : calc(100vh - 62px);
+     background-color: $white-base;
+   }
+
+   &-wrapper {
+     padding         : 15px;
+     width           : 100%;
+     background-color: $background-base;
+   }
+
+   &-tabs-bg {
+     background-color: $background-base;
+   }
+
+   &-heading {
+     padding-top   : 15px;
+     padding-bottom: 10px;
+     border-bottom : 1px solid $grey-x-light;
+     background    : $heading-base;
+     border-radius : 8px 8px 0px 0px;
+   }
+
+   &-name {
+     font-size  : $font-xs-regular;
+     color      : $dark-base;
+     font-family: $primary-bold;
+   }
+
+   &-text {
+     font-size  : $font-xl-small;
+     color      : $dark-base;
+     font-family: $primary-bold;
+   }
+
+   &-label {
+     font-size  : $font-xl-small;
+     color      : $grey-light;
+     font-family: $primary-font;
+   }
+
+   &-calender-icon {
+     background     : $primary-light;
+     height         : 18px;
+     width          : 18px;
+     display        : flex;
+     align-items    : center;
+     justify-content: center;
+     color          : $white-base;
+     border-radius  : 4px;
+     font-size      : $font-small;
+     cursor         : pointer;
+   }
+
+   &-border {
+     border       : 1px solid $grey-x-light;
+     border-radius: 8px;
+   }
+
+   &-border-top {
+     border-top: 1px solid $grey-x-light;
+   }
+
+   &-user-msg {
+     @include content-text();
+     font-size: $font-xl-small;
+   }
+
+   &-user-img {
+     display       : inline-block;
+     vertical-align: middle;
+     height        : 30px;
+     width         : 30px;
+     border-radius : 50%;
+     max-width     : 100%;
+   }
+
+   &-user-name {
+     color      : $dark-base;
+     font-size  : $font-xl-small;
+     font-family: $primary-font;
+     font-weight: $font-weight-bold;
+   }
+
+   &-user-date {
+     color      : $grey-light;
+     font-size  : $font-small;
+     font-family: $primary-font;
+   }
+
+   &-group-btn {
+     @include mpc-button();
+     background-color: transparent;
+     font-size       : $font-xs-regular;
+     color           : $secondary;
+     border-radius   : 0px;
+     width           : 100%;
+     font-size       : $font-small;
+     font-family     : $primary-font;
+     text-align      : center;
+
+     &:hover {
+       outline: none;
+     }
+
+     &:focus,
+     &:active {
+       outline: none;
+     }
+   }
+
+   &-border-span {
+     position        : absolute;
+     height          : 10px;
+     width           : 1px;
+     right           : 0px;
+     top             : 7px;
+     background-color: $grey-x-light;
+     content         : "";
+   }
+
+   &-total-bg {
+     background-color: $background-base;
+   }
+
+   &-border-dark {
+     border       : 1px solid $grey-x-light;
+     border-radius: 8px;
+   }
+
+   &-border-r-p {
+     border-right : 1px solid $grey-x-light;
+     padding-right: 10px !important;
+   }
+
+   &-border-l-p {
+     border-left : 1px solid $grey-x-light;
+     padding-left: 10px !important;
+   }
+
+   &-width-100 {
+     width: 100%;
+   }
+
+   &-height-249 {
+     min-height: calc(100vh - 249px);
+   }
+
+   &-height-137 {
+     min-height: calc(100vh - 137px);
+   }
+
+   .col {
+     padding-left: 0px;
+     @media only screen and (min-width: 320px) and (max-width: 575px) {
+      padding: 5px;
+     }
+   }
+
+   #create-task___BV_tab_button__ {
+     background-color: $background-base !important;
+     color           : $secondary !important;
+     padding-top     : 18px;
+     padding-bottom  : 10px;
+     border-bottom   : 1px solid #d9d9d9;
+   }
+
+   #create-task___BV_tab_button__::after {
+     position       : absolute;
+     height         : 20px;
+     width          : 20px;
+     right          : 12px;
+     top            : 13px;
+     content        : "+" !important;
+     font-size      : 16px !important;
+     color          : #000 !important;
+      
+     display        : flex;
+     align-items    : center;
+     justify-content: center;
+
+   }
+
+
+   #create-task___BV_tab_button__.active::after {
+     background: linear-gradient(to right, #bd2921 0%, #FB6D32 100%);
+    background-clip: border-box;
+    -webkit-background-clip: text;
+    background-clip: text;
+   -webkit-text-fill-color: transparent;
+   }
+
+   #create-task___BV_tab_button__.active::before {
+     position        : absolute;
+     height          : 100%;
+     width           : 6px;
+     bottom          : 0px;
+     left            : 0px;
+     background-color: $primary-radio;
+     content         : "";
+   }
+ }
+
+ .loan-pipeline .mx-datepicker {
+   position: absolute;
+   display : inline-block;
+   width   : auto !important;
+   z-index : 3;
+   left    : 0;
+   top     : 35px
+ }
+
+ .los {
+   &__b-r-p {
+    @media only screen and (min-width: 320px) and (max-width: 575px) {
+     border-right : 1px solid transparent;
+     padding-right: 0px !important;
+    }
+   }
+
+   &__b-l-p {
+    @media only screen and (min-width: 320px) and (max-width: 575px) {
+     border-left : 1px solid transparent;
+     padding-left: 0px !important;
+   }
+ }
+ &__md-b{
+  @media only screen and (min-width: 320px) and (max-width: 991px) {
+   border-right: 0px solid transparent!important;
+   padding: 0!important;
+  }
+ }
+}
+
+.loan-address .loan-address__wd-33{
+  max-width: 33%!important;
+  flex: 0 0 33%!important;
+  @media only screen and (min-width: 320px) and (max-width: 575px) {
+    max-width: 100%!important;
+    flex:0 0 100%!important
+  }
+}
+
+.loan-address .loan-address__wd-20{
+  max-width: 22.3%!important;
+  flex: 0 0 22.3%!important;
+  @media only screen and (min-width: 320px) and (max-width: 575px) {
+    max-width: 100%!important;
+    flex:0 0 100%!important
+  }
+}

@@ -1,0 +1,1 @@
+import { createPinia, defineStore } from 'pinia'; export const pinia=createPinia(); export const useAuth=defineStore('auth',{ state:()=>({token:null,user:null}), actions:{ setToken(t){this.token=t}, setUser(u){this.user=u} } });

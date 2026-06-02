@@ -1,0 +1,270 @@
+// Input //
+.form-group {
+  position     : relative;
+  margin-bottom: 8px !important;
+
+  .login-input {
+    @include input();
+
+    &:focus {
+      color           : var(--textdark);
+      // background-color: $primary-x-light;
+      background-color: white;
+      border-color    : #63666A; 
+      outline         : 0;
+    }
+  }
+
+  .login-input-error {
+    @include error-input();
+
+    &:focus {
+      color           : var(--textdark);
+      border-color    : #ff4d4d;
+      outline         : 0;
+    }
+  }
+
+
+  .label {
+    @include mpc-label();
+  }
+
+  .login-error {
+    font-size  : $font-small;
+    margin-top : 5px;
+    color      : $error-red;
+    display    : none;
+    font-family: $primary-font;
+  }
+
+  .login-error.show {
+    display: block;
+  }
+}
+
+input.input-error{
+  border: 1px solid #ff4d4d!important;
+}
+
+
+//   upload button //
+
+.file-upload {
+  position: relative;
+  display : inline-block;
+}
+
+.file-upload-label {
+  @include mpc-button();
+  display         : block;
+  background-color: $background-base !important;
+  border          : solid 1px $grey-x-light !important;
+  min-width       : 60px;
+  color           : $secondary !important;
+
+  &:hover {
+    cursor          : pointer;
+    background-color: $grey-x-light !important;
+    outline         : none;
+  }
+}
+
+.file-upload-input {
+  position : absolute;
+  left     : 0;
+  top      : 0;
+  right    : 0;
+  bottom   : 0;
+  font-size: 1;
+  width    : 0;
+  height   : 100%;
+  opacity  : 0;
+}
+
+
+
+//   upload button document upload//
+
+.upload-btn-wrapper {
+  position: relative;
+  display : inline-block;
+
+  .btn-upload {
+    @include mpc-button();
+    display         : block;
+    background-color: $background-base !important;
+    border          : solid 1px $grey-x-light !important;
+    min-width       : 60px;
+    color           : $secondary !important;
+
+    &:hover {
+      cursor          : pointer;
+      background-color: $grey-x-light !important;
+      outline         : none;
+    }
+  }
+
+  input[type="file"] {
+    width   : 100%;
+    position: absolute;
+    left    : 0;
+    top     : 0;
+    opacity : 0;
+    cursor  : pointer;
+  }
+}
+
+
+.upload_btn_wrapper {
+  position: relative;
+  display : inline-block;
+
+  .btn-upload {
+    @include mpc-button();
+    display         : block;
+    background-color: $background-base !important;
+    border          : solid 1px $grey-x-light !important;
+    min-width       : 60px;
+    color           : $secondary !important;
+
+    &:hover {
+      cursor          : pointer;
+      background-color: $grey-x-light !important;
+      outline         : none;
+    }
+  }
+
+  input[type="file"] {
+    width   : 100%;
+    position: absolute;
+    left    : 0;
+    top     : -100%;
+    opacity : 0;
+    cursor  : pointer;
+    height  : 200%;
+    outline : none;
+  }
+}
+
+// radio btn //
+
+.radio {
+  width              : auto;
+  position           : relative;
+  padding-left       : 26px;
+  margin-bottom      : 12px;
+  font-size          : 13px;
+  -webkit-user-select: none;
+  -moz-user-select   : none;
+  -ms-user-select    : none;
+  user-select        : none;
+}
+
+.radio input {
+  position: absolute;
+  left    : 2px;
+  top     : 2px;
+  opacity : 0;
+  cursor  : pointer;
+}
+
+.radio input:checked~.checkround {
+  background-color: transparent;
+}
+
+.checkround {
+  position        : absolute;
+  top             : 0 !important;
+  left            : 0;
+  height          : 20px;
+  width           : 20px;
+  background-color: $white-base;
+  border-color    : darken($grey-x-light, 25%);
+  border-style    : solid;
+  border-width    : 1px;
+  border-radius   : 50%;
+  cursor          : pointer;
+}
+
+.radio input:checked~.checkround:after {
+  display: block;
+}
+
+.radio .checkround:after {
+  left         : 3px;
+  top          : 3px;
+  width        : 12px;
+  height       : 12px;
+  border-radius: 50%;
+  background   : $primary-radio;
+}
+
+.checkround:after {
+  content : "";
+  position: absolute;
+  display : none;
+}
+
+.radio-text {
+  font-size  : $font-small;
+  color      : #1b1c1e;
+  font-family: $primary-font;
+  cursor: pointer;
+}
+
+.custom-checkbox1 .custom-checkbox-input:checked ~ .indicator{
+  // background: #ddd;
+}
+
+.custom-checkbox1 .indicator{
+  border:1px solid #ff4d4d!important
+}
+
+
+
+.checkround1{
+  border-color: #ff4d4d!important;
+}
+
+.radio .checkround1:after{
+background: #fff!important;
+}
+
+.custom-select {
+  @include mpc-custom-select()
+}
+
+.custom-select-error {
+  @include mpc-custom-select();
+  border:1px solid #ff4d4d!important;
+  font-size: 12px;
+  height: 38px;
+}
+
+#pointProcessor_multiselect .multiselect-error {
+  border:1px solid #ff4d4d!important;
+
+}
+// .custom-checkbox {
+//   position: relative;
+//   margin-bottom: 20px;
+//   display: flex;
+// }
+// .custom-checkbox label {
+//   pointer-events: none;
+//   transition-timing-function: ease-in;
+//   transition-duration: 0.125s;
+//   font-size: 10px;
+//   color: #999999;
+//   margin-bottom: 2px;
+//   font-family: "poppinsregular";
+// }
+
+#pointProcessor_multiselect .multiselect-error{
+  border:1px solid red!important;
+}
+
+.ps{
+  overflow-x: auto!important;
+}

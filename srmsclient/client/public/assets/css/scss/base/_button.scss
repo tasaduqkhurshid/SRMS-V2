@@ -1,0 +1,317 @@
+// buttons //
+
+.btn {
+  
+}
+
+.point-btn {
+  @include mpc-button();
+
+  @media screen and (max-width: 992px) {
+    
+  &__toggle {
+    color           : #212529;
+    background-color: transparent;
+    border-color    : transparent;
+    padding         : 0.375rem 0.75rem;
+    font-size       : 1rem;
+  }
+  }
+  @media screen and (min-width: 992px) {
+      
+    &__toggle {
+      display: none;
+    }
+  }
+
+  &__theme {
+    @include theme-button();
+    color           : $white-base;
+    min-width       : 100px;
+    height          : 38px;
+    font-size       : $font-xl-small;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background      : #1e5799; /* Old browsers */
+      background      : -moz-linear-gradient(left, #1e5799 0%, #ed3429 0%, #fb6d32 100%); /* FF3.6-15 */
+      background      : -webkit-linear-gradient(left, #1e5799 0%,#ed3429 0%,#fb6d32 100%); /* Chrome10-25,Safari5.1-6 */
+      background      : linear-gradient(to right, #1e5799 0%,#ed3429 0%,#fb6d32 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+      filter          : progid:DXImageTransform.Microsoft.gradient( startColorstr='#1e5799', endColorstr='#fb6d32',GradientType=1 ); /* IE6-9 */
+      outline         : none;
+    }
+  }
+
+
+  &__sm-theme {
+    @include theme-button();
+    color           : $white-base;
+    min-width       : 80px;
+    font-size       : $font-xl-small;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: darken($primary, 10%);
+      outline         : none;
+    }
+  }
+
+  &__md-theme {
+    @include theme-button();
+    color           : $white-base;
+    font-size       : $font-xl-small;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: darken($primary, 10%);
+      outline         : none;
+    }
+  }
+
+
+  &__default {
+    @include mpc-button();
+    background-color: $background-base !important;
+    border          : solid 1px $grey-x-light !important;
+    min-width       : 60px;
+    color           : $secondary !important;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: $grey-x-light !important;
+      outline         : none;
+    }
+  }
+
+  &__sm-default {
+    @include add-button();
+    font-family:$primary-bold;
+    //background-color: $background-base;
+    //color           : $gray-dark;
+    //font-size       : $font-xl-small;
+    min-width       : 80px;
+    .btn-color-upload{
+      @include btn-color-upload();
+      font-size       : $font-xl-small;
+    }
+    
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: $grey-x-light;
+      outline         : none;
+    }
+  }
+
+  &__default-icon {
+    background-color: $background-base !important;
+    border          : solid 1px $grey-x-light !important;
+    color           : $secondary !important;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: $grey-x-light !important;
+      outline         : none;
+    }
+  }
+
+
+  &__default-blue {
+    background-color: $background-base;
+    min-width       : 100px;
+    height          : 40px;
+    font-size       : $font-xs-regular;
+    color           : $secondary;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: $grey-x-light;
+      outline         : none;
+    }
+  }
+
+
+  &__replace {
+    color      : $error-red;
+    font-family: $primary-font;
+    font-size  : $font-xl-small;
+  }
+
+  &__add {
+    /*background: linear-gradient(90deg,#fff,#fff) padding-box,linear-gradient(90deg,#bd2921 0%, #FB6D32 100%) border-box;
+    background-color: rgba(255,255,255, 0);
+    border: 1.5px solid transparent;*/
+    @include add-button();
+    //background-color: #edfff1;
+    //color           : $primary;
+    //border          : solid 1px #83db8e;
+    font-size         : $font-xs-regular;
+    height            : 34px;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: #c1ffcf;
+      outline         : none;
+    }
+
+  }
+
+  &__plus {
+    @include add-button();
+    /*background-color: #edfff1;
+    color           : $primary;
+    border          : solid 1px #83db8e;
+    font-size       : $font-xl-small;
+    height          : 30px;*/
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: #c1ffcf;
+      outline         : none;
+    }
+
+  }
+
+  &__minus {
+    background-color: $background-base;
+    color           : $gray-dark;
+    border          : solid 1px $grey-x-light;
+    font-size       : $font-xl-small;
+    height          : 30px;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: #eee;
+      outline         : none;
+    }
+  }
+
+  &__remove {
+    @include add-button();
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: #eee;
+      outline         : none;
+    }
+  }
+
+  &__light {
+    background-color: transparent;
+    border          : none;
+
+    &:focus,
+    &:active {
+      outline: none !important;
+    }
+  }
+
+  &__upload-border {
+    background: linear-gradient(90deg,#fff,#fff) padding-box,linear-gradient(90deg,#bd2921 0%, #FB6D32 100%) border-box;
+    background-color: rgba(255,255,255, 0);
+    border: 1.5px solid transparent;
+    height: 38px;
+    font-size: 12px;
+    min-width: 100px;
+      &:hover{
+        color:darken($primary, 25%);
+        text-decoration: none;
+      }
+
+    
+  }
+
+  &__proceed-btn {
+    background      : #1e5799; /* Old browsers */
+    background      : -moz-linear-gradient(left, #1e5799 0%, #ed3429 0%, #fb6d32 100%); /* FF3.6-15 */
+    background      : -webkit-linear-gradient(left, #1e5799 0%,#ed3429 0%,#fb6d32 100%); /* Chrome10-25,Safari5.1-6 */
+    background      : linear-gradient(to right, #1e5799 0%,#ed3429 0%,#fb6d32 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+    filter          : progid:DXImageTransform.Microsoft.gradient( startColorstr='#1e5799', endColorstr='#fb6d32',GradientType=1 ); /* IE6-9 */
+    color           : $white-base;
+    padding-top     : 6px;
+    padding-bottom  : 6px;
+    text-align      : center;
+    margin          : 5px 0;
+
+    /*background-color: #41cf53 !important;
+    border:1px solid #41cf53!important;
+    color           : #fff !important;
+    border-radius   : 8px !important;
+    font-family     : "Poppins-SemiBold";
+    font-size       : 12px !important;*/
+   
+    position : absolute;
+    left     : -210px;
+    width    : 245px;
+    top      : 345px;
+    @media only screen and (min-width: 320px) and (max-width: 575px) {
+      // position: absolute;
+      // right: 8px;
+      // left: auto;
+      // top: -10px;
+      // width: auto;
+    }
+
+    @media only screen and (min-width: 1366px) and (max-width: 2000px) {
+      // bottom          : 385px;
+    }
+
+    @media only screen and (min-width: 1200px) and (max-width: 1365px) {
+      // bottom          : 385px;
+    }
+
+    &:focus,
+    &:active {
+      outline: none !important;
+    }
+  }
+
+}
+
+.close-btn{
+  cursor               : pointer!important;
+  border-radius        : 6px!important;
+  outline              : none!important;
+  box-shadow           : none!important;
+  font-size            : 18px!important;
+  font-weight          : 700!important;
+  padding              : 5px 12px !important;
+  border               : 1px solid transparent!important;
+  text-align           : center!important;
+  white-space          : nowrap!important;
+  vertical-align       : middle!important;
+  font-family          : "Poppins-SemiBold"!important;
+  font-weight          : normal!important;
+  position             : relative!important;
+  -webkit-user-select  : none!important;
+  -moz-user-select     : none!important;
+  -ms-user-select      : none!important!important;
+  background-color     : $background-base !important;
+  border               : solid 1px $grey-x-light !important;
+  color                : $secondary !important;
+  position             : relative!important;
+  top                  : -2px;
+  right                : 5px;
+
+  &:hover,
+  &:focus,
+  &:active {
+    background-color   : $grey-x-light !important;
+    outline            : none;
+  }
+}
+
+button:focus{
+  outline: none!important;
+}

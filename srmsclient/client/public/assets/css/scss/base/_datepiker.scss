@@ -1,0 +1,32 @@
+//  datapicker//
+.mx-datepicker {
+    width: 100% !important;
+  }
+  
+  .mx-input {
+    color             : #1b1c1e !important;
+    font-size         : $font-xl-small !important;
+    border            : 1px solid $grey-x-light !important;
+    -webkit-transition: all .3s;
+    transition        : all .3s;
+    height            : 38px !important;
+    box-shadow        : none !important;
+    border-radius     : 8px !important;
+    padding           : 10px !important;
+    font-family       : $primary-font !important;
+  
+    &:focus {
+      color           : var(--textdark) !important;
+      background-color: $primary-x-light !important;
+      border-color    : #63666A !important;
+      outline         : 0;
+    }
+  }
+  .mx-input-error input{
+    border:1px solid red!important;
+  }
+
+  .mx-table-date .today{
+    /*background-color: #0f0b63!important;*/
+    color: #000!important;
+  }

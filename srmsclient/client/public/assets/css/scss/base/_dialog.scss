@@ -1,0 +1,522 @@
+@import '../utils/variables';
+
+.modal-title{
+  color: #0f0b63;
+  font-size: 12px;
+  font-family: "poppinsregular";
+  font-weight: 600;
+  margin-top: 5px;
+}
+
+.close {
+  float: right;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1;
+  color: #0f0b63 !important;
+  text-shadow: 0 1px 0 #fff;
+  opacity: 0.5;
+  outline: none!important;
+}
+
+.modal-body {
+  position: relative;
+  flex: 1 1 auto;
+  padding: 0rem!important;
+}
+
+.modal-body-content{
+  padding: 1rem!important;
+  height    : auto;
+  max-height: 450px!important;
+  overflow: auto!important;
+}
+
+.view-modal-body-content{
+  padding: 1rem!important;
+  height    : auto;
+  max-height:100%!important;
+  overflow: auto!important;
+}
+
+.close{
+ opacity: 0.9!important;
+}
+.content-modal{
+  font-family: $primary-font;
+  font-size: 12px;
+  // font-weight: 600;
+  color: $secondary;
+}
+.point-modal {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    z-index: 1;
+    display: block;
+
+  // @include modal-layput();
+  position: relative;
+  width: auto;
+  margin: 0.5rem;
+  pointer-events: none;
+  &__content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    pointer-events: auto;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 0.3rem;
+    outline: 0;
+}
+  &__header {
+    @include modal-header();
+
+  }
+
+  &__title {
+    // @include modal-header;\
+        margin-bottom: 0;
+        line-height: 1.5;
+        color: #fff;
+        font-size: 13px;
+        font-family: "latoregular";
+        font-weight: 600;
+        margin-top: 5px;
+  }
+
+  &__close {
+    // @include modal_close();
+    background: #fff;
+    border: none;
+
+    float: right;
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1;
+    color: #fff !important;
+    text-shadow: 0 1px 0 #fff;
+    opacity: 0.9;
+    background: none;
+    outline: none!important;
+
+    &:focus{
+      outline: none;
+    }
+  }
+
+  &__body {
+    @include modal_body();
+
+    &--full {
+      overflow  : auto;
+      max-height: none;
+    }
+  }
+
+  &__footer {
+    padding   : 15px 4px;
+    text-align: right;
+
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -webkit-box-pack: end;
+    -ms-flex-pack: end;
+    justify-content: flex-end;
+    padding: 1rem;
+    border-top: 1px solid #e9ecef;
+    
+  }
+
+  &__row {
+    display: flex;
+  }
+
+  &__confirmation {
+    flex           : 1.1 1 0;
+    justify-content: flex-end;
+  }
+}
+
+.modal {
+  &--xxl-large {
+    max-width:1350px !important;
+    width    : 1350px !important;
+    @media only screen and (min-width: 1651px) and (max-width: 2000px) {
+      max-width: 1650px !important;
+      width    : 1650px !important;
+    }
+
+    @media only screen and (min-width: 1450px) and (max-width: 1650px) {
+      max-width: 1450px !important;
+      width    : 1450px !important;
+    }
+
+    @media only screen and (min-width: 992px) and (max-width: 1350px) {
+      max-width: 950px !important;
+      width    : 950px !important;
+    }
+
+    @media only screen and (min-width: 320px) and (max-width: 767px) {
+      max-width: 100% !important;
+      width    : 100% !important;
+    }
+
+    @media only screen and (min-width: 768px) and (max-width: 991px) {
+      max-width: 700px !important;
+      width    : 700px !important;
+    }
+  }
+
+  &--xl-large {
+    max-width: 1000px !important;
+    width    : 1000px !important;
+
+    @media only screen and (min-width: 320px) and (max-width: 767px) {
+      max-width: 100% !important;
+      width    : 100% !important;
+    }
+
+    @media only screen and (min-width: 768px) and (max-width: 991px) {
+      max-width: 700px !important;
+      width    : 700px !important;
+    }
+  }
+
+  &--large {
+    max-width: 900px !important;
+    width    : 900px !important;
+
+    @media only screen and (min-width: 320px) and (max-width: 920px) {
+      max-width: 100% !important;
+      width    : 100% !important;
+    }
+  }
+
+  &--md-large {
+    max-width: 800px !important;
+    width    : 800px !important;
+
+    @media only screen and (min-width: 320px) and (max-width: 920px) {
+      max-width: 100% !important;
+      width    : 100% !important;
+    }
+  }
+
+  &--regular {
+    max-width: 700px !important;
+    width    : 700px !important;
+
+    @media only screen and (min-width: 320px) and (max-width: 767px) {
+      max-width: 100% !important;
+      /*width    : 100% !important;*/
+      padding  : 0 15px 15px !important;
+    }
+  }
+
+  &--md-regular {
+    max-width: 600px !important;
+    width    : 600px !important;
+
+    @media only screen and (min-width: 320px) and (max-width: 767px) {
+      max-width: 100% !important;
+      /*width    : 100% !important;*/
+    }
+  }
+
+  &--small {
+    max-width: 500px !important;
+    width    : 500px !important;
+
+    @media only screen and (min-width: 320px) and (max-width: 767px) {
+      max-width: 100% !important;
+      width    : 100% !important;
+    }
+  }
+
+  &--xs-small {
+    max-width: 400px !important;
+    width    : 400px !important;
+
+    @media only screen and (min-width: 320px) and (max-width: 767px) {
+      max-width: 100% !important;
+      width    : 100% !important;
+      padding  : 0 15px 15px !important;
+    }
+  }
+}
+
+.vm--modal .fusion-modal {
+  @include modal-layput();
+
+}
+
+.vm--container {
+  display        : flex;
+  justify-content: center;
+  align-items    : center;
+  pointer-events: all;
+}
+
+.vm--modal {
+  // background-color: #fff !important;
+  left            : 0 !important;
+  margin          : 0 auto !important;
+  height          : auto !important;
+  top             : 0px !important;
+  width           : auto !important;
+  background: none!important;
+  border-radius: 8px!important;
+
+}
+
+.dg-container {
+  width   : 100%;
+  height  : 100%;
+  position: fixed;
+  top     : 0;
+  left    : 0;
+  z-index : 5000;
+}
+
+.dg-content-cont {
+  width      : 100%;
+  font-family: inherit;
+}
+
+.dg-content-cont--floating {
+  position         : absolute;
+  top              : 35% !important;
+  -webkit-transform: none !important;
+  transform        : none !important;
+  margin-top       : 0;
+}
+
+.dg-content {
+  font-size  : 16px;
+  line-height: 1.3em;
+  padding    : 6px;
+}
+
+.dg-main-content {
+  width           : 98%;
+  /* width        : calc(98% - 30px); */
+  max-width       : 400px;
+  padding         : 15px;
+  border-radius   : 5px;
+  margin          : 25px auto;
+  background-color: #ffffff;
+}
+
+.dg-content-body {
+  border-bottom : 1px solid #E1E6EA;
+  padding-bottom: 15px;
+}
+
+.dg-content-footer {
+  position       : relative;
+  padding        : 15px 0 0;
+  display        : flex;
+  justify-content: flex-end;
+}
+
+.modal{
+  padding: 0!important;
+}
+@media (min-width: 1200px){
+.modal-xl {
+    max-width: 100%!important;
+
+}
+}
+
+@media (min-width: 576px){
+.modal-dialog-centered {
+    min-height: calc(100% - 3.5rem)!important;
+}
+}
+
+.modal-dialog{
+  margin: 0 auto;
+}
+
+
+
+.sun-editor .se-dialog .se-dialog-inner .se-dialog-content {
+  position: relative;
+  width: auto;
+  max-width: 500px;
+  margin: 20px auto;
+  background-color: #fff;
+  -webkit-background-clip: padding-box;
+  background-clip: padding-box;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  outline: 0;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.5);
+}
+
+.sun-editor .se-dialog .se-dialog-inner .se-dialog-header {
+  height: 50px;
+  padding: 6px 15px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.sun-editor .se-dialog .se-dialog-inner .se-dialog-header .se-modal-title {
+  float: left;
+  margin: 0;
+  padding: 0;
+  line-height: 2.5;
+  color: #0f0b63;
+    font-size: 12px;
+    font-family: "poppinsregular";
+    font-weight: 600;
+    margin-top: 5px;
+}
+.sun-editor .se-dialog .se-dialog-inner .se-dialog-header .se-dialog-close{
+float: right;
+font-size: 1.5rem;
+font-weight: 700;
+line-height: 1;
+color: #000;
+text-shadow: 0 1px 0 #fff;
+opacity: .5;
+background: #fff;
+border: none;
+&:focus{
+  outline: none;
+}
+}
+
+.se-dialog-tabs {
+  margin-right: -0.625rem;
+  margin-bottom: -0.75rem !important;
+  margin-left: -0.625rem;
+  border-bottom: 0;
+}
+
+.sun-editor .se-dialog-tabs button.active{
+  color: #0f0b63;
+  background: transparent;
+}
+.sun-editor .se-dialog-tabs button {
+  background-color: #e5e5e5;
+  border-right: 1px solid #e5e5e5;
+  float: left;
+  outline: none;
+  padding: 2px 13px;
+  transition: 0.3s;
+
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: #999999;
+  border-bottom: 4px solid transparent;
+  background: transparent;
+  font-size: 12px;
+  border-radius: 0px !important;
+  font-weight: 600;
+  border-left: 0px solid transparent;
+  border-top: 0px solid transparent;
+  border-right: 0px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sun-editor .se-dialog .se-dialog-inner .se-dialog-content label {
+  display: inline-block;
+  max-width: 100%;
+  margin-bottom: 5px;
+  font-weight: 700;
+
+  pointer-events: none;
+    transition-timing-function: ease-in;
+    transition-duration: 0.125s;
+    font-size: 10px;
+    color: #999999;
+    margin-bottom: 2px;
+    font-family: "poppinsregular";
+
+}
+
+.sun-editor .se-btn-primary{
+  cursor: pointer;
+  border-radius: 6px!important;
+  outline: none;
+  box-shadow: none;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 6px 13px;
+  border: 1px solid transparent;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-family: "Poppins-SemiBold";
+  font-weight: normal;
+  position: relative;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  background-color: #2caf3c;
+  color: #fff!important;
+  min-width: 80px;
+  font-size: 12px;
+}
+
+#suneditor_pageEditor input{
+  margin-right: 5px;
+  padding: 6px 10px 0px 10px;
+}
+
+.sun-editor .se-dialog .se-dialog-inner .se-dialog-form .se-dialog-form-files .se-dialog-files-edge-button{
+  cursor: pointer;
+    border-radius: 6px;
+    outline: none;
+    box-shadow: none;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 6px 13px;
+    border: 1px solid transparent;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    font-family: "Poppins-SemiBold";
+    font-weight: normal;
+    position: relative;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background-color: #f4f5f8 !important;
+    border: solid 1px #d9d9d9 !important;
+    min-width: 60px;
+    color: #0f0b63 !important;
+}
+
+.se-input-control ._se_image_size_x, ._se_image_size_y{
+  max-width: 70px!important;
+  padding: 0px 10px 0px 10px;
+}
+
+.sun-editor .se-dialog .se-dialog-inner .se-dialog-content{
+  border:1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0.200rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+.modal-loader-note{
+  display: flex; height: 400px; justify-content: center; align-items: center;
+}
+
+.modal-loader-note .loader{
+  position: relative!important;
+}

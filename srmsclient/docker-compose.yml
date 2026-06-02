@@ -1,0 +1,22 @@
+version: '3.9'
+
+services:
+  # Frontend Client
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: srms-client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      NODE_ENV: production
+    networks:
+      - srms-network
+
+volumes: {}
+
+networks:
+  srms-network:
+    driver: bridge

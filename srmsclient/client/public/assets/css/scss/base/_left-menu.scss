@@ -1,0 +1,70 @@
+// sidenavbar //
+.nav {
+  padding-left: 0;
+  margin-bottom: 0;
+  list-style: none;
+}
+
+.menu {
+  padding-top: 15px;
+  list-style-type: none;
+  font-size: --font-xl-small !important;
+  font-family: --primary-font !important;
+}
+
+.menu-item {
+  position: relative;
+
+  &:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 0;
+    // background-color: #0d1c61;
+    // transition      : width .3s ease-in;
+
+    &.active {
+      color: #fff;
+    }
+  }
+
+  &:hover {
+    &:before {
+      width: 100%;
+    }
+  }
+
+  a {
+    /*color          : #999999;*/
+    color: #f9fafb;
+    text-decoration: none !important;
+    position: relative;
+    display: block;
+    // padding        : 10px 18px;
+    padding: 10px 10px;
+    font-size: 13px;
+
+    &:hover {
+      background: linear-gradient(to right, #bd2921 0%, #FB6D32 100%);
+      background-clip: border-box;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    &.active {
+      /*background-color: #2caf3c;*/
+      background: linear-gradient(to right, #bd2921 0%, #FB6D32 100%);
+      background-clip: border-box;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-family: 'Poppins-SemiBold';
+      background-color: transparent;
+      /*color: $white-base !important;*/
+    }
+  }
+
+}

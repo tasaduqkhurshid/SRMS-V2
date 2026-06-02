@@ -1,0 +1,59 @@
+// @import 'base/fusion.scss';
+// @import 'base/style.scss';
+// @import '~vue-snotify/styles/material';
+// @import '~vue2-timepicker/dist/VueTimepicker.css';
+
+// @import 'bootstrap/scss/bootstrap.scss';
+// @import 'base/font-awesome.min.scss';
+// @import 'base/font-awesome.scss';
+// @import 'utils/variables';
+// @import 'utils/mixins';
+
+// @import '~vue-snotify/styles/material';
+
+// @import 'base/form';
+// @import 'base/fusion';
+// @import 'base/style';
+// @import 'base/button';
+// @import 'base/table';
+// @import 'base/dialog';
+// @import 'base/fusion-datepiker';
+// @import 'base/footer';
+// @import 'base/dashboard';
+// @import 'base/fusion_tabs';
+// @import 'base/login';
+// @import 'base/fusion-header';
+// @import 'base/global-setup';
+// @import 'base/fusion-multi-select';
+// @import 'base/slick-carousel';
+// @import 'base/tabs';
+// @import '~vue-context/src/sass/vue-context';
+// @import 'base/loader';
+
+@import 'utils/variables';
+@import 'utils/mixins';
+@import 'base/login';
+@import '~vue-snotify/styles/material';
+@import 'base/global-setup';
+@import 'base/_point-style';
+@import 'base/borker-dashboard';
+@import 'bootstrap/scss/bootstrap.scss';
+@import '~bootstrap-vue/src/index';
+@import '~font-awesome/scss/font-awesome';
+@import 'base/pointProcessor-multi-select.scss';
+@import "~vue-multiselect/dist/vue-multiselect.min.css";
+@import 'base/loan';
+@import 'base/loan-process';
+
+// reenu
+@import 'base/form';
+@import 'base/button';
+@import 'base/table';
+@import 'base/left-menu';
+@import 'base/tabs';
+@import 'base/datepiker';
+@import 'base/header';
+@import 'base/los';
+@import 'base/icon';
+@import "~suneditor/dist/css/suneditor.min.css";
+@import 'base/dialog';

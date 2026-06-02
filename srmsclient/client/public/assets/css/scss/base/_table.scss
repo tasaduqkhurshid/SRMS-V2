@@ -1,0 +1,1490 @@
+// table //
+
+.table {
+  font-family    : $primary-font;
+  border-collapse: collapse;
+
+  th {
+    color        : #171e28;
+    font-size    : $font-small;
+    font-family  : $primary-bold;
+    /*font-family  :'latobold';*/
+    border-top   : solid 1px transparent !important;
+    border-bottom: solid 1px $grey-x-light !important;
+    padding      : 0.3rem !important;
+  }
+
+  tr {
+    td {
+      color         : $grey-x-dark;
+      font-size     : $font-small;
+      border-top    : solid 1px $grey-x-light;
+      padding       : 10px 5px;
+      vertical-align: middle;
+    }
+  }
+
+  .b-table {
+    margin-bottom: 0 !important;
+  }
+
+  .b-table-border {
+    border          : solid 1px $grey-x-light;
+    background-color: $heading-base;
+  }
+
+  tr.b-table-details>td {
+    padding: 0px 0px 10px 0px !important;
+  }
+
+}
+
+
+@media only screen and (min-width: 320px) and (max-width: 991px) {
+
+}
+
+
+table {
+  width          : 100%;
+  border-collapse: collapse;
+  color          : $secondary;
+
+  thead {
+    th {
+      vertical-align   : bottom;
+      // border-bottom : 2px solid #dee2e6;
+    }
+  }
+}
+
+.table td,
+.table th {
+  border-color: #f3f3f3 !important;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: #f3f3f3 !important;
+}
+
+
+@media only screen and (min-width: 320px) and (max-width: 450px) {
+
+  .min_height-80 {
+    min-height: 60px !important;
+  }
+}
+
+@media only screen and (min-width: 320px) and (max-width: 355px) {
+
+  .min_heigh_55 {
+    min-height: 55px !important;
+  }
+}
+
+@media only screen and (min-width: 320px) and (max-width: 1024px) {
+  
+  .min_50{
+    min-height: 50px !important;
+  }
+  
+}
+
+@media only screen and (max-width: 760px),
+(min-device-width: 768px) and (max-device-width: 1024px) {
+  .left_td_50 {
+    padding-left: 50% !important;
+    min-height  : 36px;
+  }
+
+  table,
+  thead,
+  tbody,
+  th,
+  td,
+  tr {
+    display: block;
+  }
+
+  thead tr {
+    position: absolute;
+    top     : -9999px;
+    left    : -9999px;
+  }
+
+  tr {
+    border: 1px solid #ccc;
+  }
+
+  td {
+    border       : none;
+    border-bottom: 1px solid #eee;
+    position     : relative;
+    padding-left : 50%;
+  }
+
+  td:before {
+    position     : absolute;
+    left         : 6px;
+    width        : 45%;
+    padding-right: 10px;
+    white-space  : nowrap;
+    color        : #0f0b63;
+    font-weight  : bold;
+  }
+
+  #Processor-list>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "Name";
+    }
+
+    &:nth-of-type(2):before {
+      content: "Contact";
+    }
+
+    &:nth-of-type(3):before {
+      content: "Roles";
+    }
+
+    &:nth-of-type(4):before {
+      content: "Email Password";
+    }
+
+    &:nth-of-type(5):before {
+      content: "Status";
+    }
+
+    &:nth-of-type(6):before {
+      content: "Created On";
+    }
+
+    &:nth-of-type(7):before {
+      content: "Action";
+    }
+
+  /*  &:nth-of-type(8):before {
+      content: "Number Of Loans";
+    }*/
+
+  }
+
+  #Setting-Table>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "Name";
+    }
+
+    &:nth-of-type(2):before {
+      content: "Order Sequence";
+    }
+
+    &:nth-of-type(3):before {
+      content: "Date";
+    }
+
+    &:nth-of-type(4):before {
+      content: "From";
+    }
+
+    &:nth-of-type(5):before {
+      content: "Sent To Broker";
+    }
+
+    &:nth-of-type(6):before {
+      content: "Sent To Borrower";
+    }
+
+    &:nth-of-type(7):before {
+      content: "Sent To Sr. Processor";
+    }
+
+    &:nth-of-type(8):before {
+      content: "Action";
+    }
+
+  }
+
+#Manage-Role>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "Name";
+    }
+
+    &:nth-of-type(2):before {
+      content: "Tasks";
+    }
+
+    &:nth-of-type(3):before {
+      content: "Edit";
+    }
+
+}
+
+#Agent-Dashboard>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "LoanId";
+    }
+
+    &:nth-of-type(2):before {
+      content: "Borrower";
+    }
+
+    &:nth-of-type(3):before {
+      content: "Property Address";
+    }
+
+    &:nth-of-type(4):before {
+      content: "Loan Purpose";
+    }
+
+    &:nth-of-type(5):before {
+      content: "Broker Co.";
+    }
+
+    &:nth-of-type(6):before {
+      content: "LO Name";
+    }
+
+    &:nth-of-type(7):before {
+      content: "Processor";
+    }
+
+    &:nth-of-type(8):before {
+      content: "Processor Email";
+    }
+
+    &:nth-of-type(9):before {
+      content: "Phone";
+    }
+
+    &:nth-of-type(10):before {
+      content: "Ordered On";
+    }
+
+    &:nth-of-type(11):before {
+      content: "Order";
+    }
+
+    &:nth-of-type(12):before {
+      content: "Low";
+    }
+
+}
+
+  #Manage-Loan>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "FILE ID";
+    }
+
+    &:nth-of-type(2):before {
+      content: "BORROWER";
+    }
+
+    &:nth-of-type(3):before {
+      content: "LOAN TYPE";
+    }
+
+    &:nth-of-type(4):before {
+      content: "APPLICATION DATE";
+    }
+
+    &:nth-of-type(5):before {
+      content: "SENT TO PROCESSING";
+    }
+
+    &:nth-of-type(6):before {
+      content: "LOCK EXP";
+    }
+
+    &:nth-of-type(7):before {
+      content: "CLOSING DATE";
+    }
+
+    &:nth-of-type(8):before {
+      content: "BROKER CO.";
+    }
+
+    &:nth-of-type(9):before {
+      content: "LO NAME";
+    }
+
+    &:nth-of-type(10):before {
+      content: "CD READY";
+    }
+
+    &:nth-of-type(11):before {
+      content: "STATUS";
+    }
+
+  }
+
+   #Appraisal-List>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "Name";
+    }
+
+    &:nth-of-type(2):before {
+      content: "WebSite";
+    }
+
+    &:nth-of-type(3):before {
+      content: "Created On";
+    }
+
+    &:nth-of-type(4):before {
+      content: "Status";
+    }
+
+    &:nth-of-type(5):before {
+      content: "Active/Inactive";
+    }
+
+    &:nth-of-type(6):before {
+      content: "Edit";
+    }
+
+  }
+
+  #Agent-List>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "Company Name";
+    }
+
+    &:nth-of-type(2):before {
+      content: "Type";
+    }
+
+    &:nth-of-type(3):before {
+      content: "Website";
+    }
+
+    &:nth-of-type(4):before {
+      content: "Address";
+    }
+
+    &:nth-of-type(5):before {
+      content: "Created On";
+    }
+
+    &:nth-of-type(6):before {
+      content: "Action";
+    }
+
+  }
+
+  #Setting-List>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "Name";
+    }
+
+    &:nth-of-type(2):before {
+      content: "Date";
+    }
+
+    &:nth-of-type(3):before {
+      content: "From";
+    }
+
+    &:nth-of-type(4):before {
+      content: "Sent To Broker";
+    }
+
+    &:nth-of-type(5):before {
+      content: "Sent To Borrower";
+    }
+
+  }
+
+  #Template-List>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "Id";
+    }
+
+    &:nth-of-type(2):before {
+      content: "Subject";
+    }
+
+    &:nth-of-type(3):before {
+      content: "Created On";
+    }
+
+    &:nth-of-type(4):before {
+      content: "Description";
+    }
+
+    &:nth-of-type(5):before {
+      content: "Edit";
+    }
+
+  }
+
+
+  #Title-Order>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "Name";
+    }
+
+    &:nth-of-type(2):before {
+      content: "Phone";
+    }
+
+    &:nth-of-type(3):before {
+      content: "Email";
+    }
+
+    &:nth-of-type(4):before {
+      content: "Action";
+    }
+
+  }
+
+  #Conditions-List>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "Category";
+    }
+
+    &:nth-of-type(2):before {
+      content: "Name";
+    }
+
+    &:nth-of-type(3):before {
+      content: "Created On";
+    }
+
+    &:nth-of-type(4):before {
+      content: "Action";
+    }
+
+  }
+
+  #Broker-List>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "Company";
+    }
+
+    &:nth-of-type(2):before {
+      content: "Company NMLS";
+    }
+
+    &:nth-of-type(3):before {
+      content: "Name";
+    }
+
+    &:nth-of-type(4):before {
+      content: "Company Address";
+    }
+
+    &:nth-of-type(5):before {
+      content: "Individual NMLS";
+    }
+
+    &:nth-of-type(6):before {
+      content: "Contact";
+    }
+
+     &:nth-of-type(7):before {
+      content: "Created On";
+     }
+
+    &:nth-of-type(8):before {
+      content: "Active";
+    }
+
+    &:nth-of-type(9):before {
+      content: "Actions";
+    }
+
+  }
+
+  #Agent-Contact>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "Full Name";
+    }
+
+    &:nth-of-type(2):before {
+      content: "Email";
+    }
+
+    &:nth-of-type(3):before {
+      content: "Phone";
+    }
+
+    &:nth-of-type(4):before {
+      content: "Created On";
+    }
+
+  }
+
+  #loan-list>tr>td {
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "FILE ID";
+    }
+
+    &:nth-of-type(2):before {
+      content: "BORROWER";
+    }
+
+    &:nth-of-type(3):before {
+      content: "LOAN TYPE";
+    }
+
+    &:nth-of-type(4):before {
+      content: "LOCK EXP";
+    }
+
+    &:nth-of-type(5):before {
+      content: "APPLICATION DATE";
+    }
+
+    &:nth-of-type(6):before {
+      content: "CLOSING DATE";
+    }
+
+    &:nth-of-type(7):before {
+      content: "SENT TO PROCESSING";
+    }
+
+    &:nth-of-type(8):before {
+      content: "";
+      display: none;
+    }
+
+    &:nth-of-type(9):before {
+      content: "";
+    }
+    
+    &:nth-of-type(10):before {
+      content: "";
+    }
+
+    &:nth-of-type(11):before {
+      content: "";
+    }
+
+}
+
+#Broker-loan-list>tr>td{
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "FILE ID";
+    }
+
+    &:nth-of-type(2):before {
+      content: "BORROWER";
+    }
+
+    &:nth-of-type(3):before {
+      content: "LOAN TYPE";
+    }
+
+    &:nth-of-type(4):before {
+      content: "APPLICATION DATE";
+    }
+
+    &:nth-of-type(5):before {
+      content: " SENT TO PROCESSING";
+    }
+
+    &:nth-of-type(6):before {
+      content: "SR PROCESSOR";
+    }
+
+    &:nth-of-type(7):before {
+      content: "CLOSING DATE";
+    }
+
+    &:nth-of-type(8):before {
+      content: "CD READY";
+    }
+
+    &:nth-of-type(9):before {
+      content: "STATUS";
+    }
+
+    &:nth-of-type(10):before {
+      content: "PROGRESS";
+    }
+
+}
+
+#Processor-loan-list>tr>td{
+    padding-right: 10px;
+
+    &:nth-of-type(1) {
+      background: #fff;
+    }
+
+    &:nth-of-type(1):before {
+      content: "FILE ID";
+    }
+
+    &:nth-of-type(2):before {
+      content: "BORROWER";
+    }
+
+    &:nth-of-type(3):before {
+      content: "LOAN TYPE";
+    }
+
+    &:nth-of-type(4):before {
+      content: "SENT TO PROCESSING";
+    }
+
+    &:nth-of-type(5):before {
+      content: "SR PROCESSOR";
+    }
+
+    &:nth-of-type(6):before {
+      content: "CLOSING DATE";
+    }
+
+    &:nth-of-type(7):before {
+      content: "BROKER CO.";
+    }
+
+    &:nth-of-type(8):before {
+      content: "LO NAME";
+    }
+
+    &:nth-of-type(9):before {
+      content: "CD READY";
+    }
+
+    &:nth-of-type(10):before {
+      content: "STATUS";
+    }
+
+    &:nth-of-type(11):before {
+      content: "PROGRESS";
+    }
+
+}
+
+#task-allocation-list>tr>td {
+  padding-right: 10px;
+
+  &:nth-of-type(1) {
+    background: #fff;
+  }
+
+  &:nth-of-type(1):before {
+    content: "Name";
+  }
+
+  &:nth-of-type(2):before {
+    content: "Due Date	";
+  }
+
+  &:nth-of-type(3):before {
+    content: "Assigned On	";
+  }
+
+  &:nth-of-type(4):before {
+    content: "Assigned To	";
+  }
+
+  &:nth-of-type(5):before {
+    content: "Completed On	";
+  }
+
+  &:nth-of-type(6):before {
+    content: "Completed By";
+  }
+
+}
+
+#Lender-List>tr>td {
+  padding-right: 10px;
+
+  &:nth-of-type(1) {
+    background: #fff;
+  }
+
+  &:nth-of-type(1):before {
+    content: "Name";
+  }
+
+  &:nth-of-type(2):before {
+    content: "Website";
+  }
+
+  &:nth-of-type(3):before {
+    content: "UserType";
+  }
+
+  &:nth-of-type(4):before {
+    content: "UserName";
+  }
+
+  &:nth-of-type(5):before {
+    content: "Password";
+  }
+  
+  &:nth-of-type(6):before {
+    content: "Address";
+  }
+
+  &:nth-of-type(7):before {
+    content: "Edit";
+  }
+
+  &:nth-of-type(8):before {
+    content: "CreatedOn";
+  }
+
+  &:nth-of-type(9):before {
+    content: "Action";
+  }
+
+}
+
+#Lender-List-1>tr>td {
+  padding-right: 10px;
+
+  &:nth-of-type(1) {
+    background: #fff;
+  }
+
+  &:nth-of-type(1):before {
+    content: "Name";
+  }
+
+  &:nth-of-type(2):before {
+    content: "Website";
+  }
+
+  &:nth-of-type(3):before {
+    content: "Address";
+  }
+
+  &:nth-of-type(4):before {
+    content: "Mortgage Clause";
+  }
+
+  &:nth-of-type(5):before {
+    content: "Appraisal Company";
+  }
+  
+  &:nth-of-type(6):before {
+    content: "Created On";
+  }
+
+  &:nth-of-type(7):before {
+    content: "Action";
+  }
+
+}
+
+#Lender-List-inner>tr>td {
+  padding-right: 10px;
+
+  &:nth-of-type(1) {
+    background: #fff;
+  }
+
+  &:nth-of-type(1):before {
+    content: "Name";
+  }
+
+  &:nth-of-type(2):before {
+    content: "LoanType";
+  }
+
+  &:nth-of-type(3):before {
+    content: "Applicable For Task";
+  }
+
+  &:nth-of-type(4):before {
+    content: "Clause";
+  }
+
+  &:nth-of-type(5):before {
+    content: "Address";
+  }
+  
+  &:nth-of-type(6):before {
+    content: "Edit/Delete";
+  }
+
+}
+
+#Lender-List-Name>tr>td {
+  padding-right: 10px;
+
+  &:nth-of-type(1) {
+    background: #fff;
+  }
+
+  &:nth-of-type(1):before {
+    content: "Name";
+  }
+
+  &:nth-of-type(2):before {
+    content: "LoanType";
+  }
+
+  &:nth-of-type(3):before {
+    content: "Applicable For Task";
+  }
+
+  &:nth-of-type(4):before {
+    content: "Clause";
+  }
+
+  &:nth-of-type(5):before {
+    content: "Address";
+  }
+
+  &:nth-of-type(6):before {
+    content: "Edit";
+  }
+
+}
+
+#Assign-Processor>tr>td {
+  padding-right: 10px;
+
+  &:nth-of-type(1) {
+    background: #fff;
+  }
+
+  &:nth-of-type(1):before {
+    content: "Role/Task";
+  }
+
+  &:nth-of-type(2):before {
+    content: "Select";
+  }
+
+}
+
+#Allocate_Loans>tr>td {
+  padding-right: 10px;
+
+  &:nth-of-type(1) {
+    background: #fff;
+  }
+
+  &:nth-of-type(1):before {
+    content: "FILE ID";
+  }
+
+  &:nth-of-type(2):before {
+    content: "Loan Type";
+  }
+
+  &:nth-of-type(3):before {
+    content: "Sent To Processing";
+  }
+
+  &:nth-of-type(4):before {
+    content: "Sr.Processor";
+  }
+
+  &:nth-of-type(5):before {
+    content: "Closing Date";
+  }
+
+  &:nth-of-type(6):before {
+    content: "Broker Co.";
+  }
+  &:nth-of-type(7):before {
+    content: "Loan Officer";
+  }
+
+  &:nth-of-type(8):before {
+    content: "CD Ready";
+  }
+
+  &:nth-of-type(9):before {
+    content: "STATUS";
+  }
+
+  &:nth-of-type(10):before {
+    content: "PROGRESS";
+  }
+
+}
+
+#Loan-Officer>tr>td {
+  padding-right: 10px;
+
+  &:nth-of-type(1) {
+    background: #fff;
+  }
+
+  &:nth-of-type(1):before {
+    content: "Name";
+  }
+
+  &:nth-of-type(2):before {
+    content: "Contact";
+  }
+
+  &:nth-of-type(3):before {
+    content: "IndividualNMLS";
+  }
+
+  &:nth-of-type(4):before {
+    content: "Created On";
+  }
+
+  &:nth-of-type(5):before {
+    content: "Action";
+  }
+
+}
+
+#View_History>tr>td {
+  padding-right: 10px;
+
+  &:nth-of-type(1) {
+    background: #fff;
+  }
+
+  &:nth-of-type(1):before {
+    content: "Form Name";
+  }
+
+  &:nth-of-type(2):before {
+    content: "Remarks";
+  }
+
+  &:nth-of-type(3):before {
+    content: "Updated On";
+  }
+
+  &:nth-of-type(4):before {
+    content: "Updated By";
+  }
+
+}
+
+#Master-Credentials>tr>td {
+  padding-right: 10px;
+
+  &:nth-of-type(1) {
+    background: #fff;
+  }
+
+   &:nth-of-type(1):before {
+    content: "Category";
+  }
+
+  &:nth-of-type(2):before {
+    content: "Company Name";
+  }
+
+  &:nth-of-type(3):before {
+    content: "Website";
+  }
+
+  &:nth-of-type(4):before {
+    content: "User Name";
+  }
+
+  &:nth-of-type(5):before {
+    content: "Password";
+  }
+
+  &:nth-of-type(6):before {
+    content: "Created On";
+  }
+
+  &:nth-of-type(7):before {
+    content: "Created By";
+  }
+
+  &:nth-of-type(8):before {
+    content: "Actions";
+  }
+
+}
+
+#Lender>tr>td {
+  padding-right: 10px;
+
+  &:nth-of-type(1) {
+    background: #fff;
+  }
+
+  &:nth-of-type(1):before {
+    content: "Name";
+  }
+
+  &:nth-of-type(2):before {
+    content: "Website";
+  }
+
+  &:nth-of-type(3):before {
+    content: "Address";
+  }
+
+  &:nth-of-type(4):before {
+    content: "Mortgage Clause";
+  }
+
+  &:nth-of-type(5):before {
+    content: "Appraisal Company";
+  }
+
+  &:nth-of-type(6):before {
+    content: "Created On";
+  }
+
+  &:nth-of-type(7):before {
+    content: "Action";
+  }
+
+}
+
+#Appraisal-Company>tr>td {
+  padding-right: 10px;
+
+  &:nth-of-type(1) {
+    background: #fff;
+  }
+
+  &:nth-of-type(1):before {
+    content: "Appraisal Company";
+  }
+
+  &:nth-of-type(2):before {
+    content: "Note";
+  }
+
+}
+
+
+}
+
+
+table {
+  width       : 100%;
+  table-layout: fixed;
+}
+
+.tbl-header {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-top      : 1px solid #dee2e6;
+}
+
+.tbl-content {
+  // height:300px;
+  overflow-x: hidden;
+  height: calc(100vh - 210px);
+
+  @media only screen and (min-width: 320px) and (max-width: 1024px) {
+    height: 100%;
+  }
+
+  overflow-x:auto;
+  margin-top: 0px;
+  // border: 1px solid rgba(255,255,255,0.3);
+}
+
+th {
+  padding    : 0.75rem !important;
+  text-align : left;
+  font-weight: 500;
+  font-size  : 10px;
+  /*font-family: "Poppins-SemiBold";*/
+  font-family  :'latobold';
+  color      : $secondary;
+}
+
+td {
+  border-top     : solid 1px $grey-x-light;
+  padding        : 0.75rem !important;
+  font-size      : 11px;
+  color          : #171e28; 
+  vertical-align : middle;
+  word-break     : break-word;
+  font-family    :'latoregular';
+}
+
+
+
+/* demo styles */
+
+
+section {
+  // margin: 50px;
+}
+
+
+/* follow me template */
+.made-with-love {
+  margin-top : 40px;
+  padding    : 10px;
+  clear      : left;
+  text-align : center;
+  font-size  : 10px;
+  font-family: arial;
+  color      : #fff;
+}
+
+.made-with-love i {
+  font-style: normal;
+  color     : #F50057;
+  font-size : 14px;
+  position  : relative;
+  top       : 2px;
+}
+
+.made-with-love a {
+  color          : #fff;
+  text-decoration: none;
+}
+
+.made-with-love a:hover {
+  text-decoration: underline;
+}
+
+
+/* for custom scrollbar for webkit browser*/
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+}
+
+::-webkit-scrollbar-thumb {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+}
+
+.processor-l{
+  &__5{
+    width: 5%;
+    text-align: center;
+    @media only screen and (min-width: 320px) and (max-width: 1024px) {
+      width: auto; 
+      text-align: left;
+     }
+    
+  }
+
+  &__8{
+    width: 8%;
+    text-align: center;
+    @media only screen and (min-width: 320px) and (max-width: 1024px) {
+      width: auto; 
+      text-align: left;
+     }
+    
+  }
+  &__10{
+    width: 12%;
+    @media only screen and (min-width: 320px) and (max-width: 1024px) {
+     width: auto; 
+    }
+  }
+}
+
+.setting-table{
+  &__20{
+    width: 20%;
+    @media only screen and (min-width: 320px) and (max-width: 1024px) {
+      width: auto; 
+      text-align: left;
+     }
+    
+  }
+
+}
+
+.td-loan{
+  position: absolute;
+  left: 5px;
+  color: #0f0b63;
+  font-size: 11px;
+  font-weight: bolder;
+  vertical-align: middle;
+  @media only screen and (min-width: 1025px) and (max-width: 20000px) {
+    position: relative;
+    left: 0;
+    display: none;
+  }
+}
+
+.status-center{
+  justify-content: center;
+  @media only screen and (min-width: 320px) and (max-width: 1024px) {
+    justify-content: start;
+  }
+}
+
+.loan-td{
+  &__8{
+    width: 8%;
+    /*text-align: center;*/
+    text-align: left;
+    @media only screen and (min-width: 320px) and (max-width: 1024px) {
+      width: auto; 
+      text-align: left;
+     }
+  }
+  &__10{
+    width: 10%;
+    text-align: center;
+    @media only screen and (min-width: 320px) and (max-width: 1024px) {
+      width: auto; 
+      text-align: left;
+     }
+  }
+  &__12{
+    width: 12%;
+    @media only screen and (min-width: 320px) and (max-width: 1024px) {
+     width: auto; 
+    }
+  }
+}
+
+.mx-calendar{
+  width: 290px!important;
+  @media only screen and (min-width: 576px) and (max-width: 767px) {
+    width: 270px!important;
+  }
+  @media only screen and (min-width: 320px) and (max-width: 575px) {
+    width: 270px!important;
+  }
+}
+.mx-calendar-content{
+  height: auto!important;
+}
+
+.mx-calendar-content .cell.active{
+  /*background: #fff!important;
+  color: #000 !important;*/
+  background-color: #0f0b63!important;
+  color: #fff!important;
+}
+
+.mx-table-date td, .mx-table-date th{
+  @media only screen and (min-width: 320px) and (max-width: 767px) {
+    font-size: 9px!important;
+  }
+}
+
+
+.mx-calendar-content table,
+.mx-calendar-content thead,
+.mx-calendar-content tbody,
+.mx-calendar-content tr,
+.mx-calendar-content td,
+.mx-calendar-content th{
+  @media only screen and (min-width: 320px) and (max-width: 1024px) {
+display: revert;
+  }
+}
+
+table {
+  width: 100%;
+
+  th {
+      text-align   : left;
+      border-bottom: 1px solid #ccc;
+      font-weight: bold;
+  }
+
+  th,
+  td {
+      padding: .4em;
+  }
+}
+
+// fold table 
+table.fold-table {
+  >tbody {
+
+      // view segment
+      >tr.view {
+
+          td,
+          th {
+              cursor: pointer;
+          }
+
+          td:first-child,
+          th:first-child {
+              position    : relative;
+              padding-left: 20px;
+
+              &:before {
+                  position  : absolute;
+                  top       : 50%;
+                  left      : 5px;
+                  width     : 9px;
+                  height    : 16px;
+                  margin-top: -8px;
+                  font      : 16px fontawesome;
+                  color     : #fff;
+                  content   : "\f0d7";
+                  transition: all .3s ease;
+              }
+          }
+
+          &:nth-child(4n-1) {
+              background: #eee;
+          }
+
+          &:hover {
+              // background: $primary-color;
+              color: #fff;
+          }
+
+          &.open {
+              background: tomato;
+              color     : white;
+
+              td:first-child,
+              th:first-child {
+                  &:before {
+                      transform: rotate(-180deg);
+                      color    : #333;
+                  }
+              }
+          }
+      }
+
+      // fold segment
+      >tr.fold {
+          display: none;
+
+          &.open {
+              display: table-row;
+          }
+      }
+  }
+}
+
+
+
+// fold content 
+.fold-content {
+  padding: .0em;
+
+  h3 {
+      margin-top: 0;
+  }
+
+  >table {
+      border: 1px solid #ccc;
+
+      >tbody {
+          tr:nth-child(even) {
+              // background: #eee;
+          }
+      }
+  }
+}
+
+.lender-list{
+  &__5{
+    width: 5%;
+    text-align: center;
+    @media only screen and (min-width: 320px) and (max-width: 1024px) {
+      width: auto; 
+      text-align: left;
+     }
+  }
+
+  &__10{
+    width: 10%;
+    /*text-align: center;*/
+    @media only screen and (min-width: 320px) and (max-width: 1024px) {
+      width: auto; 
+      text-align: left;
+     }
+  }
+}

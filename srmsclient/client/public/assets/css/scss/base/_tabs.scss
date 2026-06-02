@@ -1,0 +1,320 @@
+//  tabs //
+
+.side-tabs {
+  .col-auto {
+    max-width    : 260px;
+    min-width    : 260px;
+    padding-right: 5px;
+    padding-left: 5px;
+    @media only screen and (min-width: 320px) and (max-width: 991px) {
+      min-width: 100%;
+      padding-left: 0;
+      padding-right: 0;
+      margin-bottom: 15px;
+    }
+  }
+
+  .nav-pills {
+    border          : none !important;
+    border-radius   : 8px !important;
+    box-shadow      : 0 0 40px rgba(0, 0, 0, 0.16);
+    background-color: $white-base !important;
+    overflow        : hidden;
+
+    @media only screen and (min-width: 320px) and (max-width: 575px) {
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: row!important;
+    overflow: auto!important;
+    width: 100%!important;
+    }
+
+
+
+    .nav-link.active {
+      background-color: transparent !important;
+    }
+
+    ul{
+      li{
+        a{
+          &:hover{
+            color: red;
+          }
+        }
+      }
+    }
+
+
+    
+    .nav-item {
+      position     : relative;
+      border-bottom: 1px solid $background-base;
+      // &:last-child{
+      //   @media only screen and (min-width: 320px) and (max-width: 575px) {
+      //   position: absolute;
+      //   right: 5px;
+      //   width: 80px!important;
+      //   }
+      //   a{
+      //     @media only screen and (min-width: 320px) and (max-width: 575px) {
+      //     width: 78px!important;
+      //     margin: 0!important;
+      //   }
+      // }
+      // }
+    }
+
+    // .nav-item:nth-child(5) {
+    //   border: none!important;
+    // }
+    a::after {
+      position       : absolute;
+      height         : 20px;
+      width          : 20px;
+      right          : 8px;
+      @media only screen and (min-width: 320px) and (max-width: 575px) {
+        right: 0;
+      }
+      top            : 7px;
+      content        : "\f105";
+      font-family    : FontAwesome;
+      font-size      : 14px;
+      color          : $grey-x-light;
+      display        : flex;
+      align-items    : center;
+      justify-content: center;
+    }
+
+    .nav-link.active::after {
+      /*background-color: $primary-light;*/
+      font-family     : FontAwesome !important;
+      color           : $white-base;
+      border-radius   : 50px;
+    }
+
+    a.active::before {
+      position        : absolute;
+      height          : 100%;
+      width           : 6px;
+      bottom          : 0px;
+      left            : 0px;
+      background-color: $primary-radio;
+      content         : "";
+    }
+
+    // .nav-link.disabled.disabled {
+    //   color: #0f0b63 !important;
+    // }
+    // .nav-link.disabled.disabled:after{
+    //   color: #0f0b63!important;
+    //   content: '\f046'!important;
+    //   font-family: FontAwesome !important;
+    //   font-size: 12px;
+    //   cursor: not-allowed;
+    // }
+
+    li {
+      font-size  : $font-xs-regular !important;
+      font-family: latoregular !important;
+      position   : relative;
+
+      ul{
+        li .abc{
+          @include theme-button();
+          color           : $white-base !important;
+          min-width       : 80px;
+          ont-size        : $font-xl-small;
+
+          &.processor-collapse &:hover {
+            color         : $white-base !important;
+          }
+        }
+        .active1{
+          @include theme-button();
+          color           : $white-base !important;
+          min-width       : 80px;
+          font-size       : $font-xl-small;
+
+          &:hover {
+            -webkit-text-fill-color: unset !important;
+          }
+
+          a::after{
+            content: none;
+          }
+        }
+      }
+    }
+
+    a {
+      display        : block;
+      text-decoration: none;
+      color          : $grey-light;
+      border-bottom  : 4px solid transparent;
+      background     : transparent;
+      font-size      : 13px!important;
+      border-radius  : 0px !important;
+      font-weight    : $font-weight-bold;
+      padding        : 10px 5px 5px 10px;
+      @media only screen and (min-width: 320px) and (max-width: 575px) {
+        width: 170px;
+        font-size: 10px!important;
+      }
+
+      &:hover {
+        /*color: $primary-light;*/
+        /*-webkit-text-fill-color:  unset !important;*/
+        @include gradian-text();
+        &::after{
+        @include gradian-text();
+        }
+      }
+
+      &.active {
+        /*color: $primary-gradian !important;*/
+        @include gradian-text();
+   /*-webkit-text-fill-color: unset;*/
+        /*font-family: 'Poppins-SemiBold';*/
+        font-family: 'latobold';
+      }
+
+      
+    }
+  }
+}
+
+#tabs-list .card-header {
+  background-color: $white-base;
+  position        : relative;
+
+  .card-header-tabs>.nav-item>.nav-link::after {
+    position        : absolute;
+    height          : 10px;
+    width           : 1px;
+    right           : 0px;
+    top             : 12px;
+    background-color: $grey-x-light;
+    content         : "";
+  }
+
+  .card-header-tabs>.nav-item>.nav-link.active::before {
+    position        : absolute;
+    height          : 4px;
+    width           : 15px;
+    bottom          : 0px;
+    background      : #1e5799; /* Old browsers */
+    background      : -moz-linear-gradient(left, #1e5799 0%, #ed3429 0%, #fb6d32 100%); /* FF3.6-15 */
+    background      : -webkit-linear-gradient(left, #1e5799 0%,#ed3429 0%,#fb6d32 100%); /* Chrome10-25,Safari5.1-6 */
+    background      : linear-gradient(to right, #1e5799 0%,#ed3429 0%,#fb6d32 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+    filter          : progid:DXImageTransform.Microsoft.gradient( startColorstr='#1e5799', endColorstr='#fb6d32',GradientType=1 ); /* IE6-9 */
+    content         : "";
+  }
+
+  .card-header-tabs {
+    margin-right : -0.625rem;
+    margin-bottom: -0.75rem !important;
+    margin-left  : -0.625rem;
+    border-bottom: 0;
+
+    li {
+      font-size  : $font-xs-regular !important;
+      font-family: $primary-font !important;
+      position   : relative;
+    }
+
+    a {
+      display        : block;
+      text-align     : center;
+      text-decoration: none;
+      color          : $grey-light;
+      border-bottom  : 4px solid transparent;
+      background     : transparent;
+      font-size      : $font-xl-small;
+      border-radius  : 0px !important;
+      font-weight    : $font-weight-bold;
+      border-left    : 0px solid transparent;
+      border-top     : 0px solid transparent;
+      border-right   : 0px solid transparent;
+      display        : flex;
+      align-items    : center;
+      justify-content: center;
+
+      &:hover {
+        //color: $secondary;
+        @include gradian-text();
+      }
+
+      &.active {
+        //color     : $secondary;
+        //background: transparent;
+        @include gradian-text();
+      }
+    }
+  }
+}
+
+// .card-header {
+//   background: transparent;
+//   padding: 0;
+//   &.active{
+//     color:#41cf53 !important
+//   }
+// }
+// .nav-tabs .nav-link.active, .nav-tabs .nav-item.show .nav-link{
+//   color:#41cf53 !important;
+//   display: block;
+//   text-decoration: none;
+//   border-bottom: 4px solid transparent;
+//   background: transparent;
+//   font-size: 14px;
+//   border-radius: 0px !important;
+//   font-weight: 600;
+//   padding: 10px 5px 5px 10px;
+// }
+
+// .nav-tabs .nav-link a, .nav-tabs .nav-link {
+//   display: block;
+//   text-decoration: none;
+//   color: #999999!important;
+
+//   display: block;
+//   text-decoration: none;
+//   border-bottom: 4px solid transparent;
+//   background: transparent;
+//   font-size: 14px;
+//   border-radius: 0px !important;
+//   font-weight: 600;
+//   padding: 10px 5px 5px 10px;
+// }
+
+.navbar-light .navbar-toggler{
+  @media only screen and (min-width: 320px) and (max-width: 991px) {
+position: absolute;
+right: 10px;
+  } 
+}
+
+.navbar-light .navbar-nav .nav-link{
+  height: 59px!important;
+  @media only screen and (min-width: 320px) and (max-width: 991px) {
+    height: 40px!important;
+  }
+}
+
+
+#workflow{
+
+  .side-tabs {
+
+    .nav-pills {
+      @media only screen and (min-width: 320px) and (max-width: 575px) {
+        display: flex;
+        flex-wrap: nowrap;
+        flex-direction: row!important;
+        overflow: auto!important;
+        width: 100%!important;
+        }
+      }
+    }
+}
