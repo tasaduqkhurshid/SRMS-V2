@@ -1,4 +1,3 @@
-const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -13,7 +12,7 @@ RedisCacheService.initializeRedis().catch(err => {
 
 const app = express();
 app.use(cors({
-  origin: "http://localhost:5173", // change to your front-end origin or true
+  origin: "http://localhost:3000",
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 }));
@@ -42,6 +41,10 @@ const MarksheetTemplateRoutes = require("./routes/marksheetTemplateRoutes");
 const DynamicOptionRoutes = require("./routes/DynamicOptionRoutes");
 const logger = require("./utils/logger");
 
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({ status: "healthy" });
+});
+
 // Dynamic option routes (cached, no auth required for select dropdowns)
 app.use("/options", DynamicOptionRoutes);
 
@@ -66,16 +69,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Serve Vue frontend
-app.use(express.static(path.join(__dirname, "../../dist")));
-
-// Only fallback for NON-API and NON-FILE routes
-app.get("*", (req, res) => {
-  if (req.originalUrl.startsWith("/api")) return res.status(404).end();
-
-  // if request has file extension → skip
-  if (req.originalUrl.includes(".")) return res.status(404).end();
-
-  res.sendFile(path.join(__dirname, "../../dist/index.html"));
-});
 module.exports = app;

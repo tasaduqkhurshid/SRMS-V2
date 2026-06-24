@@ -4,10 +4,10 @@ import axios from "axios";
 /**
  * Axios instance
  * baseURL is read from Vite env: VITE_API_BASE
- * fallback to http://localhost:5050/
+ * Defaults to the same-origin Nginx API proxy.
  */
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || "http://localhost:5050/",
+  baseURL: import.meta.env.VITE_API_BASE || "/api/",
   // timeout: 10000, // optional
 });
 

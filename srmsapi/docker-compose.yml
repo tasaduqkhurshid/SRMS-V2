@@ -1,9 +1,7 @@
-version: '3.9'
-
 services:
   # MongoDB Database
   mongodb:
-    image: mongo:7.0-alpine
+    image: mongo:7.0
     container_name: srms-mongodb
     restart: unless-stopped
     ports:
@@ -62,8 +60,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - ./src:/app/src
     networks:
       - srms-network
     healthcheck:
