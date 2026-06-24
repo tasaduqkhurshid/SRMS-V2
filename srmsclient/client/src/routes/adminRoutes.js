@@ -15,7 +15,6 @@ import AddEditMarksheetTemplate from '../components/pages/template/AddEditMarksh
 import StudentImport from '../components/pages/import/StudentImport.js';
 import ResultBook from '../components/pages/resultbook/ResultBook.js';
 import SchoolProfile from '../components/pages/school/SchoolProfile.js';
-// import StudentProfile from '../components/pages/student/StudentProfile.js';
 
 const routes = [
   { path: '/', component: Login },
@@ -46,7 +45,6 @@ const routes = [
   { path: "/templates/marksheets/:id/edit", component: AddEditMarksheetTemplate },
   // school profile
   { path: "/school/profile", component: SchoolProfile },
-  // { path: "/students/:id", component: StudentProfile }
 
 ];
 

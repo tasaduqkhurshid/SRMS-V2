@@ -4,7 +4,7 @@
  * Provides reactive access to cached school data from local storage
  */
 
-import { ref, computed, onMounted } from 'Vue'
+import { ref, computed, onMounted } from 'vue'
 import LocalStorageService from '../Services/LocalStorageService.js'
 
 export function useSchool() {

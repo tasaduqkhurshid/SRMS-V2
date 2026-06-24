@@ -1,6 +1,6 @@
 import AppLayout from "./components/common/AppLayout.js"
 import AuthLayout from "./components/common/AuthLayout.js"
-const { onMounted, computed } = Vue
+const { computed } = Vue
 const { useRoute } = VueRouter
 
 export default {
@@ -17,9 +17,6 @@ export default {
       }
       // Default to AppLayout for all other pages
       return "app"
-    })
-
-    onMounted(() => {
     })
 
     return { layout }

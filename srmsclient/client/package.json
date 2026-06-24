@@ -9,12 +9,9 @@
   },
   "dependencies": {
     "axios": "^1",
-    "pinia": "^2",
-    "vue": "^3",
-    "vue-router": "^4"
+    "vue": "^3"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5",
     "vite": "^5"
   }
 }

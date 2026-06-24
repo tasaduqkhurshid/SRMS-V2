@@ -3,7 +3,7 @@
  * Vue 3 composable for authentication with session/local storage integration
  */
 
-import { ref, computed } from 'Vue'
+import { ref, computed } from 'vue'
 import { api } from '../Services/api.js'
 import LocalStorageService from '../Services/LocalStorageService.js'
 

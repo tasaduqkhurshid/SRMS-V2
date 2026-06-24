@@ -2,7 +2,7 @@ import template from "./AppLayout-template.js"
 import Header from "./Header.js"
 import Sidebar from "./Sidebar.js"
 import Footer from "./Footer.js"
-const { ref, onMounted } = Vue
+const { ref } = Vue
 
 export default {
   name: "AppLayout",
@@ -14,9 +14,6 @@ export default {
       name: "Admin User",
       email: "admin@example.com",
       image: "/assets/images/avatar.png"
-    })
-
-    onMounted(() => {
     })
 
     return { user }

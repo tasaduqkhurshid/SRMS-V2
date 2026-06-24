@@ -1,5 +1,5 @@
 import template from './SchoolProfile-template.js'
-import { ref, onMounted } from 'Vue'
+import { ref, onMounted } from 'vue'
 import { useSchool } from '../../../Services/useSchool.js'
 import { useAuth } from '../../../Services/useAuth.js'
 import { api } from '../../../Services/api.js'
