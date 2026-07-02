@@ -1,53 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Bootstrap CSS -->
-    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/assets/css/global.css" rel="stylesheet">
-    <link href="/assets/css/scss/base/font-awesome.min.css" rel="stylesheet">
-    <script src="/assets/js/boot-strap/bootstrap.bundle.min.js"></script>
-    <!-- Vue and Vue Router scripts -->
-    <link rel="stylesheet" href="/assets/css/font-awesome/all.min.css">
-    <script type="text/javascript" src="/assets/js/vue.global.min.js"></script>
-    <script type="text/javascript" src="/assets/js/vue-meta.custom.min.js"></script>
-    <script type="text/javascript" src="/assets/js/vue-router.global.min.js"></script>
-    <script type="text/javascript" src="/assets/js/axios/axios.min.js"></script>
-    <script type="text/javascript" src="/assets/js/toasty.js"></script>
-    <script type="text/javascript" src="/assets/js/just-validate.min.js"></script>
-    <script type="text/javascript" src="/assets/js/validator.js"></script>
-    
-    <!-- Froala Editor CSS (Local) -->
-    <link rel="stylesheet" href="/assets/css/froala/froala_editor.pkgd.min.css">
-    <link rel="stylesheet" href="/assets/css/froala/froala_style.min.css">
-    
-    <!-- Froala Editor JS (Local) -->
-    <script src="/assets/js/froala/froala_editor.pkgd.min.js"></script>
-    
-        <!-- XLSX Library for Excel file generation (local) -->
-        <!-- Place the downloaded `xlsx.min.js` (v0.18.5) at `client/assets/js/xlsx.min.js` -->
-        <script src="/assets/js/xlsx.min.js"></script>
-        <script>
-            // Small runtime check: if the library didn't load, log actionable guidance
-            if (!window.XLSX) {
-                console.error('XLSX not available. Download xlsx.min.js v0.18.5 from https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js and place it at /assets/js/xlsx.min.js');
-            }
-        </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRMS</title>
 </head>
-<title>Project 1</title>
 <body>
     <div id="app"></div>
-    
-    
-    <script type ="module">
-        // Imports
-        import App from "./src/app.vue.js";
-        import router from "./src/routes/index.js";
-        const { createApp } = Vue;
-        const app = createApp(App);
-         app.use(router);
-        app.mount('#app');
-        
-        // You can try adding an alert here to check if the script executes
-    </script>
+    <script type="module" src="/src/main.js"></script>
 </body>
 </html>

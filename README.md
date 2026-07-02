@@ -1,150 +1,187 @@
 # School Result Management System (SRMS)
 
-A modern web application for managing school results, built with Vue.js frontend and Node.js/Express backend.
+SRMS is a Dockerized school result management system with a Vue.js frontend and a Node.js/Express API backed by MongoDB and Redis.
 
-## Table of Contents
-- [Prerequisites](#prerequisites)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Running the Application](#running-the-application)
-- [Development](#development)
-- [Docker Compose Alternative](#docker-compose-alternative)
-- [License](#license)
+The backend workflow is intentionally split into two parts:
+
+- `./start-server.sh` starts the application only.
+- `./setup ...` performs explicit database and operational tasks.
+
+The host machine does not need Node.js or npm. Backend commands run inside Docker containers.
 
 ## Prerequisites
 
-Before you begin, ensure you have installed:
-- [Docker](https://www.docker.com/get-started) (version 20.10+)
-- [Git](https://git-scm.com/)
-- (Optional) Docker Compose (included with Docker Desktop)
+- Docker
+- Docker Compose v2, available as `docker compose`
+- Git
 
 ## Project Structure
 
-```
-school-result-system/
-+-- srmsapi/                  # Backend server (Node.js/Express)
-�   +-- Dockerfile            # Multi-stage Docker build for server
-�   +-- docker-compose.yml    # MongoDB, Redis, and server services
-�   +-- start-server.sh       # Script to build and run server container
-�   +-- server/               # Source code
-�       +-- src/
-�       +-- public/
-�       +-- db/
-�       +-- package.json
-�       +-- ...
-+-- srmsclient/               # Frontend client (Vue.js)
-    +-- Dockerfile            # Multi-stage Docker build (Vite ? nginx)
-    +-- docker-compose.yml    # Client service only
-    +-- start-client.sh       # Script to build and run client container
-    +-- client/               # Source code
-        +-- src/
-        +-- public/
-        +-- package.json
-        +-- ...
+```text
+SRMS-DOCKER/
+├── setup                  # Docker-first API management CLI
+├── start-server.sh        # Starts the API stack only
+├── srmsapi/
+│   ├── Dockerfile
+│   ├── docker-compose.yml # MongoDB, Redis, and API services
+│   ├── start-server.sh
+│   └── server/
+│       ├── server.js
+│       ├── src/
+│       └── package.json
+└── srmsclient/
+    ├── Dockerfile
+    ├── docker-compose.yml
+    └── client/
 ```
 
-## Installation
+## Backend Workflow
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/srms.git
-   cd srms
-   ```
+Start the API stack:
 
-2. No further installation is required if using Docker. The Dockerfiles contain all necessary dependencies.
+```bash
+./start-server.sh
+```
 
-## Running the Application
+This starts MongoDB, Redis, and the API server. It waits for MongoDB and the API health check, then prints the API URL.
 
-### Method 1: Direct Execution Scripts (Recommended for quick start)
+Important: `./start-server.sh` never runs migrations, never runs seeders, and never modifies the database.
 
-#### Start the Server (API)
+Initialize the database manually:
+
+```bash
+./setup db
+```
+
+This runs migrations first, then seeders, inside the server container.
+
+Run only migrations:
+
+```bash
+./setup migrate
+```
+
+Run only seeders:
+
+```bash
+./setup seed
+```
+
+Create a completely fresh database:
+
+```bash
+./setup reset
+```
+
+This stops containers, removes Docker volumes for this API compose project, starts fresh containers, waits for health checks, then runs migrations and seeders.
+
+Show container status:
+
+```bash
+./setup status
+```
+
+Show live logs:
+
+```bash
+./setup logs
+```
+
+Open a shell inside the API container:
+
+```bash
+./setup shell
+```
+
+Open the MongoDB shell:
+
+```bash
+./setup mongo
+```
+
+Show all available commands:
+
+```bash
+./setup help
+```
+
+## API URL
+
+After startup, the API is available at:
+
+```text
+http://localhost:5000
+```
+
+Health check:
+
+```text
+http://localhost:5000/api/health
+```
+
+## Docker Compose Direct Usage
+
+The `setup` script wraps common Docker Compose commands, but you can still use Compose directly from the API directory:
+
 ```bash
 cd srmsapi
-bash start-server.sh   # In Git Bash/WSL or terminal with bash
-# OR (in PowerShell with Git Bash available)
-.\start-server.sh
+docker compose up -d --build
+docker compose ps
+docker compose logs -f
+docker compose down
 ```
-The server will be accessible at http://localhost:5000
 
-#### Start the Client (Frontend)
+Database commands should still be run inside the server container:
+
+```bash
+docker compose exec server npm run migrate
+docker compose exec server npm run seed
+docker compose exec server npm run db:setup
+```
+
+## Frontend
+
+Start the frontend separately:
+
 ```bash
 cd srmsclient
-bash start-client.sh   # In Git Bash/WSL or terminal with bash
-# OR (in PowerShell with Git Bash available)
-.\start-client.sh
-```
-The client will be accessible at http://localhost
-
-### Method 2: Docker Compose (Full stack with dependencies)
-
-#### Start Server with Dependencies
-```bash
-cd srmsapi
-docker-compose up -d   # Starts MongoDB, Redis, and server
-```
-Access API at http://localhost:5000
-
-#### Start Client
-```bash
-cd srmsclient
-docker-compose up -d   # Starts client
-```
-Access frontend at http://localhost
-
-> **Note**: When using docker-compose, the server waits for MongoDB and Redis to be healthy before starting.
-
-## Development
-
-For local development without Docker:
-
-### Backend (srmsapi)
-```bash
-cd srmsapi/server
-npm install
-npm run dev   # or whatever dev script is defined in package.json
+bash start-client.sh
 ```
 
-### Frontend (srmsclient)
-```bash
-cd srmsclient/client
-npm install
-npm run dev   # Vite dev server
+The frontend is available at:
+
+```text
+http://localhost
 ```
 
 ## Environment Variables
 
-The application uses the following environment variables (set in docker-compose.yml or .env files):
+Backend environment variables are defined in `srmsapi/docker-compose.yml`.
 
-### Server
-- `MONGODB_URI`: Connection string for MongoDB
-- `REDIS_HOST`: Redis host
-- `REDIS_PORT`: Redis port
-- `PORT`: Server port (default: 5000)
-- `NODE_ENV`: Environment (development/production)
+Key API variables:
 
-### Client
-- `VITE_API_BASE_URL`: Base URL for API calls (usually http://localhost:5000)
+- `MONGO_URI`: MongoDB connection string used by the API.
+- `REDIS_HOST`: Redis hostname.
+- `REDIS_PORT`: Redis port.
+- `PORT`: API port, default `5000`.
+- `NODE_ENV`: Runtime environment.
 
-## Stopping and Cleaning Up
+Frontend API configuration is controlled by:
 
-### Using Direct Scripts
-```bash
-# Server
-docker stop srmsapi-server
-docker rm srmsapi-server
+- `VITE_API_BASE_URL`: API base URL, usually `http://localhost:5000`.
 
-# Client
-docker stop srmsclient-client
-docker rm srmsclient-client
-```
+## Stopping Services
 
-### Using Docker Compose
+Stop the backend stack without deleting volumes:
+
 ```bash
 cd srmsapi
-docker-compose down
-
-cd srmsclient
-docker-compose down
+docker compose down
 ```
 
+Stop and remove backend database/cache volumes:
 
+```bash
+cd srmsapi
+docker compose down -v
+```

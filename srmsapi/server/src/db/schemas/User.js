@@ -11,7 +11,10 @@ const UserSchema = new mongoose.Schema(
     password: String,
     pin: String,
     role: String,
-    school_id: mongoose.Schema.Types.ObjectId
+    school_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'School'
+    }
   },
   {
     timestamps: true,

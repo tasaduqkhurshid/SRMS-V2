@@ -1,7 +1,9 @@
 # Dependencies
 node_modules/
 /dist/
-
+dist/
+**/dist/
+**/dist/
 # Environment variables
 .env
 .env.docker

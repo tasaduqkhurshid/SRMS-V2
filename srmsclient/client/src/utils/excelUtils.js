@@ -14,7 +14,7 @@ export const ensureXLSX = () => {
     if (window.XLSX)
       return resolve(window.XLSX)
 
-    const src = '/assets/js/xlsx.min.js'
+    const src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
     const existing = document.querySelector(`script[src="${src}"]`)
 
     if (!existing) {
@@ -29,7 +29,7 @@ export const ensureXLSX = () => {
       }
 
       script.onerror = () =>
-        reject(new Error('Failed to load xlsx.min.js'))
+        reject(new Error('Failed to load XLSX library'))
 
       document.head.appendChild(script)
 

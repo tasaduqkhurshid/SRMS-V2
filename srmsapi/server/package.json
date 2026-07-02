@@ -4,7 +4,9 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "seed": "node db/seeders/seed.js"
+    "migrate": "node src/db/mongo/migrate.js",
+    "seed": "node src/db/mongo/seed.js",
+    "db:setup": "npm run migrate && npm run seed"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

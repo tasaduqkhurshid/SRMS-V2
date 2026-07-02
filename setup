@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+set -e
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+API_DIR="$ROOT_DIR/srmsapi"
+
+SERVER_CONTAINER="srms-server"
+MONGO_CONTAINER="srms-mongodb"
+API_URL="${API_URL:-http://localhost:5000}"
+
+RED="\033[0;31m"
+GREEN="\033[0;32m"
+YELLOW="\033[1;33m"
+BLUE="\033[0;34m"
+NC="\033[0m"
+
+info() {
+  printf "%b\n" "${BLUE}==>${NC} $*"
+}
+
+success() {
+  printf "%b\n" "${GREEN}OK:${NC} $*"
+}
+
+warn() {
+  printf "%b\n" "${YELLOW}WARN:${NC} $*"
+}
+
+error() {
+  printf "%b\n" "${RED}ERROR:${NC} $*" >&2
+}
+
+usage() {
+  cat <<'EOF'
+SRMS Docker CLI
+
+Usage:
+  ./setup <command>
+
+Commands:
+  db       Run Mongo migrations, then seeders.
+  migrate  Run database migrations inside the server container.
+  seed     Run database seeders inside the server container.
+  reset    Stop containers, remove database volumes, start fresh, migrate, and seed.
+  status   Show Docker container status.
+  logs     Show live Docker logs.
+  shell    Open an interactive shell inside the server container.
+  mongo    Open mongosh inside the MongoDB container.
+  help     Show this help message.
+
+Examples:
+  ./setup db
+  ./setup migrate
+  ./setup seed
+  ./setup reset
+  ./setup logs
+EOF
+}
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    error "$1 is required but was not found."
+    exit 1
+  fi
+}
+
+require_docker() {
+  require_command docker
+
+  if ! docker compose version >/dev/null 2>&1; then
+    error "Docker Compose v2 is required. Install Docker Compose or enable the Docker Compose plugin."
+    exit 1
+  fi
+
+  if ! docker info >/dev/null 2>&1; then
+    error "Docker is not running or your user cannot access the Docker daemon."
+    exit 1
+  fi
+}
+
+compose() {
+  docker compose --project-directory "$API_DIR" -f "$API_DIR/docker-compose.yml" "$@"
+}
+
+container_exists() {
+  docker inspect "$1" >/dev/null 2>&1
+}
+
+require_container() {
+  local container="$1"
+  local service="$2"
+
+  if ! container_exists "$container"; then
+    error "Container '${container}' does not exist. Start the application first with './start-server.sh'."
+    exit 1
+  fi
+
+  if [ "$(docker inspect --format '{{.State.Running}}' "$container")" != "true" ]; then
+    error "Container '${container}' is not running. Start '${service}' first with './start-server.sh'."
+    exit 1
+  fi
+}
+
+wait_for_container_health() {
+  local container="$1"
+  local label="$2"
+  local max_attempts="${3:-60}"
+  local attempt=1
+  local status
+
+  info "Waiting for ${label} to become healthy..."
+
+  while [ "$attempt" -le "$max_attempts" ]; do
+    if ! container_exists "$container"; then
+      error "Container '${container}' does not exist."
+      exit 1
+    fi
+
+    status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container")"
+
+    if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
+      success "${label} is ${status}."
+      return 0
+    fi
+
+    sleep 2
+    attempt=$((attempt + 1))
+  done
+
+  error "${label} did not become healthy in time."
+  compose ps
+  compose logs --tail=100
+  exit 1
+}
+
+ensure_services() {
+  require_container "$MONGO_CONTAINER" "mongodb"
+  require_container "$SERVER_CONTAINER" "server"
+}
+
+run_migrate() {
+  ensure_services
+  info "Running Mongo migrations inside the server container..."
+  compose exec server npm run migrate
+  success "Migrations completed."
+}
+
+run_seed() {
+  ensure_services
+  info "Running Mongo seeders inside the server container..."
+  compose exec server npm run seed
+  success "Seeders completed."
+}
+
+run_db() {
+  run_migrate
+  run_seed
+  success "Database setup completed."
+}
+
+run_reset() {
+  warn "This will stop containers and remove MongoDB/Redis Docker volumes for this compose project."
+  info "Stopping containers and removing volumes..."
+  compose down -v
+
+  info "Starting fresh containers..."
+  compose up -d --build
+
+  wait_for_container_health "$MONGO_CONTAINER" "MongoDB"
+  wait_for_container_health "$SERVER_CONTAINER" "SRMS API"
+
+  run_db
+  success "Fresh database is ready. API: ${API_URL}"
+}
+
+run_status() {
+  compose ps
+}
+
+run_logs() {
+  compose logs -f
+}
+
+run_shell() {
+  require_container "$SERVER_CONTAINER" "server"
+
+  if compose exec server sh -lc 'command -v bash >/dev/null 2>&1'; then
+    compose exec server bash
+  else
+    compose exec server sh
+  fi
+}
+
+run_mongo() {
+  require_container "$MONGO_CONTAINER" "mongodb"
+  compose exec mongodb mongosh "mongodb://admin:password@localhost:27017/school-system?authSource=admin"
+}
+
+main() {
+  local command="${1:-help}"
+
+  case "$command" in
+    help|-h|--help)
+      usage
+      ;;
+    db|migrate|seed|reset|status|logs|shell|mongo)
+      require_docker
+      case "$command" in
+        db) run_db ;;
+        migrate) run_migrate ;;
+        seed) run_seed ;;
+        reset) run_reset ;;
+        status) run_status ;;
+        logs) run_logs ;;
+        shell) run_shell ;;
+        mongo) run_mongo ;;
+      esac
+      ;;
+    *)
+      error "Unknown command: $command"
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

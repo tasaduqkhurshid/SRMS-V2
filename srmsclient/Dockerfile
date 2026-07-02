@@ -18,7 +18,7 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 # Copy the built app from the builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/client/dist /usr/share/nginx/html
 # Copy nginx configuration
 COPY client/nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80
