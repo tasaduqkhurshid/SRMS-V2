@@ -4,8 +4,8 @@ SRMS is a Dockerized school result management system with a Vue.js frontend and 
 
 The backend workflow is intentionally split into two parts:
 
-- `./start-server.sh` starts the application only.
-- `./setup ...` performs explicit database and operational tasks.
+- `./srmsapi/start-server.sh` starts the application only.
+- `./srmsapi/setup ...` performs explicit database and operational tasks.
 
 The host machine does not need Node.js or npm. Backend commands run inside Docker containers.
 
@@ -19,12 +19,11 @@ The host machine does not need Node.js or npm. Backend commands run inside Docke
 
 ```text
 SRMS-DOCKER/
-├── setup                  # Docker-first API management CLI
-├── start-server.sh        # Starts the API stack only
 ├── srmsapi/
 │   ├── Dockerfile
 │   ├── docker-compose.yml # MongoDB, Redis, and API services
-│   ├── start-server.sh
+│   ├── setup              # Docker-first API management CLI
+│   ├── start-server.sh    # Starts the API stack only
 │   └── server/
 │       ├── server.js
 │       ├── src/
@@ -40,17 +39,17 @@ SRMS-DOCKER/
 Start the API stack:
 
 ```bash
-./start-server.sh
+./srmsapi/start-server.sh
 ```
 
 This starts MongoDB, Redis, and the API server. It waits for MongoDB and the API health check, then prints the API URL.
 
-Important: `./start-server.sh` never runs migrations, never runs seeders, and never modifies the database.
+Important: `./srmsapi/start-server.sh` never runs migrations, never runs seeders, and never modifies the database.
 
 Initialize the database manually:
 
 ```bash
-./setup db
+./srmsapi/setup db
 ```
 
 This runs migrations first, then seeders, inside the server container.
@@ -58,19 +57,19 @@ This runs migrations first, then seeders, inside the server container.
 Run only migrations:
 
 ```bash
-./setup migrate
+./srmsapi/setup migrate
 ```
 
 Run only seeders:
 
 ```bash
-./setup seed
+./srmsapi/setup seed
 ```
 
 Create a completely fresh database:
 
 ```bash
-./setup reset
+./srmsapi/setup reset
 ```
 
 This stops containers, removes Docker volumes for this API compose project, starts fresh containers, waits for health checks, then runs migrations and seeders.
@@ -78,31 +77,31 @@ This stops containers, removes Docker volumes for this API compose project, star
 Show container status:
 
 ```bash
-./setup status
+./srmsapi/setup status
 ```
 
 Show live logs:
 
 ```bash
-./setup logs
+./srmsapi/setup logs
 ```
 
 Open a shell inside the API container:
 
 ```bash
-./setup shell
+./srmsapi/setup shell
 ```
 
 Open the MongoDB shell:
 
 ```bash
-./setup mongo
+./srmsapi/setup mongo
 ```
 
 Show all available commands:
 
 ```bash
-./setup help
+./srmsapi/setup help
 ```
 
 ## API URL

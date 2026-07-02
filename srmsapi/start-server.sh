@@ -86,7 +86,7 @@ main() {
 
   success "SRMS API started at ${API_URL}"
   printf "%b\n" "${YELLOW}Note:${NC} Database migrations and seeders were not run."
-  printf "%b\n" "${YELLOW}Next:${NC} Run './setup db' from the project root when you want to initialize the database."
+  printf "%b\n" "${YELLOW}Next:${NC} Run './srmsapi/setup db' from the project root when you want to initialize the database."
 }
 
 main "$@"

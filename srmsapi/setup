@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-API_DIR="$ROOT_DIR/srmsapi"
+API_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 SERVER_CONTAINER="srms-server"
 MONGO_CONTAINER="srms-mongodb"
@@ -35,7 +34,7 @@ usage() {
 SRMS Docker CLI
 
 Usage:
-  ./setup <command>
+  ./srmsapi/setup <command>
 
 Commands:
   db       Run Mongo migrations, then seeders.
@@ -49,11 +48,11 @@ Commands:
   help     Show this help message.
 
 Examples:
-  ./setup db
-  ./setup migrate
-  ./setup seed
-  ./setup reset
-  ./setup logs
+  ./srmsapi/setup db
+  ./srmsapi/setup migrate
+  ./srmsapi/setup seed
+  ./srmsapi/setup reset
+  ./srmsapi/setup logs
 EOF
 }
 
@@ -91,12 +90,12 @@ require_container() {
   local service="$2"
 
   if ! container_exists "$container"; then
-    error "Container '${container}' does not exist. Start the application first with './start-server.sh'."
+    error "Container '${container}' does not exist. Start the application first with './srmsapi/start-server.sh'."
     exit 1
   fi
 
   if [ "$(docker inspect --format '{{.State.Running}}' "$container")" != "true" ]; then
-    error "Container '${container}' is not running. Start '${service}' first with './start-server.sh'."
+    error "Container '${container}' is not running. Start '${service}' first with './srmsapi/start-server.sh'."
     exit 1
   fi
 }
