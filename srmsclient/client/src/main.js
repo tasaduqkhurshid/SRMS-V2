@@ -20,12 +20,16 @@ window.JustValidate = JustValidate;
 window.XLSX = XLSX;
 window.FroalaEditor = FroalaEditor;
 
-await import("./utils/toasty.js");
-await import("./utils/formValidator.js");
+async function bootstrapApp() {
+  await import("./utils/toasty.js");
+  await import("./utils/formValidator.js");
 
-const [{ default: App }, { default: router }] = await Promise.all([
-  import("./app.vue.js"),
-  import("./routes/index.js")
-]);
+  const [{ default: App }, { default: router }] = await Promise.all([
+    import("./app.vue.js"),
+    import("./routes/index.js")
+  ]);
 
-Vue.createApp(App).use(router).mount("#app");
+  Vue.createApp(App).use(router).mount("#app");
+}
+
+bootstrapApp();
