@@ -3,10 +3,18 @@ import { defineConfig } from "vite";
 export default defineConfig({
   base: "/",
 
-  server: { port: 5173 },
+  resolve: {
+    alias: {
+      vue: "vue/dist/vue.esm-bundler.js"
+    }
+  },
+
+  server: {
+    port: 5173
+  },
 
   build: {
-    outDir: "../dist",     // ✅ build directly to ROOT
+    outDir: "../dist",
     emptyOutDir: true
   }
 });
