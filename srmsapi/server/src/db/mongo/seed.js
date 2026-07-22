@@ -1,10 +1,11 @@
 "use strict";
 
 const db = require("../models");
+const bcrypt = require("bcryptjs");
 
 const SCHOOL_CODE = "HIT";
-const ADMIN_PASSWORD_HASH = "$2a$10$l3hBRoWpVGxq4oXdBRDJNOCTqi7DI3yFxMt2lWXOqbtAe0f91Eomy";
-const ADMIN_PIN_HASH = "$2a$10$dTurE/.LEYF5i/axX8l6KuSOge.JtrUaKGf3c9vNokcxgNIYuURNS";
+const ADMIN_PASSWORD = "password";
+const ADMIN_PIN = "1234";
 
 const courses = [
   ["Pre Nursery", "pre_nursery", "Pre Nursery"],
@@ -83,8 +84,8 @@ const run = async () => {
       {
         username: "admin",
         email: "admin@hubiinfotech.com",
-        password: ADMIN_PASSWORD_HASH,
-        pin: ADMIN_PIN_HASH,
+        password: bcrypt.hashSync(ADMIN_PASSWORD, 10),
+        pin: bcrypt.hashSync(ADMIN_PIN, 10),
         role: "ADMIN",
         school_id: school._id
       }
@@ -137,7 +138,8 @@ const run = async () => {
     }
 
     console.log("Mongo seed completed");
-    console.log("Admin login: admin / password from existing seed hash");
+    console.log(`Admin login: admin / ${ADMIN_PASSWORD}`);
+    console.log(`Admin PIN login: admin@hubiinfotech.com / ${ADMIN_PIN}`);
   } catch (error) {
     console.error("Mongo seed failed:", error);
     process.exitCode = 1;

@@ -85,6 +85,7 @@ main() {
   wait_for_container_health srms-server "SRMS API"
 
   success "SRMS API started at ${API_URL}"
+  printf "%b\n" "${YELLOW}Dev:${NC} Backend source is mounted and nodemon will restart the API when files change."
   printf "%b\n" "${YELLOW}Note:${NC} Database migrations and seeders were not run."
   printf "%b\n" "${YELLOW}Next:${NC} Run './srmsapi/setup db' from the project root when you want to initialize the database."
 }

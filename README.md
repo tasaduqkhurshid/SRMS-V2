@@ -5,6 +5,7 @@ SRMS is a Dockerized school result management system with a Vue.js frontend and 
 The backend workflow is intentionally split into two parts:
 
 - `./srmsapi/start-server.sh` starts the application only.
+- `./srmsapi/stop-server.sh` stops the application only.
 - `./srmsapi/setup ...` performs explicit database and operational tasks.
 
 The host machine does not need Node.js or npm. Backend commands run inside Docker containers.
@@ -24,6 +25,7 @@ SRMS-DOCKER/
 │   ├── docker-compose.yml # MongoDB, Redis, and API services
 │   ├── setup              # Docker-first API management CLI
 │   ├── start-server.sh    # Starts the API stack only
+│   ├── stop-server.sh     # Stops the API stack only
 │   └── server/
 │       ├── server.js
 │       ├── src/
@@ -44,7 +46,17 @@ Start the API stack:
 
 This starts MongoDB, Redis, and the API server. It waits for MongoDB and the API health check, then prints the API URL.
 
+Backend source files are mounted into the API container and run with `nodemon`, so saving a backend file automatically restarts the API. Rebuild only when dependencies or Docker config change.
+
 Important: `./srmsapi/start-server.sh` never runs migrations, never runs seeders, and never modifies the database.
+
+Stop the API stack:
+
+```bash
+./srmsapi/stop-server.sh
+```
+
+This stops the API, MongoDB, and Redis containers without removing database volumes.
 
 Initialize the database manually:
 

@@ -2,7 +2,7 @@
   "name": "srms-server",
   "version": "0.1.0",
   "scripts": {
-    "dev": "nodemon server.js",
+    "dev": "nodemon --legacy-watch server.js",
     "start": "node server.js",
     "migrate": "node src/db/mongo/migrate.js",
     "seed": "node src/db/mongo/seed.js",

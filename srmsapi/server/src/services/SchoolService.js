@@ -3,7 +3,6 @@ const ModelUtils = require("../utils/ModelUtils");
 const bcrypt = require("bcryptjs");
 
 async function register({ school, admin }) {
-  console.log("Registering school:", school);
   if (
     !school?.school_name ||
     !school?.school_code ||
@@ -11,11 +10,8 @@ async function register({ school, admin }) {
     !admin?.password
   )
     throw new Error("Missing required fields");
-  console.log("Registering school:", school);
-  console.log("Admin details:", admin);
 
   const schoolRecord = await ModelUtils.createAndReturn(School, school);
-  console.log("Created school record:", schoolRecord);
 
   const existingUser = await ModelUtils.findOne(User, { school_id: schoolRecord._id, username: admin.username });
   if (existingUser) {
@@ -23,10 +19,12 @@ async function register({ school, admin }) {
   }
 
   const hash = bcrypt.hashSync(admin.password, 10);
+  const pinHash = admin.pin ? bcrypt.hashSync(admin.pin, 10) : null;
   await ModelUtils.createAndReturn(User, {
     username: admin.username,
+    email: admin.email,
     password: hash,
-    pin: admin.pin || null,
+    pin: pinHash,
     role: "ADMIN",
     school_id: schoolRecord._id,
   });
@@ -94,7 +92,6 @@ async function findSchoolByCode(schoolCode) {
   const school = await ModelUtils.findOne(School, {
     school_code: schoolCode
   });
-  console.log("Found school by code:", school);
   return school;
 }
 

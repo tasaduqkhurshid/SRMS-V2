@@ -13,15 +13,16 @@ const login = async (req, res) => {
     if (!identifier || !password) {
       return res.status(STATUS.BAD_REQUEST).json({
         status: "error",
+        success: false,
         message: "username/email and password are required",
       });
     }
-
     const data = await AuthService.login(identifier, password);
 
     if (!data) {
       return res.status(STATUS.UNAUTHORIZED).json({
         status: "error",
+        success: false,
         message: "Invalid credentials",
       });
     }
@@ -34,19 +35,20 @@ const login = async (req, res) => {
       if (data.school) {
         SessionStore.storeSchoolInSession(req, data.school);
       }
-      console.log('Session data stored for user:', data.user?.id);
     } catch (sessionErr) {
       logger && logger.warn && logger.warn("Failed to store session data:", sessionErr);
     }
 
     return res.status(STATUS.OK).json({
       status: "success",
+      success: true,
       data,
     });
   } catch (err) {
   logger && logger.error && logger.error("login controller error:", err);
     return res.status(STATUS.INTERNAL_SERVER_ERROR).json({
       status: "error",
+      success: false,
       message: "Something went wrong while logging in",
       error: err.message,
     });
@@ -59,17 +61,16 @@ const loginViaPin = async (req, res) => {
     if (!email || !pin) {
       return res.status(STATUS.BAD_REQUEST).json({
         status: "error",
+        success: false,
         message: "email and pin are required",
       });
     }
 
     const data = await AuthService.loginPin(email.trim(), pin);
-
-  logger && logger.debug && logger.debug("data in controller", data);
-
     if (!data) {
       return res.status(STATUS.UNAUTHORIZED).json({
         status: "error",
+        success: false,
         message: "Invalid credentials",
       });
     }
@@ -82,19 +83,20 @@ const loginViaPin = async (req, res) => {
       if (data.school) {
         SessionStore.storeSchoolInSession(req, data.school);
       }
-      console.log('Session data stored for user:', data.user?.id);
     } catch (sessionErr) {
       logger && logger.warn && logger.warn("Failed to store session data:", sessionErr);
     }
 
     return res.status(STATUS.OK).json({
       status: "success",
+      success: true,
       data,
     });
   } catch (err) {
   logger && logger.error && logger.error("loginViaPin controller error:", err);
     return res.status(STATUS.INTERNAL_SERVER_ERROR).json({
       status: "error",
+      success: false,
       message: "Something went wrong while logging in via pin",
       error: err.message,
     });
@@ -139,8 +141,6 @@ const logout = async (req, res) => {
   try {
     // Clear session data
     SessionStore.clearSession(req);
-    
-    console.log('User logged out, session cleared');
 
     return res.status(STATUS.OK).json({
       status: "success",
