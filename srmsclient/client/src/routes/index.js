@@ -16,7 +16,7 @@ router.beforeEach((to, _from, next) => {
   if (!token && !to.path.endsWith("/login")) return next("/login");
 
   // If logged in and tries to go to login → redirect home
-  if (token && to.path.endsWith("/login")) return next("/");
+  if (token && to.path.endsWith("/login")) return next("/dashboard");
 
   next();
 });

@@ -1,12 +1,13 @@
 import template from './Sidebar-template.js'
 const { ref, onMounted, onUnmounted, computed, watch } = Vue
-const { useRoute } = VueRouter
+    const { useRoute, useRouter } = VueRouter
 
 export default {
   name: 'Sidebar',
   template,
-  setup() {
-    const route = useRoute()
+    setup() {
+      const route = useRoute()
+      const router = useRouter()
 
     // collapsed = narrow desktop (shows only icons)
     const collapsed = ref(false)
@@ -54,13 +55,11 @@ export default {
 
     // Results submenu state
     const resultsOpen = ref(false);
-    const toggleResults = () => { 
+    const toggleResults = () => {
       if (!resultsOpen.value) {
         // When opening Results, navigate to first sub-item (Student-wise)
         resultsOpen.value = true;
-        setTimeout(() => {
-          window.location.href = '#/results/student-wise';
-        }, 10);
+        router.push('/results/student-wise');
       } else {
         resultsOpen.value = false;
       }
@@ -68,13 +67,11 @@ export default {
 
     // Templates submenu state
     const templatesOpen = ref(false);
-    const toggleTemplates = () => { 
+    const toggleTemplates = () => {
       if (!templatesOpen.value) {
         // When opening Templates, navigate to first sub-item (Marksheets)
         templatesOpen.value = true;
-        setTimeout(() => {
-          window.location.href = '#/templates/marksheets';
-        }, 10);
+        router.push('/templates/marksheets');
       } else {
         templatesOpen.value = false;
       }
@@ -85,9 +82,7 @@ export default {
     const toggleResultBook = () => {
       if (!resultBookOpen.value) {
         resultBookOpen.value = true;
-        setTimeout(() => {
-          window.location.href = '#/results/result-book/class-wise';
-        }, 10);
+        router.push('/results/result-book/class-wise');
       } else {
         resultBookOpen.value = false;
       }

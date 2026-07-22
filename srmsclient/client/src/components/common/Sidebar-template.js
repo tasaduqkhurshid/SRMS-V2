@@ -17,20 +17,20 @@ export default `
     </div>
 
     <nav class="nav flex-column px-2 py-3">
-      <a class="nav-link d-flex align-items-center" :class="{ active: isActive('/dashboard') }" href="/dashboard">
+      <router-link class="nav-link d-flex align-items-center" :class="{ active: isActive('/dashboard') }" to="/dashboard">
         <i class="fa-solid fa-tachometer-alt me-3"></i>
         <span v-if="!collapsed">Dashboard</span>
-      </a>
+      </router-link>
 
-      <a class="nav-link d-flex align-items-center" :class="{ active: isActive('/students') }" href="/students">
+      <router-link class="nav-link d-flex align-items-center" :class="{ active: isActive('/students') }" to="/students">
         <i class="fa-solid fa-user-graduate me-3"></i>
         <span v-if="!collapsed">Students</span>
-      </a>
+      </router-link>
 
-      <a class="nav-link d-flex align-items-center" :class="{ active: isActive('/students/import') }" href="/students/import">
+      <router-link class="nav-link d-flex align-items-center" :class="{ active: isActive('/students/import') }" to="/students/import">
         <i class="fa-solid fa-upload me-3"></i>
         <span v-if="!collapsed">Import Students</span>
-      </a>
+      </router-link>
 
       <!-- Academics group (collapsible) -->
       <div class="sidebar-section px-2 pt-2 mb-2">
@@ -44,20 +44,20 @@ export default `
         </div>
 
         <div :class="{ 'collapse': !academicsOpen && !collapsed }" style="overflow: hidden;">
-          <a class="nav-link d-flex align-items-center ps-3" :class="{ active: isActive('/subjects') }" href="/subjects">
+          <router-link class="nav-link d-flex align-items-center ps-3" :class="{ active: isActive('/subjects') }" to="/subjects">
             <i class="fa-solid fa-book-open me-3"></i>
             <span v-if="!collapsed">Subjects</span>
-          </a>
+          </router-link>
 
-          <a class="nav-link d-flex align-items-center ps-3" :class="{ active: isActive('/courses') }" href="/courses">
+          <router-link class="nav-link d-flex align-items-center ps-3" :class="{ active: isActive('/courses') }" to="/courses">
             <i class="fa-solid fa-graduation-cap me-3"></i>
             <span v-if="!collapsed">Courses</span>
-          </a>
+          </router-link>
 
-          <a class="nav-link d-flex align-items-center ps-3" :class="{ active: isActive('/exams') }" href="/exams">
+          <router-link class="nav-link d-flex align-items-center ps-3" :class="{ active: isActive('/exams') }" to="/exams">
             <i class="fa-solid fa-file-circle-check me-3"></i>
             <span v-if="!collapsed">Exams</span>
-          </a>
+          </router-link>
 
           <!-- Results with sub-items -->
           <div class="nav-item">
@@ -72,22 +72,22 @@ export default `
             </div>
 
             <div :class="{ 'collapse': !resultsOpen && !collapsed }" style="overflow: hidden;">
-              <a class="nav-link nav-link-sm d-flex align-items-center ps-5" :class="{ active: isActive('/results/student-wise') }" href="/results/student-wise">
+              <router-link class="nav-link nav-link-sm d-flex align-items-center ps-5" :class="{ active: isActive('/results/student-wise') }" to="/results/student-wise">
                 <i class="fa-solid fa-user me-2" style="font-size:0.85rem;"></i>
                 <span v-if="!collapsed" style="font-size:0.9rem;">Student-wise</span>
-              </a>
-              <a class="nav-link nav-link-sm d-flex align-items-center ps-5" :class="{ active: isActive('/results/course-wise') }" href="/results/course-wise">
+              </router-link>
+              <router-link class="nav-link nav-link-sm d-flex align-items-center ps-5" :class="{ active: isActive('/results/course-wise') }" to="/results/course-wise">
                 <i class="fa-solid fa-book me-2" style="font-size:0.85rem;"></i>
                 <span v-if="!collapsed" style="font-size:0.9rem;">Course-wise</span>
-              </a>
-              <a class="nav-link nav-link-sm d-flex align-items-center ps-5" :class="{ active: isActive('/results/subject-wise') }" href="/results/subject-wise">
+              </router-link>
+              <router-link class="nav-link nav-link-sm d-flex align-items-center ps-5" :class="{ active: isActive('/results/subject-wise') }" to="/results/subject-wise">
                 <i class="fa-solid fa-book-open me-2" style="font-size:0.85rem;"></i>
                 <span v-if="!collapsed" style="font-size:0.9rem;">Subject-wise</span>
-              </a>
-              <a class="nav-link nav-link-sm d-flex align-items-center ps-5" :class="{ active: isActive('/results/generate') }" href="/results/generate">
+              </router-link>
+              <router-link class="nav-link nav-link-sm d-flex align-items-center ps-5" :class="{ active: isActive('/results/generate') }" to="/results/generate">
                 <i class="fa-solid fa-file-export me-2" style="font-size:0.85rem;"></i>
                 <span v-if="!collapsed" style="font-size:0.9rem;">Generate Marksheet</span>
-              </a>
+              </router-link>
             </div>
           </div>
         </div>
@@ -99,14 +99,14 @@ export default `
         <span v-if="!collapsed">Result Book</span>
       </a>
       <div :class="{ 'collapse': !resultBookOpen && !collapsed }" style="overflow: hidden;">
-        <a class="nav-link nav-link-sm d-flex align-items-center ps-3" :class="{ active: isActive('/results/result-book/class-wise') }" href="/results/result-book/class-wise">
+        <router-link class="nav-link nav-link-sm d-flex align-items-center ps-3" :class="{ active: isActive('/results/result-book/class-wise') }" to="/results/result-book/class-wise">
           <i class="fa-solid fa-layer-group me-2" style="font-size:0.85rem"></i>
           <span v-if="!collapsed" style="font-size:0.9rem;">Class-wise</span>
-        </a>
-        <a class="nav-link nav-link-sm d-flex align-items-center ps-3" :class="{ active: isActive('/results/result-book/student-wise') }" href="/results/result-book/student-wise">
+        </router-link>
+        <router-link class="nav-link nav-link-sm d-flex align-items-center ps-3" :class="{ active: isActive('/results/result-book/student-wise') }" to="/results/result-book/student-wise">
           <i class="fa-solid fa-user me-2" style="font-size:0.85rem"></i>
           <span v-if="!collapsed" style="font-size:0.9rem;">Student-wise</span>
-        </a>
+        </router-link>
       </div>
 
       <hr class="my-1" />
@@ -123,29 +123,29 @@ export default `
         </div>
 
         <div :class="{ 'collapse': !templatesOpen && !collapsed }" style="overflow: hidden;">
-          <a class="nav-link nav-link-sm d-flex align-items-center ps-3" :class="{ active: isActive('/templates/marksheets') }" href="/templates/marksheets">
+          <router-link class="nav-link nav-link-sm d-flex align-items-center ps-3" :class="{ active: isActive('/templates/marksheets') }" to="/templates/marksheets">
             <i class="fa-solid fa-file-lines me-3" style="font-size:0.9rem;"></i>
             <span v-if="!collapsed" style="font-size:0.9rem;">Marksheets</span>
-          </a>
+          </router-link>
         </div>
       </div>
 
       <hr class="my-2" />
 
-      <a class="nav-link d-flex align-items-center" :class="{ active: isActive('/school/profile') }" href="/school/profile">
+      <router-link class="nav-link d-flex align-items-center" :class="{ active: isActive('/school/profile') }" to="/school/profile">
         <i class="fa-solid fa-landmark me-3"></i>
         <span v-if="!collapsed">School Profile</span>
-      </a>
+      </router-link>
 
-      <a class="nav-link d-flex align-items-center" :class="{ active: isActive('/settings') }" href="/settings">
+      <router-link class="nav-link d-flex align-items-center" :class="{ active: isActive('/settings') }" to="/settings">
         <i class="fa-solid fa-gear me-3"></i>
         <span v-if="!collapsed">Settings</span>
-      </a>
+      </router-link>
 
-      <a class="nav-link d-flex align-items-center" :class="{ active: isActive('/backup') }" href="/backup">
+      <router-link class="nav-link d-flex align-items-center" :class="{ active: isActive('/backup') }" to="/backup">
         <i class="fa-solid fa-cloud-arrow-up me-3"></i>
         <span v-if="!collapsed">Backup</span>
-      </a>
+      </router-link>
     </nav>
 
     <div class="sidebar-bottom px-3 py-3" v-if="!collapsed">

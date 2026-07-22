@@ -1,6 +1,4 @@
 // middleware/auth.js
-const ModelUtils = require("../utils/ModelUtils");
-const { logger } = ModelUtils;
 const jwt = require("jsonwebtoken");
 const { User } = require("../db/models");
 
@@ -12,28 +10,23 @@ const getToken = (req) => {
 };
 
 const authenticateJwt = async (req, res, next) => {
-  logger && logger.debug && logger.debug("Authenticating JWT for request:", req.method, req.originalUrl);
   const token = getToken(req);
-  if (!token) return next(); // allow public routes
+  if (!token) return res.status(401).json({ error: "Authentication required" });
 
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-  logger && logger.debug && logger.debug("Authenticated payload:", payload);
 
-    const user = await User.findOne({
-      where: { id: payload.id },
-      attributes: ["id", "username", "role", "SchoolId"],
-    });
+    const user = await User.findById(payload.id).lean();
 
     if (!user) {
       return res.status(401).json({ error: "User no longer exists" });
     }
 
     req.user = {
-      id: user.id,
+      id: user._id,
       username: user.username,
       role: user.role,
-      SchoolId: user.SchoolId,
+      school_id: user.school_id,
     };
 
     next();

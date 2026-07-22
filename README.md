@@ -155,8 +155,7 @@ docker compose exec server npm run db:setup
 Start the frontend separately:
 
 ```bash
-cd srmsclient
-bash start-client.sh
+./srmsclient/start-client.sh
 ```
 
 The frontend is available at:
@@ -164,6 +163,8 @@ The frontend is available at:
 ```text
 http://localhost
 ```
+
+In development, the frontend runs with Vite at `http://localhost:3000`. Source files are mounted into the container, so saving client files hot-reloads the browser.
 
 ## Environment Variables
 
