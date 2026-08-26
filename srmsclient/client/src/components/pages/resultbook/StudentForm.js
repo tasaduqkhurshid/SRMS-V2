@@ -18,7 +18,7 @@ export default {
             <label class="form-label">Student *</label>
             <select v-model="resultForm.student_id" @change="onSelectionChange" class="form-select">
               <option :value="null">Select Student</option>
-              <option v-for="student in students" :key="student.id" :value="student.id">
+              <option v-for="student in students" :key="student._id" :value="student._id">
                 {{ student.name }} ({{ student.roll_number }})
               </option>
             </select>
@@ -28,8 +28,8 @@ export default {
             <label class="form-label">Subject *</label>
             <select v-model="resultForm.subject_id" @change="onSelectionChange" class="form-select">
               <option :value="null">Select Subject</option>
-              <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
-                {{ subject.subject_name }}
+              <option v-for="subject in subjects" :key="subject._id" :value="subject._id">
+                {{ subject.subject_name || subject.name }}
               </option>
             </select>
           </div>

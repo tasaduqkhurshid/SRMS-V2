@@ -56,7 +56,7 @@ exports.me = async (_req, res) => {
  */
 exports.getById = async (req, res) => {
   try {
-    const schoolId = req.params.id || req.schoolData?.id || req.session?.school?.id;
+    const schoolId = req.params.id || req.schoolData?._id || req.session?.school?._id;
     if (!schoolId) {
       return res.status(400).json({ success: false, message: "School ID not found" });
     }
@@ -73,7 +73,7 @@ exports.getById = async (req, res) => {
  */
 exports.update = async (req, res) => {
   try {
-    const schoolId = req.params.id || req.schoolData?.id || req.session?.school?.id;
+    const schoolId = req.params.id || req.schoolData?._id || req.session?.school?._id;
     if (!schoolId) {
       return res.status(400).json({ success: false, message: "School ID not found" });
     }

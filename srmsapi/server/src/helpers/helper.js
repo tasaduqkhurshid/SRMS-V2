@@ -20,7 +20,7 @@ function getKeysFromArray(items = [], key = "") {
 
   // Extract values if elements are objects
   return items
-    .map((obj) => obj?.[key])
+    .map((obj) => obj?._id ?? obj?.id ?? obj?.[key])
     .filter((v) => v !== undefined && v !== null);
 }
 

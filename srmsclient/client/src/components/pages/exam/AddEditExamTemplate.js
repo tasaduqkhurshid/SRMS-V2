@@ -21,7 +21,7 @@ export default `<div class="position-fixed top-0 start-0 w-100 h-100" style="bac
           <label class="form-label">Academic Year</label>
           <select v-model="exam.academic_year_id" class="form-select">
             <option :value="null">-- choose --</option>
-            <option v-for="y in years" :value="y.id" :key="y.id">{{ y.name }}</option>
+            <option v-for="y in years" :value="y._id" :key="y._id">{{ y.name }}</option>
           </select>
         </div>
 
@@ -33,4 +33,4 @@ export default `<div class="position-fixed top-0 start-0 w-100 h-100" style="bac
     </div>
   </div>
 </div>
-</div>`;
+`;

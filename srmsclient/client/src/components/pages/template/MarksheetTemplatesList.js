@@ -80,7 +80,7 @@ export default {
     const toggleActive = async (template) => {
       try {
         const updated = await api.post(`/marksheet-templates/save`, {
-          id: template.id,
+          _id: template._id,
           is_active: !template.is_active
         })
         toast?.success?.('Template updated successfully')

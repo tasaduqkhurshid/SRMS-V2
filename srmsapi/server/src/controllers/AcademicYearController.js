@@ -14,7 +14,7 @@ const list = async (req, res) => {
 
 const get = async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = req.params.id;
     const data = await AcademicYearService.getAcademicYear(id);
     return res.json({ success: true, data });
   } catch (err) {
@@ -26,8 +26,9 @@ const get = async (req, res) => {
 const save = async (req, res) => {
   try {
     const payload = req.body || {};
+    const id = payload._id || payload.id;
     let saved;
-    if (payload.id) saved = await AcademicYearService.updateAcademicYear(payload.id, payload);
+    if (id) saved = await AcademicYearService.updateAcademicYear(id, payload);
     else saved = await AcademicYearService.createAcademicYear(payload);
     return res.json({ success: true, data: saved });
   } catch (err) {
@@ -38,7 +39,7 @@ const save = async (req, res) => {
 
 const remove = async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = req.params.id;
     await AcademicYearService.deleteAcademicYear(id);
     return res.json({ success: true });
   } catch (err) {

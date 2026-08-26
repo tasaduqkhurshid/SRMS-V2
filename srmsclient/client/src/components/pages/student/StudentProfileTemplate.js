@@ -36,7 +36,7 @@ export default `
                     <h3 class="mt-2">{{ student?.name || '—' }}</h3>
                   </div>
                   <div class="card-body">
-                    <p class="mb-2"><strong class="me-1">Student ID:</strong>{{ student?.id ?? '—' }}</p>
+                    <p class="mb-2"><strong class="me-1">Student #:</strong>{{ student?._id ?? '—' }}</p>
                     <p class="mb-2">
                       <strong class="me-1">Class:</strong>{{ student?.class || '—' }}
                       <strong class="ms-3 me-1">Section:</strong>{{ student?.section || '—' }}
@@ -106,14 +106,14 @@ export default `
                     </h3>
                     <div class="d-flex gap-2">
                       <button class="btn btn-outline-secondary btn-sm" @click="$emit('close')">Back to list</button>
-                      <button class="btn btn-primary btn-sm" @click="editStudent(student.id)">Edit</button>
+                      <button class="btn btn-primary btn-sm" @click="editStudent(student._id)">Edit</button>
                     </div>
                   </div>
                   <div class="card-body pt-0">
                     <div class="mb-2">
                       <h6>Subjects</h6>
                       <div v-if="assignedSubjects && assignedSubjects.length">
-                        <span class="badge bg-secondary me-1" v-for="s in assignedSubjects" :key="s.id">{{ s.subject_name }}</span>
+                        <span class="badge bg-secondary me-1" v-for="s in assignedSubjects" :key="s._id">{{ s.subject_name }}</span>
                       </div>
                       <div v-else class="text-muted">No subjects assigned</div>
                     </div>

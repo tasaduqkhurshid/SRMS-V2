@@ -35,7 +35,7 @@ export default `
                       type="file"
                       accept="image/*"
                       @change="onFileChange"
-                    >
+                      />
                   </div>
 
                   <!-- Clear Button -->
@@ -61,17 +61,17 @@ export default `
                 <div class="col-md-4">
                   <label class="form-label">Roll No</label>
                   <input class="form-control" v-model="student.roll_number" data-vtype="number" />
-                </div>
+                  </div>
 
                 <div class="col-md-8">
                   <label class="form-label">Name</label>
                   <input class="form-control" v-model="student.name" data-vtype="text" data-vmin="2" />
-                </div>
+                  </div>
 
                 <div class="col-md-6">
                   <label class="form-label">Father's Name</label>
                   <input class="form-control" v-model="student.father_name" data-vtype="text" />
-                </div>
+                  </div>
 
                 <div class="col-md-6">
                   <label class="form-label">Mother's Name</label>
@@ -92,7 +92,7 @@ export default `
                   <label class="form-label">Class</label>
                   <select class="form-control" v-model="student.class" data-vtype="select">
                     <option value="">Select course</option>
-                    <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.course_name }} ({{ c.course_code }})</option>
+                    <option v-for="c in courses" :key="c._id" :value="c._id">{{ c.course_name }} ({{ c.course_code }})</option>
                   </select>
                 </div>
 
@@ -134,14 +134,15 @@ export default `
                       {{ currentYearName || 'Loading...' }}
                     </option>
                     <option v-else :value="null">Select Year</option>
-                    <option v-for="year in academicYears" :key="year.id" :value="year.id">
+                    <option v-for="year in academicYears" :key="year._id" :value="year._id">
                       {{ year.name }}
                     </option>
                   </select>
                   <small v-if="mode === 'create'" class="text-muted">Auto-assigned based on current year</small>
                   <small v-else class="text-muted">Select to upgrade to new academic year</small>
                 </div>
-            </div>
+                </div>
+              </div>
 
           </div>
         </div>

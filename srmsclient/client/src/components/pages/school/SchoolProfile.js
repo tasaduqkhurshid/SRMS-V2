@@ -44,7 +44,7 @@ export default {
         errorMessage.value = ''
 
         // Get school ID from session or local storage
-        const schoolId = user.value?.school_id || schoolData.value?.id
+        const schoolId = user.value?.school_id || schoolData.value?._id
         if (!schoolId) {
           errorMessage.value = 'School ID not found'
           return
@@ -86,7 +86,7 @@ export default {
         errorMessage.value = ''
         successMessage.value = ''
 
-        const schoolId = user.value?.school_id || schoolData.value?.id
+        const schoolId = user.value?.school_id || schoolData.value?._id
         if (!schoolId) {
           errorMessage.value = 'School ID not found'
           return

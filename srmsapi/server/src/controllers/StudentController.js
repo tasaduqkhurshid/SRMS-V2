@@ -17,7 +17,7 @@ const saveStudentDetails = async (req, res) => {
       const userSchoolId = req.user.school_id || req.user.SchoolId || req.user.schoolId || null;
       if (userSchoolId) {
         // ensure we send the underscored key expected by the Student model
-        requestParams.school_id = Number(userSchoolId);
+        requestParams.school_id = userSchoolId;
       }
     }
 
@@ -49,7 +49,7 @@ const saveStudentDetails = async (req, res) => {
         mother_name: requestParams.mother_name || null,
         address: requestParams.address || null,
         pincode: requestParams.pincode || null,
-        school_id: req.user.school_id,
+        school_id: req.user?.school_id || req.user?.SchoolId || req.user?.schoolId || null,
         academic_year_id: requestParams.academic_year_id || null
       }
       student = await StudentService.updateStudent(studentId, student_obj);
@@ -84,7 +84,7 @@ const saveStudentDetails = async (req, res) => {
 
     if (student && image) {
       try {
-        const idToUse = studentId || student.id || student._id;
+        const idToUse = studentId || student._id;
   logger && logger.debug && logger.debug("saveStudentDetails: saving image for student ID =", idToUse);
 
         // Use ImageService to normalize image into { buffer, originalname, mimetype }
@@ -117,11 +117,11 @@ const saveStudentDetails = async (req, res) => {
     // ------------------- If class is a course id, assign course subjects to student -------------------
     try {
       const classVal = requestParams.class || null;
-      const classId = classVal && !Number.isNaN(Number(classVal)) ? Number(classVal) : null;
+      const classId = classVal ? String(classVal) : null;
       if (classId) {
         const StudentServiceLocal = require("../services/StudentService");
         const schoolId = req.user ? (req.user.school_id || req.user.SchoolId || req.user.schoolId || null) : null;
-        const studentIdToUse = student && (student.id || student._id) ? (student.id || student._id) : (studentId || null);
+        const studentIdToUse = student?._id || studentId || null;
         if (studentIdToUse) {
           await StudentServiceLocal.assignCourseToStudent(studentIdToUse, classId, schoolId);
         }

@@ -18,7 +18,7 @@ export default `
           <label class="form-label">Template *</label>
           <select v-model="selectedTemplate" class="form-select">
             <option :value="null">Select Template</option>
-            <option v-for="template in templates" :key="template.id" :value="template.id">
+            <option v-for="template in templates" :key="template._id" :value="template._id">
               {{ template.name }}
             </option>
           </select>
@@ -32,7 +32,7 @@ export default `
               ✓ All Students ({{ students.length }})
             </option>
             <option value="__ALL__" disabled style="border-top: 1px solid #ddd;"></option>
-            <option v-for="student in students" :key="student.id" :value="student.id">
+            <option v-for="student in students" :key="student._id" :value="student._id">
               {{ student.name }} ({{ student.roll_number }})
             </option>
           </select>
@@ -42,16 +42,16 @@ export default `
           <label class="form-label">Exams (Select Multiple) *</label>
           <div class="exam-checkboxes" style="border: 1px solid #ddd; padding: 10px; border-radius: 4px; max-height: 150px; overflow-y: auto; background-color: #f9f9f9;">
             <div v-if="exams.length === 0" class="text-muted small">No exams available</div>
-            <div v-for="exam in exams" :key="exam.id" class="form-check">
+            <div v-for="exam in exams" :key="exam._id" class="form-check">
               <input 
                 type="checkbox" 
-                :id="'exam-' + exam.id"
+                :id="'exam-' + exam._id"
                 class="form-check-input"
-                :checked="isExamSelected(exam.id)"
-                @change="toggleExam(exam.id)"
+                :checked="isExamSelected(exam._id)"
+                @change="toggleExam(exam._id)"
               />
-              <label class="form-check-label" :for="'exam-' + exam.id" style="cursor: pointer; font-size: 0.9rem;">
-                {{ exam.exam_name }}
+              <label class="form-check-label" :for="'exam-' + exam._id" style="cursor: pointer; font-size: 0.9rem;">
+                {{ exam.exam_name || exam.name }}
               </label>
             </div>
           </div>
@@ -64,8 +64,8 @@ export default `
           <label class="form-label">Course</label>
           <select v-model="selectedCourse" class="form-select">
             <option :value="null">Select Course</option>
-            <option v-for="course in courses" :key="course.id" :value="course.id">
-              {{ course.course_name }}
+            <option v-for="course in courses" :key="course._id" :value="course._id">
+              {{ course.course_name || course.name }}
             </option>
           </select>
         </div>
@@ -74,7 +74,7 @@ export default `
           <label class="form-label">Academic Year</label>
           <select v-model="selectedAcademicYear" class="form-select">
             <option :value="null">Select Year</option>
-            <option v-for="year in academicYears" :key="year.id" :value="year.id">
+            <option v-for="year in academicYears" :key="year._id" :value="year._id">
               {{ year.name }}
             </option>
           </select>

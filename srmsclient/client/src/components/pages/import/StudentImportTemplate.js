@@ -22,8 +22,8 @@ export default `
               <label class="form-label">Select Class/Course *</label>
               <select v-model="selectedCourse" class="form-select">
                 <option :value="null">Select Course</option>
-                <option v-for="course in courses" :key="course.id" :value="course.id">
-                  {{ course.course_name }}
+                <option v-for="course in courses" :key="course._id" :value="course._id">
+                  {{ course.course_name || course.name }}
                 </option>
               </select>
             </div>

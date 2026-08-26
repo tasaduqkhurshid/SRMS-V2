@@ -18,6 +18,24 @@
 
 const mongoose = require('mongoose');
 
+const normalizeObjectIds = (value, key = '', idContext = false) => {
+  const isIdField = idContext || key === '_id' || key.endsWith('_id');
+  if (Array.isArray(value)) return value.map(item => normalizeObjectIds(item, key, isIdField));
+  if (!value || typeof value !== 'object' || value instanceof mongoose.Types.ObjectId) {
+    if (isIdField && mongoose.isValidObjectId(value)) {
+      return new mongoose.Types.ObjectId(value);
+    }
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([entryKey, entryValue]) => [
+      entryKey,
+      normalizeObjectIds(entryValue, entryKey, isIdField)
+    ])
+  );
+};
+
 /* ------------------ Helpers ------------------ */
 
 /**
@@ -73,7 +91,8 @@ const createAndReturn = async (model, data) => {
  */
 const findOne = async (model, where = {}, options = {}) => {
   const normalized = normalizeWhereAndOptions(where, options);
-  let query = model.findOne(normalized.where);
+  const normalizedWhere = normalizeObjectIds(normalized.where);
+  let query = model.findOne(normalizedWhere);
 
   // Apply populate if provided
   if (normalized.options.populate) {
@@ -102,7 +121,8 @@ const findOne = async (model, where = {}, options = {}) => {
  */
 const findAll = async (model, where = {}, options = {}) => {
   const normalized = normalizeWhereAndOptions(where, options);
-  let query = model.find(normalized.where);
+  const normalizedWhere = normalizeObjectIds(normalized.where);
+  let query = model.find(normalizedWhere);
 
   // Apply populate if provided
   if (normalized.options.populate) {
@@ -148,10 +168,11 @@ const findAndCountAll = async (model, where = {}, options = {}) => {
   const normalized = normalizeWhereAndOptions(where, options);
   
   // Count total matching documents
-  const count = await model.countDocuments(normalized.where);
+  const normalizedWhere = normalizeObjectIds(normalized.where);
+  const count = await model.countDocuments(normalizedWhere);
   
   // Build the find query
-  let query = model.find(normalized.where);
+  let query = model.find(normalizedWhere);
 
   // Apply populate if provided
   if (normalized.options.populate) {
@@ -198,7 +219,7 @@ const findAndCountAll = async (model, where = {}, options = {}) => {
  */
 const count = async (model, where = {}, options = {}) => {
   const normalized = normalizeWhereAndOptions(where, options);
-  return await model.countDocuments(normalized.where);
+  return await model.countDocuments(normalizeObjectIds(normalized.where));
 };
 
 /**
@@ -207,7 +228,7 @@ const count = async (model, where = {}, options = {}) => {
  */
 const remove = async (model, where = {}, options = {}) => {
   const normalized = normalizeWhereAndOptions(where, options);
-  const result = await model.deleteMany(normalized.where);
+  const result = await model.deleteMany(normalizeObjectIds(normalized.where));
   return result.deletedCount || 0;
 };
 
@@ -238,9 +259,10 @@ const updateAndReturn = async (model, where = {}, values = {}, options = {}) => 
     values = options.values || {};
   }
 
+  const { _id, id, ...updateValues } = values || {};
   const result = await model.updateMany(
-    where || {},
-    { $set: values },
+    normalizeObjectIds(where || {}),
+    { $set: updateValues },
     { new: true }
   );
 
@@ -249,7 +271,7 @@ const updateAndReturn = async (model, where = {}, values = {}, options = {}) => 
   // Fetch the updated documents to return them
   let rows = [];
   if (affectedCount > 0) {
-    rows = await findAll(model, where || {});
+    rows = await findAll(model, normalizeObjectIds(where || {}));
   }
 
   return { affectedCount, rows };

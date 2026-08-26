@@ -23,6 +23,7 @@ export default {
       loading.value = true
       try {
         console.log('Fetching courses from /options/courses/all')
+        console.log("selectedCourse.value", selectedCourse.value)
         const res = await api.get('/options/courses/all')
         console.log('Courses response:', res.data)
         courses.value = res.data?.data || []
@@ -50,7 +51,7 @@ export default {
         toast?.error?.('Please select a file')
         return
       }
-
+      console.log("course selected ", selectedCourse.value)
       if (!selectedCourse.value) {
         toast?.error?.('Please select a course/class')
         return

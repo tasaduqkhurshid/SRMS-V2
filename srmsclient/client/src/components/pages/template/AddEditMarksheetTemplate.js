@@ -34,7 +34,7 @@ export default {
             name: response.data.data.name,
             html_content: response.data.data.html_content,
             is_active: response.data.data.is_active,
-            id: response.data.data.id
+            _id: response.data.data._id
           }
         }
       } catch (error) {
@@ -61,7 +61,7 @@ export default {
         }
 
         if (isEdit.value) {
-          payload.id = templateId.value
+          payload._id = templateId.value
         }
 
         const response = await api.post('/marksheet-templates/save', payload)

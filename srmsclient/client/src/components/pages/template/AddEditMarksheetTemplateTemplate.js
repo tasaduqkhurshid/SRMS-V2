@@ -53,7 +53,7 @@ export default `
             <div class="col-4" v-if="isEdit">
               <label class="form-label">Template ID *</label>
               <input class="form-control"
-                v-model="form.id" 
+                v-model="form._id"
                 type="text" 
                 placeholder="e.g., 12345"
               />

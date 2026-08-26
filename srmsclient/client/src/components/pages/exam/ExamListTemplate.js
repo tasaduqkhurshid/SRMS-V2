@@ -11,13 +11,13 @@ export default `<div>
       </tr>
     </thead>
     <tbody>
-      <tr v-for="exam in exams" :key="exam.id">
-        <td>{{ exam.id }}</td>
+      <tr v-for="(exam, index) in exams" :key="exam._id">
+        <td>{{ index + 1 }}</td>
         <td>{{ exam.exam_name }}</td>
         <td>{{ exam.max_marks }}</td>
         <td>{{ exam.academic_year && exam.academic_year.name ? exam.academic_year.name : '-' }}</td>
         <td>
-          <button class="btn btn-sm btn-outline-secondary" @click="editExam(exam.id)">Edit</button>
+          <button class="btn btn-sm btn-outline-secondary" @click="editExam(exam._id)">Edit</button>
         </td>
       </tr>
       <tr v-if="exams.length === 0">

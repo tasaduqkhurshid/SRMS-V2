@@ -24,23 +24,23 @@ export default {
       const q = (filter.value || '').toLowerCase().trim();
       const base = subjects.value || [];
       // exclude already selected subjects from dropdown options
-      const candidates = base.filter(s => !selectedIds.value.includes(Number(s.id)));
+      const candidates = base.filter(s => !selectedIds.value.map(String).includes(String(s._id)));
       if (!q) return candidates;
       return candidates.filter(s => {
-        const idStr = String(s.id || '');
+        const idStr = String(s._id || '');
         return idStr.includes(q) || (s.subject_name || '').toLowerCase().includes(q) || (s.subject_code || '').toLowerCase().includes(q);
       });
     });
 
     const selectedSubjects = computed(() => {
-      return selectedIds.value.map(id => subjects.value.find(s => s.id === id)).filter(Boolean);
+      return selectedIds.value.map(id => subjects.value.find(s => String(s._id) === String(id))).filter(Boolean);
     });
 
     const addSubject = (id) => {
       if (!id) return;
-      const nid = Number(id);
-      if (!selectedIds.value.includes(nid)) {
-        selectedIds.value.push(nid);
+      const strId = String(id);
+      if (!selectedIds.value.map(String).includes(strId)) {
+        selectedIds.value.push(strId);
       }
       filter.value = '';
       openDropdown.value = false;
@@ -49,8 +49,8 @@ export default {
 
     const removeSubject = (id) => {
       if (!id) return;
-      const nid = Number(id);
-      selectedIds.value = selectedIds.value.filter(x => x !== nid);
+      const strId = String(id);
+      selectedIds.value = selectedIds.value.filter(x => String(x) !== strId);
     };
 
     const highlightNext = () => {
@@ -65,12 +65,11 @@ export default {
 
     const selectHighlighted = () => {
       if (highlightedIndex.value >= 0 && filteredSubjects.value[highlightedIndex.value]) {
-        addSubject(filteredSubjects.value[highlightedIndex.value].id);
+        addSubject(filteredSubjects.value[highlightedIndex.value]._id);
       }
     };
 
     const getAllSubjects = async () => {
-      loading.value = true;
       try {
         const response = await api.get('/subjects', { params: { limit: 1000 } });
         if (response?.data?.status === 'success') {
@@ -80,30 +79,28 @@ export default {
         }
       } catch (err) {
         toast?.error?.('Failed to load subjects: ' + (err?.message || err));
-      } finally {
-        loading.value = false;
       }
     };
 
 
     const getAssignedSubjects = async () => {
       if (!props.entityId) return;
-      loading.value = true;
       try {
         const endpoint = props.entityType === 'student' ? `/students/${props.entityId}/subjects` : `/courses/${props.entityId}/subjects`;
         const response = await api.get(endpoint);
         if (response?.data?.status === 'success') {
-            console.log("response", response);
-          const ids = (response.data.data || []).map(course => course.subject && course.subject.id);
-          console.log("ids", ids);
+          const rows = response.data.data || [];
+          const ids = rows.map(row => {
+            if (row.subject?._id) return String(row.subject._id);
+            if (row.subject_id) return String(row.subject_id);
+            return row._id ? String(row._id) : null;
+          });
           selectedIds.value = ids.filter(Boolean);
         } else {
           selectedIds.value = [];
         }
       } catch (e) {
         selectedIds.value = [];
-      } finally {
-        loading.value = false;
       }
     };  
 
@@ -135,10 +132,14 @@ export default {
       }
     };
 
-    onMounted(() => {
+    onMounted(async () => {
       if (props.open && props.entityId) {
-        getAllSubjects();
-        getAssignedSubjects();
+        loading.value = true;
+        try {
+          await Promise.all([getAllSubjects(), getAssignedSubjects()]);
+        } finally {
+          loading.value = false;
+        }
       }
     });
 

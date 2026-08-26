@@ -14,7 +14,7 @@ const buildSchoolData = (school) => {
   if (!school) return null;
 
   return {
-    id: school._id,
+    _id: school._id,
     name: school.name || school.school_name,
     school_name: school.school_name,
     abbreviation: school.abbreviation,

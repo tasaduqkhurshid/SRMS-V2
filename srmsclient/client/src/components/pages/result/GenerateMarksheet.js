@@ -34,7 +34,7 @@ export default {
 
     const selectedStudentIds = computed(() => {
       if (isAllStudentsSelected.value) {
-        return students.value.map(s => s.id)
+        return students.value.map(s => s._id)
       }
       return selectedStudent.value ? [selectedStudent.value] : []
     })
@@ -132,10 +132,10 @@ export default {
       try {
         console.log('=== Marksheet Generation Start ===')
         console.log('Template ID:', selectedTemplate.value)
-        console.log('Selected template object:', templates.value.find(t => t.id === selectedTemplate.value))
+        console.log('Selected template object:', templates.value.find(t => t._id === selectedTemplate.value))
         console.log('Student(s):', selectedStudentIds.value)
         console.log('Exam IDs:', selectedExams.value)
-        console.log('Exams detail:', exams.value.filter(e => selectedExams.value.includes(e.id)))
+        console.log('Exams detail:', exams.value.filter(e => selectedExams.value.includes(e._id)))
         console.log('Academic Year ID:', selectedAcademicYear.value)
         const studentIds = selectedStudentIds.value
 
@@ -162,7 +162,7 @@ export default {
                 marksheets.push({
                   studentId,
                   html: response.data.data.html,
-                  studentName: students.value.find(s => s.id === studentId)?.name || `Student ${studentId}`
+                  studentName: students.value.find(s => s._id === studentId)?.name || `Student ${studentId}`
                 })
                 successCount++
                 console.log(`[${studentId}] ✓ Success`)
@@ -275,7 +275,7 @@ export default {
       saving.value = true
       try {
         // Find next academic year
-        const currentYearIndex = academicYears.value.findIndex(y => y.id === parseInt(selectedAcademicYear.value))
+        const currentYearIndex = academicYears.value.findIndex(y => y._id === selectedAcademicYear.value)
         if (currentYearIndex === -1 || currentYearIndex === academicYears.value.length - 1) {
           toast?.error?.('Next academic year not found')
           return

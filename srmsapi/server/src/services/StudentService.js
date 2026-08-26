@@ -259,9 +259,9 @@ const assignCourseToStudent = async (studentId, courseId, schoolId = null) => {
   const courseSubjects = await CourseService.getCourseSubjects(courseId);
   // courseSubjects may be array of { id, subject: { id, subject_name, ... } } or subject rows
   const subjectIds = (courseSubjects || []).map((r) => {
-    if (r && r.subject_id) return Number(r.subject_id);
-    if (r && r.subject && r.subject.id) return Number(r.subject.id);
-    if (r && r.id) return Number(r.id);
+    if (r && r.subject && (r.subject._id || r.subject.id)) return String(r.subject._id || r.subject.id);
+    if (r && (r.subject_id?._id || r.subject_id)) return String(r.subject_id._id || r.subject_id);
+    if (r && (r._id || r.id)) return String(r._id || r.id);
     return null;
   }).filter(Boolean);
 

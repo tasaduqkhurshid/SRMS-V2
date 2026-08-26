@@ -211,7 +211,10 @@ const generateMarksMatrix = (results = [], exams = []) => {
   const subjects = Object.values(subjectMap);
 
   const examTotals = {};
-  exams.forEach(e => examTotals[e.id] = 0);
+  exams.forEach(e => {
+    const eid = e._id || e.id;
+    examTotals[eid] = 0;
+  });
 
   let grandTotal = 0;
 
@@ -229,13 +232,14 @@ const generateMarksMatrix = (results = [], exams = []) => {
     html += `<tr><td>${sub.name}</td>`;
 
     exams.forEach(e => {
-      const m = sub.marks[e.id] || { theory: 0, lab: 0, activity: 0, attendance: 0 };
+      const eid = e._id || e.id;
+      const m = sub.marks[eid] || { theory: 0, lab: 0, activity: 0, attendance: 0 };
       const total = m.theory + m.lab + m.activity + m.attendance;
 
       html += `<td>${total}</td>`;
 
       subjectTotal += total;
-      examTotals[e.id] += total;
+      examTotals[eid] = (examTotals[eid] || 0) + total;
     });
 
     html += `<td><b>${subjectTotal}</b></td></tr>`;
@@ -245,7 +249,8 @@ const generateMarksMatrix = (results = [], exams = []) => {
   html += `<tr><td><b>Grand Total</b></td>`;
 
   exams.forEach(e => {
-    html += `<td><b>${examTotals[e.id]}</b></td>`;
+    const eid = e._id || e.id;
+    html += `<td><b>${examTotals[eid] || 0}</b></td>`;
   });
 
   html += `<td><b>${grandTotal}</b></td></tr>`;
@@ -353,7 +358,7 @@ const generateCompleteMarksheet = async (studentId, examIds = [], templateId, ac
       data: {
         html,
         metadata: {
-          student: { id: student.id, name: student.name },
+          student: { id: student._id, name: student.name },
           exams: exams.length,
           subjects: subjectCount,
           totalMarks,

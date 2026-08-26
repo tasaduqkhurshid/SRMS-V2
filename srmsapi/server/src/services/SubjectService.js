@@ -37,7 +37,7 @@ const updateSubject = async (id, payload) => {
   const where = { _id: id };
   const updatedRows = await ModelUtils.updateAndReturn(Subject, where, payload);
 
-  if (Array.isArray(updatedRows) && updatedRows.length) {
+  if (updatedRows?.rows?.length) {
     // Invalidate cache
     await RedisCacheService.del(CACHE_KEYS.SUBJECT(id));
     await RedisCacheService.del(CACHE_KEYS.SUBJECTS_LIST);

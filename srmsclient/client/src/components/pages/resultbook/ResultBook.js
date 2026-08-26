@@ -42,18 +42,18 @@ export default {
     const selectedSubjectObj = computed(() => {
       if (!selectedSubjectForClass.value) return null
       return subjectsForCourse.value.find(
-        s => String(s.id) === String(selectedSubjectForClass.value)
+        s => String(s._id) === String(selectedSubjectForClass.value)
       )
     })
 
     const selectedExamObj = computed(() => {
       if (!selectedExam.value) return null
-      return exams.value.find(e => String(e.id) === String(selectedExam.value))
+      return exams.value.find(e => String(e._id) === String(selectedExam.value))
     })
 
     const selectedCourseObj = computed(() => {
       if (!selectedCourse.value) return null
-      return courses.value.find(c => String(c.id) === String(selectedCourse.value))
+      return courses.value.find(c => String(c._id) === String(selectedCourse.value))
     })
 
     const selectedMaxMarks = computed(() => {
@@ -63,7 +63,7 @@ export default {
 
     const selectedAcademicYearObj = computed(() => {
       if (!selectedAcademicYear.value) return null
-      return academicYears.value.find(ay => String(ay.id) === String(selectedAcademicYear.value))
+      return academicYears.value.find(ay => String(ay._id) === String(selectedAcademicYear.value))
     })
 
     const notifyOrAlert = (msg, level = 'info') => {
@@ -176,18 +176,20 @@ export default {
           // Create a map of student_id -> existing result
           const resultsMap = {}
           existingResults.forEach(r => {
-            resultsMap[r.student_id] = r
+            const sid = r.student_id?._id || r.student_id || r.student
+            if (sid) resultsMap[String(sid)] = r
           })
 
           // Merge students with their existing results
           studentsForSubject.value = students.value.map(s => {
-            const result = resultsMap[s.id] || {}
+            const sid = s._id
+            const result = resultsMap[String(sid)] || {}
             return {
-              id: s.id, // Use result id if exists, else student id
-              student_id: s.id,
+              id: sid,
+              student_id: sid,
               name: s.name,
               roll_number: s.roll_number,
-              result_id: result.id || null,
+              result_id: result._id || null,
               marks: {
                 theory: result.theory_marks ?? null,
                 lab: result.lab_marks ?? null,
@@ -200,7 +202,15 @@ export default {
         } catch (error) {
           console.error(error)
           // If API fails, just use students without marks
-          studentsForSubject.value = students.value || []
+          studentsForSubject.value = (students.value || []).map(s => ({
+            id: s._id,
+            student_id: s._id,
+            name: s.name,
+            roll_number: s.roll_number,
+            result_id: null,
+            marks: { theory: null, lab: null, attendance: null, activity: null },
+            total_marks: null
+          }))
         }
         return
       }
@@ -222,18 +232,21 @@ export default {
         }
         
         // Transform results to include student info
-        studentsForSubject.value = results.map(r => ({
-          id: r.student_id,
-          student_id: r.student_id,
-          student_name: r.Student?.name || r.student_name || 'Unknown',
-          name: r.Student?.name || r.student_name || 'Unknown',
-          theory_marks: r.theory_marks,
-          lab_marks: r.lab_marks,
-          attendance_marks: r.attendance_marks,
-          activity_marks: r.activity_marks,
-          total_marks: r.total_marks,
-          result_id: r.id
-        }))
+        studentsForSubject.value = results.map(r => {
+          const sid = r.student_id?._id || r.student_id
+          return {
+            id: sid,
+            student_id: sid,
+            student_name: r.student_id?.name || r.Student?.name || r.student_name || 'Unknown',
+            name: r.student_id?.name || r.Student?.name || r.student_name || 'Unknown',
+            theory_marks: r.theory_marks,
+            lab_marks: r.lab_marks,
+            attendance_marks: r.attendance_marks,
+            activity_marks: r.activity_marks,
+            total_marks: r.total_marks,
+            result_id: r._id
+          }
+        })
       } catch (error) {
         console.error(error)
         studentsForSubject.value = []
@@ -250,16 +263,18 @@ export default {
           return
         }
 
+        const ayId = selectedAcademicYearObj.value._id
+
         // Add academic_year_id to each row
         const dataWithYear = data.map(row => ({
           ...row,
-          academic_year_id: selectedAcademicYearObj.value.id
+          academic_year_id: ayId
         }))
 
         // data is an array of result objects, use bulk save endpoint
         await api.post('/results/save-class-result', { 
           rows: dataWithYear,
-          academic_year_id: selectedAcademicYearObj.value.id 
+          academic_year_id: ayId 
         })
         notifyOrAlert('Results saved successfully', 'success')
         loadStudentsForSubject()
@@ -279,13 +294,15 @@ export default {
           return
         }
 
+        const ayId = selectedAcademicYearObj.value._id
+
         // If there's an existing result_id, update it; otherwise create new
         const payload = {
-          id: updatedRow.result_id || null,
-          student_id: Number(updatedRow.student_id),
-          exam_id: Number(updatedRow.exam_id),
-          subject_id: Number(updatedRow.subject_id),
-          academic_year_id: selectedAcademicYearObj.value.id,
+          _id: updatedRow.result_id || null,
+          student_id: updatedRow.student_id,
+          exam_id: updatedRow.exam_id,
+          subject_id: updatedRow.subject_id,
+          academic_year_id: ayId,
           theory_marks: parseFloat(updatedRow.marks?.theory) || 0,
           lab_marks: parseFloat(updatedRow.marks?.lab) || 0,
           attendance_marks: parseFloat(updatedRow.marks?.attendance) || 0,
@@ -294,18 +311,18 @@ export default {
         }
 
         if (updatedRow.result_id) {
-          payload.id = updatedRow.result_id
+          payload._id = updatedRow.result_id
         }
 
         const res = await api.post('/results/save', payload)
         
         // Get the saved result id (for new records)
-        const savedId = res.data?.data?.id || updatedRow.result_id
+        const savedId = res.data?.data?._id || updatedRow.result_id
         
         notifyOrAlert('Marks updated successfully', 'success')
         
         // Update local state with nested marks format
-        const index = studentsForSubject.value.findIndex(s => s.id === updatedRow.student_id)
+        const index = studentsForSubject.value.findIndex(s => s._id === updatedRow.student_id)
         if (index !== -1) {
           studentsForSubject.value[index] = {
             ...studentsForSubject.value[index],
@@ -389,8 +406,8 @@ export default {
               resultRows.push({
                 student_id: studentId,
                 exam_id: selectedExam.value,
-                subject_id: subject.id,
-                academic_year_id: selectedAcademicYearObj.value.id,
+                subject_id: subject._id,
+                academic_year_id: selectedAcademicYearObj.value._id,
                 theory_marks: theory,
                 lab_marks: lab,
                 attendance_marks: attendance,
@@ -410,7 +427,7 @@ export default {
 
           await api.post('/results/save-class-result', { 
             rows: resultRows,
-            academic_year_id: selectedAcademicYearObj.value.id 
+            academic_year_id: selectedAcademicYearObj.value._id
           })
 
           notifyOrAlert(`Imported ${resultRows.length} results`, 'success')
@@ -452,8 +469,8 @@ export default {
 
         const courseSubjects = courseSubjectsRes.data?.data || []
 
-        const exam = exams.value.find(e => e.id === selectedExam.value)
-        const course = courses.value.find(c => c.id === selectedCourse.value)
+        const exam = exams.value.find(e => e._id === selectedExam.value)
+        const course = courses.value.find(c => c._id === selectedCourse.value)
 
         let subjectsToExport = []
 
@@ -474,7 +491,7 @@ export default {
 
         await generateResultsTemplate(
           subjectsToExport,
-          students.value.sort((a,b)=>a.id-b.id),
+          students.value.slice().sort((a, b) => (a.roll_number || '').localeCompare(b.roll_number || '')),
           course?.course_code || 'Course',
           exam?.exam_name || 'Exam',
           course?.course_name || ''
@@ -522,10 +539,10 @@ export default {
         if (academicYears.value.length > 0) {
           const found = academicYears.value.find(ay => ay.name === currentAcademicYear)
           if (found) {
-            selectedAcademicYear.value = found.id
+            selectedAcademicYear.value = found._id
           } else if (academicYears.value.length > 0) {
             // If exact match not found, select the first one (most recent)
-            selectedAcademicYear.value = academicYears.value[0].id
+            selectedAcademicYear.value = academicYears.value[0]._id
           }
         }
       }

@@ -17,7 +17,7 @@ class LocalStorageService {
   static saveSchoolData(schoolData) {
     try {
       const data = {
-        id: schoolData.id,
+        _id: schoolData._id,
         name: schoolData.name,
         abbreviation: schoolData.abbreviation || null,
         email: schoolData.email || null,
@@ -51,7 +51,15 @@ class LocalStorageService {
   static getSchoolData() {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SCHOOL);
-      return data ? JSON.parse(data) : null;
+      if (!data) return null;
+
+      const schoolData = JSON.parse(data);
+      if (!schoolData._id && schoolData.id) {
+        schoolData._id = schoolData.id;
+        delete schoolData.id;
+        localStorage.setItem(STORAGE_KEYS.SCHOOL, JSON.stringify(schoolData));
+      }
+      return schoolData;
     } catch (error) {
       console.error('Error reading school data from local storage:', error);
       return null;

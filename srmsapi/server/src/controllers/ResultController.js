@@ -15,7 +15,7 @@ const list = async (req, res) => {
 
 const get = async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = req.params.id;
     const data = await ResultService.getResultById(id);
     return res.json({ success: true, data });
   } catch (err) {
@@ -40,8 +40,9 @@ const save = async (req, res) => {
     }
     
     let saved;
-    if (payload.id) {
-      saved = await ResultService.updateResultById(payload.id, payload);
+    const resId = payload._id || payload.id;
+    if (resId) {
+      saved = await ResultService.updateResultById(resId, payload);
     } else {
       saved = await ResultService.createNewResult(payload);
     }
@@ -77,7 +78,7 @@ const bulkSave = async (req, res) => {
 
 const remove = async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = req.params.id;
     await ResultService.deleteResultById(id);
     return res.json({ success: true });
   } catch (err) {
@@ -99,10 +100,10 @@ const generateMarksheet = async (req, res) => {
     }
 
     const result = await ResultService.generateCompleteMarksheet(
-      Number(student_id),
-      exam_ids.map(id => Number(id)),
-      Number(template_id),
-      academic_year_id ? Number(academic_year_id) : null
+      student_id,
+      exam_ids,
+      template_id,
+      academic_year_id || null
     );
 
     if (!result.success) {

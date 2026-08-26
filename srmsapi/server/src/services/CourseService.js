@@ -118,11 +118,11 @@ const getCourseSubjects = async (courseId) => {
  */
 const setCourseSubjects = async (courseId, subjectIds = [], schoolId = null) => {
   if (!courseId) throw new Error("courseId is required");
-  const ids = Array.isArray(subjectIds) ? subjectIds.map(v => Number(v)).filter(Boolean) : [];
+  const ids = Array.isArray(subjectIds) ? subjectIds.map(v => String(v)).filter(Boolean) : [];
 
   // read existing subject ids for this course to determine added / removed
   const existingRows = await ModelUtils.findAll(CourseSubject, { course_id: courseId });
-  const existingIds = (existingRows || []).map(r => Number(r.subject_id)).filter(Boolean);
+  const existingIds = (existingRows || []).map(r => String(r.subject_id)).filter(Boolean);
 
   const toAdd = ids.filter(id => !existingIds.includes(id));
   const toRemove = existingIds.filter(id => !ids.includes(id));
@@ -150,7 +150,7 @@ const setCourseSubjects = async (courseId, subjectIds = [], schoolId = null) => 
   try {
     // find students in this course
     const students = await ModelUtils.findAll(Student, { class: courseId });
-    const studentIds = (students || []).map(s => s.id).filter(Boolean);
+    const studentIds = (students || []).map(s => s._id).filter(Boolean);
 
     // For added subject ids: upsert StudentSubject for every student
     if (toAdd.length && studentIds.length) {

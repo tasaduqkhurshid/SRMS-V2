@@ -24,8 +24,11 @@ export default {
         if (props.mode === 'edit' && props.examId) {
           const res = await api.get(`/exams/${props.examId}`);
           if (res?.data?.success) exam.value = res.data.data || {};
+          else toast?.error?.(res?.data?.error || 'Failed to load exam');
         }
-      } catch (e) {}
+      } catch (e) {
+        toast?.error?.(e.response?.data?.error || 'Failed to load exam');
+      }
       finally { loading.value = false; }
     };
 
@@ -40,7 +43,7 @@ export default {
           toast?.error?.(res?.data?.message || 'Save failed');
         }
       } catch (e) {
-        toast?.error?.('Save failed');
+        toast?.error?.(e.response?.data?.error || 'Save failed');
       } finally { saving.value = false; }
     };
 

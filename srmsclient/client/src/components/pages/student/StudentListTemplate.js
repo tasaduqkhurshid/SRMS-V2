@@ -12,7 +12,7 @@ export default `
     <table class="table table-bordered table-sm align-middle">
       <thead class="table-light">
         <tr>
-          <th style="width: 60px;">ID</th>
+          <th style="width: 60px;">#</th>
           <th>Roll</th>
           <th>Name</th>
           <th>Class</th>
@@ -24,8 +24,8 @@ export default `
         </tr>
       </thead>
       <tbody>
-        <tr v-for="student in students" :key="student.id">
-          <td>{{ student.id }}</td>
+        <tr v-for="(student, index) in students" :key="student._id">
+          <td>{{ index + 1 }}</td>
           <td>{{ student.roll_number }}</td>
           <td>{{ student.name }}</td>
           <td>{{ student.class }}</td>
@@ -36,16 +36,16 @@ export default `
           <td class="text-center">
 
             <div class="btn-group btn-group-sm">
-              <button class="btn btn-light border" title="View Profile" @click="viewStudent(student.id)">
+              <button class="btn btn-light border" title="View Profile" @click="viewStudent(student._id)">
                 <i class="fa-solid fa-user"></i>
               </button>
-              <button class="btn btn-light border" title="Edit" @click="editStudent(student.id)">
+              <button class="btn btn-light border" title="Edit" @click="editStudent(student._id)">
                 <i class="fa-solid fa-pen-to-square"></i>
               </button>
-              <button class="btn btn-light border" title="Assign Subjects" @click="assignStudent(student.id)">
+              <button class="btn btn-light border" title="Assign Subjects" @click="assignStudent(student._id)">
                 <i class="fa-solid fa-book-open"></i>
               </button>
-              <button class="btn btn-light border text-danger" title="Delete" @click="deleteStudent(student.id)">
+              <button class="btn btn-light border text-danger" title="Delete" @click="deleteStudent(student._id)">
                 <i class="fa-solid fa-trash"></i>
               </button>
             </div>

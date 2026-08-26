@@ -9,7 +9,7 @@ export default {
   props: {
     open: Boolean,
     mode: { type: String, default: "create" },
-    studentId: { type: [Number, null], default: null }
+    studentId: { type: [String, Number], default: null }
   },
   emits: ["close", "saved"],
 
@@ -49,7 +49,7 @@ export default {
         const currentYear = academicYears.value[0];
         return currentYear?.name || 'Current Year';
       }
-      const selected = academicYears.value.find(y => y.id === student.value.academic_year_id);
+      const selected = academicYears.value.find(y => y._id === student.value.academic_year_id);
       return selected?.name || 'Current Year';
     });
 
@@ -96,12 +96,12 @@ export default {
             mother_name: studentData?.mother_name || "",
             address: studentData?.address || "",
             pincode: studentData?.pincode || "",
-            class: studentData?.class ? Number(studentData.class) : "",
+            class: studentData?.class || "",
             section: studentData?.section || "",
             gender: studentData?.gender || "",
             dob: studentData?.dob ? studentData.dob.slice(0, 10) : "",
             admission_number: studentData?.admission_number || "",
-            academic_year_id: studentData?.academic_year_id ? Number(studentData.academic_year_id) : null,
+            academic_year_id: studentData?.academic_year_id || null,
             image: (imageData?.url || imageData?.image || imageData?.image_url) || studentData?.imageUrl || studentData?.image || ""
           };
 
@@ -111,7 +111,7 @@ export default {
           toast.error(res.data?.message || "Failed to load student");
         }
       } catch (err) {
-        toast.error("Failed to load student");
+        toast.error(err.response?.data?.message || "Failed to load student");
       } finally {
         saving.value = false;
       }

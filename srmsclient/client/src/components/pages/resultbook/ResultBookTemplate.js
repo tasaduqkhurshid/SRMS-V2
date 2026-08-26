@@ -27,7 +27,7 @@ export default `
             <label class="form-label">Academic Year</label>
             <select v-model="selectedAcademicYear" class="form-select">
               <option :value="null">Select Year</option>
-              <option v-for="year in academicYears" :key="year.id" :value="year.id">
+              <option v-for="year in academicYears" :key="year._id" :value="year._id">
                 {{ year.name }}
               </option>
             </select>
@@ -37,8 +37,8 @@ export default `
             <label class="form-label">Exam *</label>
             <select v-model="selectedExam" class="form-select">
               <option :value="null">Select Exam</option>
-              <option v-for="exam in exams" :key="exam.id" :value="exam.id">
-                {{ exam.exam_name }}
+              <option v-for="exam in exams" :key="exam._id" :value="exam._id">
+                {{ exam.exam_name || exam.name }}
               </option>
             </select>
           </div>
@@ -47,8 +47,8 @@ export default `
             <label class="form-label">Class/Course *</label>
             <select v-model="selectedCourse" @change="fetchStudentsByClass" class="form-select">
               <option :value="null">Select Class</option>
-              <option v-for="course in courses" :key="course.id" :value="course.id">
-                {{ course.course_name }}
+              <option v-for="course in courses" :key="course._id" :value="course._id">
+                {{ course.course_name || course.name }}
               </option>
             </select>
           </div>
@@ -85,8 +85,8 @@ export default `
                 <label class="form-label">Subject</label>
                 <select v-model="selectedSubjectForClass" @change="loadStudentsForSubject" class="form-select">
                   <option :value="null">Select Subject</option>
-                  <option v-for="s in subjectsForCourse" :key="s.id" :value="s.id">
-                    {{ s.subject_name }}
+                  <option v-for="s in subjectsForCourse" :key="s._id" :value="s._id">
+                    {{ s.subject_name || s.name }}
                   </option>
                 </select>
               </div>
@@ -136,8 +136,8 @@ export default `
             <select v-model="selectedSubjectForClass" class="form-select">
               <option :value="null">Select Subject</option>
               <option value="__ALL__">All Subjects</option>
-              <option v-for="s in subjectsForCourse" :key="s.id" :value="s.id">
-                {{ s.subject_name }}
+              <option v-for="s in subjectsForCourse" :key="s._id" :value="s._id">
+                {{ s.subject_name || s.name }}
               </option>
             </select>
 

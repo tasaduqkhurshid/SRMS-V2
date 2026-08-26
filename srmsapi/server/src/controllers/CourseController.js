@@ -41,8 +41,12 @@ const getCourse = async (req, res) => {
 
 const saveCourse = async (req, res) => {
   try {
-    const payload = req.body || {};
-    const id = payload.id || null;
+    const requestPayload = req.body || {};
+    const id = requestPayload._id || null;
+    const { _id, ...payload } = requestPayload;
+    if (req.user && !payload.school_id) {
+      payload.school_id = req.user.school_id || req.user.SchoolId || req.user.schoolId || null;
+    }
     let result;
     if (id) result = await CourseService.updateCourse(id, payload);
     else result = await CourseService.createCourse(payload);

@@ -44,6 +44,7 @@ export default `
       <table class="table table-hover mb-0">
         <thead class="table-light">
           <tr>
+            <th>#</th>
             <th>Template Name</th>
             <th>Status</th>
             <th>Created</th>
@@ -52,14 +53,15 @@ export default `
         </thead>
         <tbody>
           <tr v-if="loading" class="text-center">
-            <td colspan="4">
+            <td colspan="5">
               <span class="spinner-border spinner-border-sm me-2"></span>Loading...
             </td>
           </tr>
           <tr v-else-if="templates.length === 0" class="text-center">
-            <td colspan="4" class="text-muted">No templates found</td>
+            <td colspan="5" class="text-muted">No templates found</td>
           </tr>
-          <tr v-for="tmpl in templates" :key="tmpl.id">
+          <tr v-for="(tmpl, index) in templates" :key="tmpl._id">
+            <td>{{ index + 1 }}</td>
             <td>{{ tmpl.name }}</td>
             <td>
               <span v-if="tmpl.is_active" class="badge bg-success">Active</span>
@@ -69,7 +71,7 @@ export default `
             <td>
               <div class="btn-group btn-group-sm" role="group">
                 <button 
-                  @click="editTemplate(tmpl.id)" 
+                  @click="editTemplate(tmpl._id)" 
                   class="btn btn-outline-primary"
                   title="Edit"
                 >
@@ -83,7 +85,7 @@ export default `
                   <i :class="tmpl.is_active ? 'fa-solid fa-times' : 'fa-solid fa-check'"></i>
                 </button>
                 <button 
-                  @click="deleteTemplate(tmpl.id)" 
+                  @click="deleteTemplate(tmpl._id)" 
                   class="btn btn-outline-danger"
                   title="Delete"
                 >

@@ -40,7 +40,7 @@ export default {
       saving.value = true;
       try {
         const payload = { ...subject.value };
-        if (props.mode === "edit" && props.subjectId) payload.subjectId = props.subjectId;
+        if (props.mode === "edit" && props.subjectId) payload._id = props.subjectId;
 
         const res = await api.post("/subjects/save", payload);
         if (res?.data?.status === "success") {

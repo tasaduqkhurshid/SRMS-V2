@@ -15,8 +15,8 @@ export default `
           <label class="form-label">Subject</label>
           <select v-model="filters.subject_id" class="form-select">
             <option :value="null">All Subjects</option>
-            <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
-              {{ subject.subject_name }}
+            <option v-for="subject in subjects" :key="subject._id" :value="subject._id">
+              {{ subject.subject_name || subject.name }}
             </option>
           </select>
         </div>
@@ -25,8 +25,8 @@ export default `
           <label class="form-label">Exam</label>
           <select v-model="filters.exam_id" class="form-select">
             <option :value="null">All Exams</option>
-            <option v-for="exam in exams" :key="exam.id" :value="exam.id">
-              {{ exam.exam_name }}
+            <option v-for="exam in exams" :key="exam._id" :value="exam._id">
+              {{ exam.exam_name || exam.name }}
             </option>
           </select>
         </div>
@@ -35,7 +35,7 @@ export default `
           <label class="form-label">Academic Year</label>
           <select v-model="filters.academic_year_id" class="form-select">
             <option :value="null">All Years</option>
-            <option v-for="year in academicYears" :key="year.id" :value="year.id">
+            <option v-for="year in academicYears" :key="year._id" :value="year._id">
               {{ year.name }}
             </option>
           </select>
@@ -83,17 +83,17 @@ export default `
           <tr v-else-if="results.length === 0" class="text-center">
             <td colspan="10" class="text-muted">No results found</td>
           </tr>
-          <tr v-for="result in results" :key="result.id">
-            <td>{{ result.Student?.name || '-' }}</td>
-            <td>{{ result.Student?.roll_number || '-' }}</td>
-            <td>{{ result.Exam?.name || '-' }}</td>
-            <td>{{ result.Subject?.name || '-' }}</td>
+          <tr v-for="result in results" :key="result._id">
+            <td>{{ result.student_id?.name || result.Student?.name || '-' }}</td>
+            <td>{{ result.student_id?.roll_number || result.Student?.roll_number || '-' }}</td>
+            <td>{{ result.exam_id?.exam_name || result.Exam?.name || '-' }}</td>
+            <td>{{ result.subject_id?.subject_name || result.Subject?.name || '-' }}</td>
             <td>{{ result.theory_marks || 0 }}</td>
             <td>{{ result.lab_marks || 0 }}</td>
             <td>{{ result.attendance_marks || 0 }}</td>
             <td>{{ result.activity_marks || 0 }}</td>
             <td><strong>{{ result.total_marks || 0 }}</strong></td>
-            <td>{{ result.AcademicYear?.name || '-' }}</td>
+            <td>{{ result.academic_year_id?.name || result.AcademicYear?.name || '-' }}</td>
           </tr>
         </tbody>
       </table>

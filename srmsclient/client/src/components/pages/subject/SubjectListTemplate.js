@@ -9,7 +9,7 @@ export default `
     <table class="table table-bordered table-sm align-middle">
       <thead class="table-light">
         <tr>
-          <th style="width: 60px;">ID</th>
+          <th style="width: 60px;">#</th>
           <th>Code</th>
           <th>Name</th>
           <th>Theory</th>
@@ -18,18 +18,18 @@ export default `
         </tr>
       </thead>
       <tbody>
-        <tr v-for="s in subjects" :key="s.id">
-          <td>{{ s.id }}</td>
+        <tr v-for="(s, index) in subjects" :key="s._id">
+          <td>{{ index + 1 }}</td>
           <td>{{ s.subject_code }}</td>
           <td>{{ s.subject_name }}</td>
           <td>{{ s.has_theory ? 'Yes' : 'No' }}</td>
           <td>{{ s.has_lab ? 'Yes' : 'No' }}</td>
           <td class="text-center">
             <div class="btn-group btn-group-sm">
-              <button class="btn btn-light border" title="Edit" @click="editSubject(s.id)">
+              <button class="btn btn-light border" title="Edit" @click="editSubject(s._id)">
                 <i class="fa-solid fa-pen-to-square"></i>
               </button>
-              <button class="btn btn-light border text-danger" title="Delete" @click="deleteSubject(s.id)">
+              <button class="btn btn-light border text-danger" title="Delete" @click="deleteSubject(s._id)">
                 <i class="fa-solid fa-trash"></i>
               </button>
             </div>

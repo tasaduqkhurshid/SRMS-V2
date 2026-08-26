@@ -27,7 +27,7 @@ const getAllExams = async (req, res) => {
 
 const get = async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = req.params.id;
     const exam = await ExamService.getExam(id);
     return res.json({ success: true, data: exam });
   } catch (err) {
@@ -38,9 +38,14 @@ const get = async (req, res) => {
 
 const save = async (req, res) => {
   try {
-    const payload = req.body || {};
+    const requestPayload = req.body || {};
+    const id = requestPayload._id || null;
+    const { _id, ...payload } = requestPayload;
+    if (req.user && !payload.school_id) {
+      payload.school_id = req.user.school_id || req.user.SchoolId || req.user.schoolId || null;
+    }
     let saved;
-    if (payload.id) saved = await ExamService.updateExam(payload.id, payload);
+    if (id) saved = await ExamService.updateExam(id, payload);
     else saved = await ExamService.createExam(payload);
     return res.json({ success: true, data: saved });
   } catch (err) {
@@ -51,7 +56,7 @@ const save = async (req, res) => {
 
 const remove = async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = req.params.id;
     await ExamService.deleteExam(id);
     return res.json({ success: true });
   } catch (err) {
@@ -64,7 +69,7 @@ const remove = async (req, res) => {
 
 const initializeResults = async (req, res) => {
   try {
-    const examId = Number(req.params.id);
+    const examId = req.params.id;
     const { course_id } = req.body || {};
     const count = await ExamService.initializeResults(examId, course_id);
     return res.json({ success: true, data: { created: count } });

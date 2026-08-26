@@ -42,12 +42,12 @@ const saveSubject = async (req, res) => {
     // ensure school_id from authenticated user if available
     if (req.user) {
       const userSchoolId = req.user.school_id || req.user.SchoolId || req.user.schoolId || null;
-      if (userSchoolId) requestParams.school_id = Number(userSchoolId);
+      if (userSchoolId) requestParams.school_id = userSchoolId;
     }
 
     logger && logger.debug && logger.debug("saveSubject requestParams:", requestParams);
 
-    const subjectId = requestParams.subjectId || requestParams.id || null;
+    const subjectId = requestParams._id || null;
 
     if (!subjectId && (!requestParams.subject_name || !requestParams.subject_code)) {
       return res.status(STATUS.BAD_REQUEST).json({ status: "error", message: "subject_name and subject_code are required" });
