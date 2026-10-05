@@ -49,4 +49,119 @@ button:focus-visible{outline:3px solid #8db2ff;outline-offset:2px}
 .admin-role{display:inline-flex;padding:5px 9px;border-radius:999px;background:#e7efff;color:#315bb0;font-size:10px;font-weight:700;letter-spacing:.04em}
 @media(max-width:700px){.school-stats{grid-template-columns:1fr}.school-stats article{padding:14px 16px}}
 
+/* Two-page book layout for the platform sign-in */
+.login-page{min-height:100vh;padding:34px;background:radial-gradient(ellipse at 15% 15%,#d9e6ff 0,transparent 42%),linear-gradient(135deg,#eff4ff,#f8f8fc 65%,#e8edfb)}
+.login-book{width:min(1120px,100%);min-height:min(680px,calc(100vh - 68px));display:grid;grid-template-columns:1.04fr .96fr;overflow:hidden;border:1px solid #dce4f6;border-radius:22px;background:#fff;box-shadow:0 28px 90px #192d5a24;position:relative}
+.book-page{min-width:0;position:relative}
+.welcome-page{display:flex;flex-direction:column;padding:44px 48px 34px;color:#fff;background:radial-gradient(circle at 85% 12%,#387be0 0,transparent 28%),radial-gradient(circle at 90% 90%,#4322cf 0,transparent 45%),linear-gradient(145deg,#101f5b 0%,#123783 54%,#17105c 100%)}
+.welcome-page:after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 54%,#ffffff0a 54.2%,transparent 54.5%);pointer-events:none}
+.welcome-brand{height:142px;display:flex;align-items:flex-start;position:relative;z-index:1}
+.welcome-brand img{width:220px;height:136px;object-fit:contain;object-position:left center;filter:drop-shadow(0 8px 20px #030d2c35)}
+.welcome-copy{max-width:480px;margin:auto 0 36px;position:relative;z-index:1}
+.welcome-copy .eyebrow{color:#b9d3ff;margin-bottom:15px}
+.welcome-copy h1{margin:0;color:#fff;font:800 clamp(31px,4vw,47px)/1.13 Manrope,sans-serif;letter-spacing:-.04em}
+.welcome-copy h1 span{color:#a7d8ff}
+.welcome-copy>p:last-child{max-width:390px;margin:16px 0 0;color:#d8e4ff;font-size:15px;line-height:1.7}
+.login-features{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;position:relative;z-index:1}
+.login-features>div{min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border:1px solid #ffffff25;border-radius:13px;background:#ffffff12;text-align:center;backdrop-filter:blur(8px)}
+.login-features strong{color:#f3f6ff;font-size:11px;line-height:1.4;font-weight:600}
+.feature-icon{height:35px;width:38px;display:grid;place-items:center;border-radius:11px;color:#fff;background:#ffffff20;font-size:21px;font-weight:800;letter-spacing:-5px;padding-right:4px}
+.academics-icon{color:#60dcff;font-size:32px;letter-spacing:0}.exams-icon{color:#ffcf5e;font-size:24px;letter-spacing:0}.reports-icon{color:#e0a8ff;font-size:26px;letter-spacing:0}
+.welcome-motto{margin:auto 0 0;padding-top:28px;color:#d6e0ff;font-size:12px;letter-spacing:.12em;text-transform:uppercase;position:relative;z-index:1}
+.welcome-motto i{padding:0 6px;color:#58d7ff;font-style:normal}
+.signin-page{display:grid;place-items:center;padding:48px;background:linear-gradient(145deg,#fff,#fbfcff)}
+.signin-content{width:min(100%,380px)}
+.signin-logo{display:block;width:134px;height:116px;object-fit:contain;margin:0 auto 3px}
+.signin-eyebrow{text-align:center;margin:0 0 8px;color:#5742d9}
+.signin-content h2{text-align:center;margin:0;color:#142452;font:800 30px Manrope,sans-serif;letter-spacing:-.035em}
+.signin-subtitle{text-align:center;margin:9px 0 30px}
+.signin-content form{display:grid;gap:17px;margin:0}
+.signin-content label{display:grid;gap:8px;color:#25375b;font-size:13px;font-weight:700}
+.signin-content input{height:49px;width:100%;border:1px solid #dce3f0;border-radius:10px;padding:0 14px;outline:none;background:#fff;color:#1c2b4a;font-size:14px;transition:border-color .18s,box-shadow .18s}
+.signin-content input:focus{border-color:#5341db;box-shadow:0 0 0 4px #5341db16}
+.password-input{position:relative;display:block}
+.password-input input{padding-right:49px}
+.password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:7px;background:transparent;color:#7b87a0}
+.password-toggle:hover{background:#f0f2fa;color:#4839ca}
+.password-toggle svg,.signin-button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.signin-button{height:50px;display:flex;align-items:center;justify-content:center;gap:12px;margin-top:3px;background:linear-gradient(100deg,#4b15dd,#3210bc);box-shadow:0 9px 20px #4619d42b;font-size:14px}
+.signin-button:hover:not(:disabled){background:linear-gradient(100deg,#3e0fc5,#260b9f)}
+.signin-divider{display:flex;align-items:center;gap:14px;margin:28px 0 18px;color:#8691a8;font-size:10px;font-weight:700;letter-spacing:.1em;white-space:nowrap}
+.signin-divider:before,.signin-divider:after{content:"";height:1px;flex:1;background:#e3e8f1}
+.signin-content>small{display:block;text-align:center;color:#8993a8;font-size:11px;line-height:1.5}
+.login-page{padding:28px}
+.login-book{width:min(1440px,100%);min-height:min(820px,calc(100vh - 56px))}
+.welcome-brand{width:260px;height:130px;align-items:center;justify-content:center;padding:7px 16px;border:1px solid #ffffffcf;border-radius:16px;background:linear-gradient(145deg,#fff,#f0f5ff);box-shadow:0 12px 28px #06134438}
+.welcome-brand img{width:100%;height:100%;object-position:center}
+@media(max-width:820px){.login-page{padding:20px}.login-book{min-height:calc(100vh - 40px)}}
+@media(max-width:620px){.login-page{padding:12px}.login-book{min-height:auto}.welcome-brand{width:150px;height:78px;padding:4px 8px;border-radius:12px}}
+
+/* Reference design: campus welcome page beside the platform sign-in */
+.login-page{padding:20px;place-items:center;background:linear-gradient(135deg,#eef1ff,#f7f7fc 55%,#e6eaff)}
+.login-book{width:min(1600px,100%);height:min(760px,calc(100vh - 40px));min-height:620px;grid-template-columns:55% 45%;border-radius:16px;box-shadow:0 22px 70px #20275a20}
+.welcome-page{padding:38px 54px 27px;background-image:linear-gradient(90deg,#071044c7 0%,#11185c80 52%,#101b5130 100%),url('/assets/login-campus.png');background-size:cover;background-position:center;isolation:isolate}
+.welcome-page:after{display:none}
+.welcome-brand{width:auto;height:112px;align-self:flex-start;display:flex;align-items:center;justify-content:flex-start;gap:14px;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.welcome-brand img{width:116px;height:108px;object-fit:contain;object-position:center;filter:none}
+.welcome-brand>div{display:grid;gap:1px;color:#fff;text-shadow:0 2px 8px #05103f66}
+.welcome-brand strong{font:800 42px/1 Manrope,sans-serif;letter-spacing:.015em}
+.welcome-brand span{font-size:12px;font-weight:800;letter-spacing:.09em}
+.welcome-brand small{margin-top:7px;font-size:9px;letter-spacing:.22em}
+.welcome-brand i{padding:0 5px;color:#bdc9ff;font-style:normal}
+.welcome-copy{max-width:470px;margin:33px 0 25px;z-index:1}
+.welcome-copy h1{font-size:clamp(33px,3.25vw,45px);line-height:1.12;letter-spacing:-.035em}
+.welcome-copy h1 span{color:#48c9ff}
+.welcome-copy>p:last-child{max-width:430px;margin-top:13px;color:#e2e8ff;font-size:15px;line-height:1.5}
+.login-features{max-width:475px;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;z-index:1}
+.login-features>div{min-height:108px;gap:9px;border:0;border-radius:12px;background:transparent;backdrop-filter:none}
+.feature-icon{height:52px;width:52px;border-radius:13px;background:#7100ed;color:#fff;letter-spacing:0;padding:12px}
+.feature-icon svg,.welcome-bottom svg,.signin-badge svg,.credential-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.academics-icon{background:#04b887;color:#fff}.exams-icon{background:#ff9b00;color:#fff}.reports-icon{background:#f20a61;color:#fff}
+.login-features strong{font-size:12px;line-height:1.35;text-shadow:0 1px 5px #08123e}
+.welcome-wave{position:absolute;z-index:0;left:0;right:0;bottom:0;height:145px;pointer-events:none}
+.welcome-wave svg{display:block;width:100%;height:100%;fill:#233da8d9}
+.welcome-bottom{position:relative;z-index:1;display:flex;align-items:center;gap:25px;margin:auto -12px 0;padding-top:22px;color:#e1e8ff;font-size:11px}
+.welcome-bottom span{display:flex;align-items:center;gap:9px;white-space:nowrap}
+.welcome-bottom span+span{border-left:1px solid #ffffff55;padding-left:25px}
+.welcome-bottom svg{width:22px;height:22px;color:#b9ccff;flex:none}
+.signin-page{position:relative;padding:44px 48px;background:linear-gradient(145deg,#fff,#fcfcff)}
+.signin-badge{position:absolute;top:24px;right:28px;display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;background:#f1eaff;color:#5900e8;font-size:12px;font-weight:700}
+.signin-badge svg{width:17px;height:17px}
+.signin-content{width:min(100%,472px)}
+.signin-logo{width:190px;height:174px;margin:0 auto 1px}
+.signin-content h2{font-size:30px}
+.signin-subtitle{margin:7px 0 27px;font-size:14px}
+.signin-content form{gap:14px}
+.signin-content label.credential-field{position:relative;display:flex;align-items:center;gap:14px;min-height:56px;padding:5px 13px;border:1px solid #dce3ef;border-radius:11px;background:#f8f9fc;box-shadow:0 2px 4px #17255408}
+.credential-icon{width:22px;height:22px;color:#697596;flex:none}
+.credential-input{min-width:0;flex:1;display:grid;gap:1px}
+.credential-input small{color:#7b86a0;font-size:11px;font-weight:500}
+.signin-content .credential-input input{height:22px;min-width:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:#1d2848;font-size:13px;font-weight:600}
+.signin-content .credential-input input:focus{outline:0;box-shadow:none}
+.password-toggle{right:9px;color:#687493}
+.signin-content label.credential-field:has(.password-toggle){padding-right:48px}
+.login-options{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 1px}
+.signin-content label.remember-control{display:flex;align-items:center;gap:9px;color:#4c5570;font-size:12px;font-weight:500}
+.signin-content .remember-control input{appearance:none;width:18px;height:18px;margin:0;border:1px solid #c6cde0;border-radius:4px;background:#fff;cursor:pointer}
+.signin-content .remember-control input:checked{border-color:#6900e7;background:#6900e7}
+.signin-content .remember-control input:checked:after{content:"✓";display:block;color:white;text-align:center;font-size:13px;line-height:16px}
+.forgot-link{padding:0;border:0;background:none;color:#5c00e8;font-size:12px;font-weight:700}
+.forgot-link:hover{text-decoration:underline}
+.signin-button{height:54px;margin-top:1px;border-radius:10px;background:#5700e6;box-shadow:0 8px 18px #6000df25;font-size:15px}
+.signin-button:hover:not(:disabled){background:#4800c5}
+.signin-copyright{margin-top:25px;padding-top:20px;border-top:1px solid #e6e9f1;text-align:center;color:#74809b;font-size:11px}
+.signin-copyright span{display:block}
+@media(max-width:980px){.login-book{height:auto;min-height:calc(100vh - 40px)}.welcome-page{padding:32px 30px 24px}.welcome-brand{gap:8px}.welcome-brand img{width:82px}.welcome-brand strong{font-size:34px}.welcome-brand span{font-size:9px}.welcome-brand small{font-size:7px}.welcome-copy h1{font-size:34px}.login-features{gap:7px}.signin-page{padding:48px 25px}.signin-logo{width:158px;height:150px}}
+@media(max-width:700px){.login-page{padding:12px}.login-book{width:100%;height:auto;min-height:0;grid-template-columns:1fr}.welcome-page{min-height:500px;padding:25px 24px 24px;background-position:62% center}.welcome-brand{height:88px}.welcome-brand img{width:82px;height:84px}.welcome-brand strong{font-size:31px}.welcome-copy{margin:26px 0 19px}.welcome-copy h1{font-size:35px}.welcome-copy>p:last-child{font-size:14px}.login-features{max-width:470px;gap:8px}.login-features>div{min-height:94px}.feature-icon{width:46px;height:46px}.welcome-bottom{gap:10px;margin-inline:0;padding-top:20px;font-size:9px}.welcome-bottom span{gap:5px}.welcome-bottom span+span{padding-left:10px}.welcome-bottom svg{width:17px;height:17px}.signin-page{min-height:570px;padding:68px 24px 35px}.signin-badge{top:17px;right:16px}.signin-logo{width:155px;height:145px}.signin-content h2{font-size:28px}.signin-subtitle{margin-bottom:23px}}
+.sidebar .brand{gap:10px}
+.sidebar-logo{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;padding:3px;border-radius:11px;background:#fff;overflow:hidden}
+.sidebar-logo img{width:100%;height:100%;object-fit:contain}
+.sidebar .brand>span:last-child{font-size:15px;letter-spacing:.01em}
+.sidebar .brand small{font-size:10px;white-space:nowrap}
+.sidebar-copyright{display:block;margin-top:14px;padding:14px 4px 0;border-top:1px solid #2b3c59;color:#9eafca;font-size:10px;text-align:center}
+.content-footer{padding:10px 2px 0;color:#8995a7;font-size:11px;text-align:right}
+@media(max-width:600px){.sidebar-copyright{margin-top:10px;padding:8px 0 0;text-align:left;border-top:0}.content-footer{text-align:center;padding-bottom:12px}}
+@media(max-width:820px){.login-page{padding:20px}.login-book{min-height:calc(100vh - 40px);grid-template-columns:.9fr 1.1fr}.welcome-page{padding:34px 28px 27px}.signin-page{padding:34px 28px}.login-features{grid-template-columns:repeat(2,minmax(0,1fr))}.login-features>div{min-height:88px}.welcome-copy{margin-bottom:24px}}
+@media(max-width:620px){.login-page{padding:12px;place-items:start center}.login-book{min-height:auto;grid-template-columns:1fr;border-radius:17px}.welcome-page{min-height:320px;padding:24px 24px 20px}.welcome-brand{height:74px}.welcome-brand img{width:128px;height:70px}.welcome-copy{margin:8px 0 20px}.welcome-copy .eyebrow{margin-bottom:9px}.welcome-copy h1{font-size:30px}.welcome-copy>p:last-child{margin-top:9px;font-size:13px}.login-features{gap:8px}.login-features>div{min-height:75px;gap:5px}.feature-icon{width:30px;height:28px;font-size:17px}.academics-icon{font-size:25px}.exams-icon{font-size:20px}.reports-icon{font-size:22px}.login-features strong{font-size:10px}.welcome-motto{padding-top:17px;font-size:10px}.signin-page{padding:30px 24px 28px}.signin-logo{height:90px;width:110px}.signin-content h2{font-size:26px}.signin-subtitle{margin-bottom:23px}.signin-divider{margin:22px 0 14px}}
+
 .branding-manager{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(0,1.5fr);gap:22px;align-items:start;margin:28px 0 8px;padding:22px;border:1px solid #e8edf4;border-radius:13px;background:#fbfcfe}.branding-manager h3{margin:0;font:700 16px Manrope;color:#203452}.branding-manager .muted{font-size:12px}.branding-upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.branding-upload-grid label{display:grid;gap:10px;color:#263957;font-size:13px;font-weight:600}.branding-upload-grid input[type=file]{width:100%;font-size:12px}.branding-upload-grid img{width:100%;max-height:140px;object-fit:contain;border:1px solid #e8edf4;border-radius:9px;background:#fff;padding:8px}.description-field{grid-column:1/-1}.school-form textarea{width:100%;border:1px solid #dce3ed;border-radius:10px;padding:10px 12px;resize:vertical;background:#fbfcfe;font:inherit}.school-form textarea:focus{outline:none;border-color:#4c7df0;box-shadow:0 0 0 3px #3b82f61c}@media(max-width:760px){.branding-manager{grid-template-columns:1fr}.branding-upload-grid{grid-template-columns:1fr}}
