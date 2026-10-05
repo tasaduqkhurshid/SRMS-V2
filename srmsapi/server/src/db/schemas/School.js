@@ -40,6 +40,16 @@ const SchoolSchema = new mongoose.Schema(
     logo_path: String,
     logo_url: String,
     campus_image_url: String,
+    branding: {
+      logoKey: { type: String, default: '' },
+      welcomeImageKey: { type: String, default: '' },
+      tagline: { type: String, default: 'A place to learn, grow, and succeed.' },
+      description: { type: String, default: 'A welcoming place to support learning, academic progress, and student success.' },
+    },
+    settings: {
+      timezone: { type: String, default: 'Asia/Kolkata' },
+      notificationsEnabled: { type: Boolean, default: true },
+    },
     website: String,
     principal_name: String,
     principal_email: String,

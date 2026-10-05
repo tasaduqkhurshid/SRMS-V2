@@ -4,53 +4,163 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
+compose_env_value() {
+  local name="$1" value
+  value="${!name:-}"
+  if [[ -z "$value" ]]; then
+    value="$(docker compose config --environment | sed -n "s/^${name}=//p" | head -n 1)"
+  fi
+  printf '%s' "$value"
+}
+
+DB_TYPE="$(compose_env_value DB_TYPE)"
+DB_TYPE="${DB_TYPE:-docker}"
+if [[ "$DB_TYPE" != docker && "$DB_TYPE" != local ]]; then
+  printf 'Invalid DB_TYPE %q; choose docker or local.\n' "$DB_TYPE" >&2
+  exit 2
+fi
+
+compose() {
+  if [[ "$DB_TYPE" == docker ]]; then
+    docker compose --profile docker "$@"
+  else
+    docker compose --profile local "$@"
+  fi
+}
+
+db_value() {
+  local name="$1" fallback="$2" value
+  value="$(compose_env_value "$name")"
+  if [[ -z "$value" && "$name" == DB_USERNAME ]]; then value="$(compose_env_value MONGO_ROOT_USER)"; fi
+  if [[ -z "$value" && "$name" == DB_PASSWORD ]]; then value="$(compose_env_value MONGO_ROOT_PASSWORD)"; fi
+  printf '%s' "${value:-$fallback}"
+}
+
+db_target() {
+  local host port name
+  host="$(db_value DB_HOST '')"
+  if [[ -z "$host" ]]; then
+    if [[ "$DB_TYPE" == docker ]]; then host=mongodb; else host=127.0.0.1; fi
+  fi
+  port="$(db_value DB_PORT 27017)"
+  name="$(db_value DB_NAME school-system)"
+  printf 'Database target: type=%s host=%s port=%s database=%s\n' "$DB_TYPE" "$host" "$port" "$name"
+  if [[ "$DB_TYPE" == local ]]; then
+    printf 'API container resolves local MongoDB through host.docker.internal; host GUI clients use 127.0.0.1.\n'
+  fi
+}
+
+host_mongo_uri() {
+  local host port name username password auth_source
+  host="$(db_value DB_HOST '')"
+  if [[ -z "$host" ]]; then
+    if [[ "$DB_TYPE" == docker ]]; then host=mongodb; else host=127.0.0.1; fi
+  fi
+  port="$(db_value DB_PORT 27017)"
+  name="$(db_value DB_NAME school-system)"
+  username="$(db_value DB_USERNAME admin)"
+  password="$(db_value DB_PASSWORD password)"
+  auth_source="$(db_value DB_AUTH_SOURCE admin)"
+  node -e 'const [h,p,n,u,pw,a]=process.argv.slice(1); const auth=u?`${encodeURIComponent(u)}:${encodeURIComponent(pw)}@`:""; const q=u?`?authSource=${encodeURIComponent(a)}`:""; const host=h.includes(":")&&!h.startsWith("[")?`[${h}]`:h; process.stdout.write(`mongodb://${auth}${host}:${p}/${encodeURIComponent(n)}${q}`)' \
+    "$host" "$port" "$name" "$username" "$password" "$auth_source"
+}
+
+require_running() {
+  local service="$1"
+  if ! compose ps --status running --services | grep -qx "$service"; then
+    printf 'Service %s is not running. Start the stack with ./start-all.sh up\n' "$service" >&2
+    exit 1
+  fi
+}
+
 usage() {
   cat <<'EOF'
-SRMS unified multi-portal stack
+SMS database and Docker setup
 
-Usage: ./setup [up|down|restart|status|logs|config]
+Usage: ./setup <command>
 
-  up       Build and start all services; wait for health checks (default)
-  down     Stop containers, keep database volumes
-  restart  Rebuild and restart all services
-  status   Show service health
-  logs     Follow all service logs
-  config   Validate the merged Docker Compose configuration
-  services Print the active Docker Compose service names
+  db          Run migrations, then environment-safe seeders
+  migrate     Run only MongoDB migrations
+  seed        Run system, tenant defaults, and enabled demo seeders
+  reset       Reset the selected database after displaying it and confirming
+  status      Show container status
+  logs        Follow service logs
+  shell       Open a shell in sms-api
+  mongo       Open mongosh against the selected database
+  db-export   Export the selected database under ./sms-db/<timestamp>
+  db-import   Restore an archive to the selected database (requires confirmation)
+  help        Show this help
+
+Set DB_TYPE=docker or DB_TYPE=local in .env. Local mode expects MongoDB on the host;
+the API container connects via host.docker.internal, while host tools use 127.0.0.1.
 EOF
 }
 
-command="${1:-up}"
+run_api_npm() {
+  require_running sms-api
+  compose exec sms-api npm "$@"
+}
+
+command="${1:-help}"
 case "$command" in
-  up)
-    docker compose up --build -d --wait --remove-orphans
-    docker compose ps
+  db)
+    run_api_npm run migrate
+    run_api_npm run seed
     ;;
-  down)
-    docker compose down
+  migrate) run_api_npm run migrate ;;
+  seed) run_api_npm run seed ;;
+  reset)
+    db_target
+    printf 'This permanently deletes the selected MongoDB database. Type RESET to continue: '
+    read -r confirmation
+    [[ "$confirmation" == RESET ]] || { echo 'Reset cancelled.'; exit 1; }
+    if [[ "$DB_TYPE" == docker ]]; then compose up -d --wait mongodb; fi
+    compose stop sms-api >/dev/null 2>&1 || true
+    compose run --rm --no-deps sms-api npm run db:reset
+    compose run --rm --no-deps sms-api npm run migrate
+    compose run --rm --no-deps sms-api npm run seed
+    compose up -d --build --wait sms-api
     ;;
-  restart)
-    docker compose up --build -d --force-recreate --wait --remove-orphans
-    docker compose ps
+  status) compose ps ;;
+  logs) compose logs -f --tail=200 ;;
+  shell) require_running sms-api; compose exec sms-api sh ;;
+  mongo)
+    if [[ "$DB_TYPE" == docker ]]; then
+      require_running mongodb
+      compose exec mongodb sh -lc 'mongosh "mongodb://$MONGO_INITDB_ROOT_USERNAME:$MONGO_INITDB_ROOT_PASSWORD@localhost:27017/$MONGO_INITDB_DATABASE?authSource=admin"'
+    else
+      command -v mongosh >/dev/null || { echo 'mongosh is required on the host in local DB mode.' >&2; exit 1; }
+      mongosh "$(host_mongo_uri)"
+    fi
     ;;
-  status)
-    docker compose ps
+  db-export)
+    timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    output="$ROOT_DIR/sms-db/$timestamp"
+    mkdir -p "$output"
+    if [[ "$DB_TYPE" == docker ]]; then
+      require_running mongodb
+      compose exec -T mongodb mongodump --uri="$(host_mongo_uri)" --archive --gzip > "$output/school-system.archive.gz"
+    else
+      command -v mongodump >/dev/null || { echo 'mongodump is required on the host in local DB mode.' >&2; exit 1; }
+      mongodump --uri="$(host_mongo_uri)" --archive --gzip > "$output/school-system.archive.gz"
+    fi
+    echo "Database export written to $output/school-system.archive.gz"
     ;;
-  logs)
-    docker compose logs -f --tail=200
+  db-import)
+    archive="${2:-}"
+    [[ -n "$archive" && -f "$archive" ]] || { echo 'Usage: ./setup db-import <path-to-school-system.archive.gz>' >&2; exit 2; }
+    db_target
+    printf 'Restore may replace data in the selected database. Type RESTORE to continue: '
+    read -r confirmation
+    [[ "$confirmation" == RESTORE ]] || { echo 'Import cancelled.'; exit 1; }
+    if [[ "$DB_TYPE" == docker ]]; then
+      require_running mongodb
+      compose exec -T mongodb mongorestore --uri="$(host_mongo_uri)" --archive --gzip --drop < "$archive"
+    else
+      command -v mongorestore >/dev/null || { echo 'mongorestore is required on the host in local DB mode.' >&2; exit 1; }
+      mongorestore --uri="$(host_mongo_uri)" --archive --gzip --drop < "$archive"
+    fi
     ;;
-  services)
-    docker compose config --services
-    ;;
-  config)
-    docker compose config --quiet
-    echo "Compose configuration is valid."
-    ;;
-  help|-h|--help)
-    usage
-    ;;
-  *)
-    usage >&2
-    exit 2
-    ;;
+  help|-h|--help) usage ;;
+  *) usage >&2; exit 2 ;;
 esac

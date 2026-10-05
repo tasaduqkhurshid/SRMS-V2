@@ -1,6 +1,18 @@
 "use strict";
-// Lightweight logger wrapper. Use process.env.DEBUG=true to enable debug logs.
-const isDebug = process.env.DEBUG === 'true' || process.env.NODE_ENV !== 'production';
+
+const path = require("node:path");
+const dotenv = require("dotenv");
+dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
+dotenv.config();
+
+const LEVELS = Object.freeze({ debug: 10, info: 20, warn: 30, error: 40 });
+const requestedLevel = String(process.env.LOG_LEVEL || 'info').trim().toLowerCase();
+const configuredLevel = Object.prototype.hasOwnProperty.call(LEVELS, requestedLevel)
+  ? requestedLevel
+  : 'info';
+const threshold = LEVELS[configuredLevel];
+
+const shouldLog = (level) => LEVELS[level] >= threshold;
 
 const safeStringify = (v) => {
   try {
@@ -11,12 +23,18 @@ const safeStringify = (v) => {
 };
 
 const debug = (...args) => {
-  if (!isDebug) return;
+  if (!shouldLog('debug')) return;
   console.debug('[debug]', ...args.map(safeStringify));
 };
 
-const info = (...args) => console.info('[info]', ...args.map(safeStringify));
-const warn = (...args) => console.warn('[warn]', ...args.map(safeStringify));
-const error = (...args) => console.error('[error]', ...args.map(safeStringify));
+const info = (...args) => {
+  if (shouldLog('info')) console.info('[info]', ...args.map(safeStringify));
+};
+const warn = (...args) => {
+  if (shouldLog('warn')) console.warn('[warn]', ...args.map(safeStringify));
+};
+const error = (...args) => {
+  if (shouldLog('error')) console.error('[error]', ...args.map(safeStringify));
+};
 
-module.exports = { debug, info, warn, error };
+module.exports = { debug, info, warn, error, level: configuredLevel };

@@ -3,6 +3,24 @@ const bcrypt = require('bcryptjs');
 const AuthService = require('../../services/AuthService');
 const StudentPortalService = require('../StudentPortalService');
 
+const matchesDateOfBirth = (input, value) => {
+  if (!value) return false;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const year = String(date.getUTCFullYear());
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const normalizedInput = String(input).trim();
+
+  return [
+    `${day}-${month}-${year}`,
+    `${day}/${month}/${year}`,
+    `${year}-${month}-${day}`,
+    `${year}/${month}/${day}`,
+  ].includes(normalizedInput);
+};
+
 const getSchoolBrand = async (school) => {
   if (!school) return null;
 
@@ -14,8 +32,14 @@ const getSchoolBrand = async (school) => {
     phone: school.phone || school.contact_number || '',
     email: school.email || '',
     website: school.website || '',
-    logoUrl: school.logo_url || school.logo_path || '',
-    campusImageUrl: school.campus_image_url || '',
+    logoUrl: school.branding?.logoKey
+      ? '/api/student/school/branding/logo'
+      : school.logo_url || school.logo_path || '',
+    campusImageUrl: school.branding?.welcomeImageKey
+      ? '/api/student/school/branding/welcome-image'
+      : school.campus_image_url || '',
+    tagline: school.branding?.tagline || 'A place to learn, grow, and succeed.',
+    description: school.branding?.description || 'A welcoming place to support learning, academic progress, and student success.',
   };
 };
 
@@ -33,10 +57,12 @@ const login = async ({ studentId, password, school }) => {
   }).select('+password_hash').limit(2).lean();
   if (studentMatches.length !== 1) return null;
   const [student] = studentMatches;
-  if (!student?.password_hash) return null;
 
-  const passwordMatches = await bcrypt.compare(password, student.password_hash);
-  if (!passwordMatches) return null;
+  const passwordMatches = student?.password_hash
+    ? await bcrypt.compare(String(password), student.password_hash)
+    : false;
+  const dateOfBirthMatches = matchesDateOfBirth(password, student?.dob);
+  if (!passwordMatches && !dateOfBirthMatches) return null;
 
   const identity = {
     id: student._id.toString(),

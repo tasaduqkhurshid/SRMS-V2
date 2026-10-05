@@ -27,6 +27,7 @@ export const setAuthToken = (token) => {
     delete api.defaults.headers.common.Authorization;
     try {
       localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
     } catch (e) {
       /* ignore */
     }
@@ -38,7 +39,7 @@ export const setAuthToken = (token) => {
  */
 export const getAuthToken = () => {
   try {
-    return localStorage.getItem("token");
+    return localStorage.getItem("token") || sessionStorage.getItem("token");
   } catch (e) {
     // silent localStorage read failure (removed console.warn)
     return null;
@@ -82,6 +83,7 @@ api.interceptors.response.use(
         setAuthToken(null);
         try {
           localStorage.removeItem("user");
+          sessionStorage.removeItem("user");
         } catch (e) {}
 
         return Promise.reject(error);

@@ -2,8 +2,9 @@ export default `
 <header class="d-flex justify-content-between align-items-center p-3 bg-white border-bottom shadow-sm">
   <!-- Left: School info -->
   <div class="d-flex align-items-center">
-    <img :src="logoUrl" alt="School Logo" height="40" class="me-2" />
-    <h5 class="mb-0 fw-bold">{{ user.schoolName || 'School Result Management System' }}</h5>
+    <img v-if="logoUrl" :src="logoUrl" :alt="user.schoolName + ' logo'" height="40" class="me-2 school-header-logo" />
+    <span v-else class="school-header-monogram me-2" aria-hidden="true">{{ schoolInitials }}</span>
+    <h5 class="mb-0 fw-bold">{{ user.schoolName }}</h5>
   </div>
 
   <!-- Right: User dropdown -->

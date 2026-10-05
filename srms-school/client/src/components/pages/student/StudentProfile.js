@@ -104,6 +104,7 @@ export default {
           // normalize student fields
           student.value = {
             _id: studentData._id || props.studentId || null,
+            student_code: studentData.student_code || "",
             roll_number: studentData.roll_number || "",
             name: studentData.name || "",
             father_name: studentData.father_name || "",

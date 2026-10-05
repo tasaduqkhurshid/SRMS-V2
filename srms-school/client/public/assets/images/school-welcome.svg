@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="School building">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eaf2ff"/>
+      <stop offset="1" stop-color="#c9dcff"/>
+    </linearGradient>
+    <linearGradient id="building" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#edf3fc"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="24" fill="url(#sky)"/>
+  <circle cx="121" cy="38" r="13" fill="#ffd36b"/>
+  <path d="M18 126c17-12 32-12 48 0 17-12 33-12 49 0 10-7 19-9 27-7v25H18z" fill="#acd6b5"/>
+  <path d="M31 75 80 48l49 27v8H31z" fill="#315fbd"/>
+  <path d="M39 82h82v47H39z" fill="url(#building)"/>
+  <path d="M72 101a8 8 0 0 1 16 0v28H72z" fill="#315fbd"/>
+  <path d="M49 91h12v12H49zm50 0h12v12H99z" fill="#9fc5ff"/>
+  <path d="M77 59h6v15h-6z" fill="#ffd36b"/>
+  <path d="M80 54h14l-14 8z" fill="#ef6b67"/>
+  <path d="M26 130h108" stroke="#78ae83" stroke-width="4" stroke-linecap="round"/>
+</svg>

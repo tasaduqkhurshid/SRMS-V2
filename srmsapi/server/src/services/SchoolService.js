@@ -1,6 +1,7 @@
 const { School, User } = require("../db/models");
 const ModelUtils = require("../utils/ModelUtils");
 const bcrypt = require("bcryptjs");
+const { seedNewSchool } = require('../db/mongo/seeders/school.seeder');
 
 const RESERVED_SCHOOL_SLUGS = new Set(['admin', 'api', 'www', 'mail', 'smtp', 'cdn', 'assets']);
 
@@ -34,15 +35,11 @@ async function register({ school, admin }) {
     throw new Error("Admin user already exists for this school");
   }
 
-  const hash = bcrypt.hashSync(admin.password, 10);
-  const pinHash = admin.pin ? bcrypt.hashSync(admin.pin, 10) : null;
-  await ModelUtils.createAndReturn(User, {
-    username: admin.username,
-    email: admin.email,
-    password: hash,
-    pin: pinHash,
-    role: "ADMIN",
-    school_id: schoolRecord._id,
+  await seedNewSchool({
+    schoolId: schoolRecord._id,
+    slug: schoolRecord.slug,
+    name: schoolRecord.school_name,
+    admin: { ...admin, role: 'ADMIN' },
   });
   return schoolRecord._id;
 }
@@ -65,7 +62,7 @@ async function createSchoolRecord(data) {
   const schoolCode = String(data.school_code || slug.toUpperCase()).trim().toUpperCase();
   const codeExists = await School.findOne({ school_code: schoolCode }).lean();
   if (codeExists) throw new Error('School code already exists');
-  return School.create({
+  const created = await School.create({
     school_name: schoolName,
     name: schoolName,
     school_code: schoolCode,
@@ -77,6 +74,16 @@ async function createSchoolRecord(data) {
     email: data.email || '',
     phone: data.phone || '',
     address: data.address || '',
+    branding: {
+      tagline: String(data.branding?.tagline || '').trim() || undefined,
+      description: String(data.branding?.description || '').trim() || undefined,
+    },
+  });
+  return seedNewSchool({
+    schoolId: created._id,
+    slug: created.slug,
+    name: created.school_name,
+    admin: data.admin,
   });
 }
 
@@ -84,6 +91,8 @@ async function updatePlatformSchool(schoolId, data) {
   const allowed = ['school_name', 'name', 'status', 'abbreviation', 'logo_url', 'campus_image_url', 'email', 'phone', 'address'];
   const update = {};
   for (const key of allowed) if (data[key] !== undefined) update[key] = data[key];
+  if (data.branding?.tagline !== undefined) update['branding.tagline'] = String(data.branding.tagline).trim().slice(0, 120);
+  if (data.branding?.description !== undefined) update['branding.description'] = String(data.branding.description).trim().slice(0, 500);
   if (update.school_name && !update.name) update.name = update.school_name;
   if (update.name && !update.school_name) update.school_name = update.name;
   if (update.status && !['active', 'inactive'].includes(update.status)) throw new Error('Status must be active or inactive');
@@ -95,6 +104,18 @@ async function listSchoolAdministrators(schoolId) {
     .select('_id username email role createdAt')
     .sort({ createdAt: -1 })
     .lean();
+}
+
+async function updateSchoolAdministratorPassword(schoolId, administratorId, password) {
+  if (!schoolId || !administratorId || typeof password !== 'string' || password.length < 8) {
+    throw new Error('A school administrator and a password of at least 8 characters are required');
+  }
+  const hashedPassword = bcrypt.hashSync(password, 12);
+  const result = await User.updateOne(
+    { _id: administratorId, school_id: schoolId, role: { $in: ['ADMIN', 'SCHOOL_ADMIN'] } },
+    { $set: { password: hashedPassword } },
+  );
+  return result.matchedCount ? { id: administratorId } : null;
 }
 
 async function createSchoolAdministrator(schoolId, data) {
@@ -181,4 +202,4 @@ async function findAdmin(schoolId, username) {
   return await ModelUtils.findOne(User, { school_id: schoolId, username });
 }
 
-module.exports = { register, getSchool, listSchools, createSchoolRecord, updatePlatformSchool, listSchoolAdministrators, createSchoolAdministrator, getSchoolById, updateSchool, findSchoolByCode, findSchoolByEmail, findAdmin, validateSlug };
+module.exports = { register, getSchool, listSchools, createSchoolRecord, updatePlatformSchool, listSchoolAdministrators, createSchoolAdministrator, updateSchoolAdministratorPassword, getSchoolById, updateSchool, findSchoolByCode, findSchoolByEmail, findAdmin, validateSlug };

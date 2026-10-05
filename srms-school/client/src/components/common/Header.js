@@ -14,16 +14,29 @@ export default {
   setup() {
     const router = useRouter();
 
-    const logoUrl = ref("/admin/assets/images/app-logo.png");
+    const logoUrl = ref("");
+    const schoolInitials = ref("SC");
     const user = ref({});
 
     // Load user data from localStorage/sessionStorage
     onMounted(() => {
-      const storedUser =
-        JSON.parse(localStorage.getItem("user")) ||
-        JSON.parse(sessionStorage.getItem("user")) ||
-        {};
-      user.value = storedUser;
+      let storedUser = {};
+      try {
+        storedUser = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
+      } catch (_error) {
+        storedUser = {};
+      }
+      const school = storedUser.school || {};
+      const schoolName = storedUser.schoolName || school.name || school.school_name || "School Portal";
+      user.value = { ...storedUser, schoolName };
+      logoUrl.value = school.logo_url || school.logo_path || "";
+      schoolInitials.value = String(school.abbreviation || schoolName)
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase() || "SC";
     });
 
     const handleLogout = () => {
@@ -40,6 +53,7 @@ export default {
 
     return {
       logoUrl,
+      schoolInitials,
       user,
       handleLogout,
     };

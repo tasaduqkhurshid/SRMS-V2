@@ -89,9 +89,10 @@ const loginSuperAdmin = async (identifier, password) => {
   return buildAuthResponse(userRecord);
 };
 
-const loginPin = async (email, pin, schoolId) => {
+const loginPin = async (identifier, pin, schoolId) => {
+  if (!identifier || !pin || !schoolId) return null;
   const userRecord = await ModelUtils.findOne(User,
-    { email, school_id: schoolId },
+    { $or: [{ username: identifier }, { email: identifier }], school_id: schoolId },
     { populate: { path: 'school_id' } }
   );
   if (!userRecord) return null;

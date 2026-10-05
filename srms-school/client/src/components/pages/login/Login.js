@@ -4,7 +4,7 @@ import appConfig from "../../../config/app-config.js";
 import { api } from "../../../Services/api.js";
 
 
-const { ref } = Vue;
+const { ref, computed, onMounted } = Vue;
 const { useRouter } = VueRouter;
 
 export default {
@@ -13,17 +13,75 @@ export default {
   setup() {
     const router = useRouter();
 
-    // App info
-    const app = ref({ ...appConfig });
+    // Start with the current school hostname so the page is school-specific
+    // even if the branding endpoint is temporarily unavailable.
+    const hostnameSlug = window.location.hostname.split('.')[0];
+    const hostnameName = hostnameSlug
+      .split('-')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+    const fallbackHeroImage = '/admin/assets/images/education-campus.svg';
+    const app = ref({
+      ...appConfig,
+      name: hostnameName || 'School Portal',
+      shortName: hostnameName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase() || 'SC',
+      logoUrl: '',
+      campusImageUrl: '',
+      tagline: 'A Place to Learn, Grow and Succeed',
+      description: 'A welcoming place to support learning, academic progress, and student success.',
+    });
+    const heroImageUrl = computed(() => app.value.campusImageUrl || fallbackHeroImage);
     const year = new Date().getFullYear();
+
+    const handleLogoError = () => { app.value.logoUrl = ''; };
+    const handleHeroImageError = (event) => {
+      if (event.target.dataset.fallbackApplied === 'true') {
+        event.target.hidden = true;
+        return;
+      }
+      event.target.dataset.fallbackApplied = 'true';
+      app.value.campusImageUrl = '';
+    };
+
+    document.title = `${app.value.name} | School Admin`;
+
+    const loadSchoolBrand = async () => {
+      try {
+        const response = await fetch('/api/student/school/brand', {
+          cache: 'no-store',
+          headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' },
+        });
+        if (!response.ok) return;
+        const result = await response.json();
+        const brand = result?.data;
+        if (!brand) return;
+        const name = brand.name || brand.schoolName || hostnameName || 'School Portal';
+        app.value = {
+          ...app.value,
+          name,
+          shortName: brand.abbreviation || brand.schoolCode || app.value.shortName,
+          logoUrl: brand.logoUrl || '',
+          campusImageUrl: brand.campusImageUrl || '',
+          tagline: brand.tagline || app.value.tagline,
+          description: brand.description || app.value.description,
+        };
+        document.title = `${name} | School Admin`;
+      } catch (_error) {
+        // Keep the hostname-based school name when branding cannot be loaded.
+      }
+    };
+
+    onMounted(loadSchoolBrand);
 
     // Tab state
     const isRegisterMode = ref(false);
 
     // Login Form state
-    const email = ref("");
+    const identifier = ref("");
     const password = ref("");
-    const isPinLogin = ref(true);
+    // School administrators are provisioned with passwords by default.
+    const isPinLogin = ref(false);
     const showPin = ref(false);
     const showPassword = ref(false);
     const remember = ref(false);
@@ -68,8 +126,8 @@ export default {
 
 const handleLogin = async () => {
   // Basic validation
-  if (!email.value?.trim()) {
-    toast.error("Please enter email.");
+  if (!identifier.value?.trim()) {
+    toast.error("Please enter your username or email.");
     return;
   }
 
@@ -86,8 +144,8 @@ const handleLogin = async () => {
 
   const url = isPinLogin.value ? "/auth/login-pin" : "/auth/login";
   const payload = isPinLogin.value
-    ? { email: email.value.trim(), pin: pin.value }
-    : { username: email.value.trim(), password: password.value };
+    ? { username: identifier.value.trim(), pin: pin.value }
+    : { username: identifier.value.trim(), password: password.value };
 
   loading.value = true;
 
@@ -101,8 +159,11 @@ const handleLogin = async () => {
       const user = data.user || {};
       toast.success("Login successful");
 
-      // ✅ use correct storage (local/session)
-      const store = localStorage;
+      // Respect Remember me while clearing any stale credential from the other storage.
+      const store = storage();
+      const previousStore = remember.value ? sessionStorage : localStorage;
+      previousStore.removeItem("token");
+      previousStore.removeItem("user");
       store.setItem("token", token);
       store.setItem(
         "user",
@@ -110,12 +171,13 @@ const handleLogin = async () => {
           id: user.id,
           username: user.username,
           role: user.role,
-          school: user.School,
+          school: data.school || null,
+          schoolName: data.school?.name || data.school?.school_name || '',
         })
       );
 
       // set auth header
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      if (token) api.defaults.headers.common.Authorization = `Bearer ${token}`;
 
       // redirect
       router.push({ path: "/dashboard" });
@@ -243,13 +305,16 @@ const handleRegister = async () => {
     return {
       // app info
       app,
+      heroImageUrl,
+      handleLogoError,
+      handleHeroImageError,
       year,
 
       // mode toggle
       isRegisterMode,
 
       // login form fields
-      email,
+      identifier,
       password,
       isPinLogin,
       showPin,

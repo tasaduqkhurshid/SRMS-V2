@@ -22,6 +22,7 @@ const getSchoolBrand = async (req, res) => {
     if (!school) {
       return res.status(404).json({ status: 'error', success: false, message: 'School not found' });
     }
+    res.set('Cache-Control', 'private, no-store');
     return res.status(200).json({ status: 'success', success: true, data: school });
   } catch (error) {
     return res.status(500).json({ status: 'error', success: false, message: 'Unable to load school branding' });

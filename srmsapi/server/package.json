@@ -5,10 +5,14 @@
     "dev": "nodemon --legacy-watch server.js",
     "start": "node server.js",
     "migrate": "node src/db/mongo/migrate.js",
-    "seed": "node src/db/mongo/seed.js",
+    "seed": "node src/db/mongo/seedAll.js",
+    "seed:system": "node src/db/mongo/seedSystem.js",
+    "seed:demo": "node src/db/mongo/seedDemo.js",
+    "db:reset": "node src/db/mongo/resetDatabase.js",
     "db:setup": "npm run migrate && npm run seed"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1146.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "csv-parse": "^5.5.6",

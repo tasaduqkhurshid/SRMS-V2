@@ -7,15 +7,18 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', redirect: '/dashboard' },
-    { path: '/login', component: App, meta: { public: true } },
-    { path: '/:pathMatch(.*)*', component: App },
+    { path: '/login', name: 'login', component: App, meta: { public: true } },
+    { path: '/dashboard', name: 'dashboard', component: App },
+    { path: '/schools', name: 'schools', component: App },
+    { path: '/schools/:id', name: 'school-detail', component: App },
+    { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
 });
 
 router.beforeEach((to) => {
   const token = localStorage.getItem('srms_platform_token');
-  if (!to.meta.public && !token) return '/login';
-  if (to.path === '/login' && token) return '/dashboard';
+  if (!to.meta.public && !token) return { name: 'login' };
+  if (to.name === 'login' && token) return { name: 'dashboard' };
 });
 
 createApp(App).use(router).mount('#app');

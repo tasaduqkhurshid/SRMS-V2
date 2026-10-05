@@ -2,7 +2,7 @@ export default `
 <div>
   <!-- Search -->
   <div class="d-flex gap-2 mb-2">
-    <input class="form-control" style="max-width: 220px" v-model="searchTerm" placeholder="Search name / roll / admission" />
+    <input class="form-control" style="max-width: 220px" v-model="searchTerm" placeholder="Search name / student ID / class roll no" />
     <input class="form-control" style="max-width: 120px" v-model="classId" placeholder="Class" />
     <input class="form-control" style="max-width: 120px" v-model="section" placeholder="Section" />
     <button class="btn btn-primary" @click="getStudentList" :disabled="loading">Search</button>
@@ -13,7 +13,8 @@ export default `
       <thead class="table-light">
         <tr>
           <th style="width: 60px;">#</th>
-          <th>Roll</th>
+          <th>Student ID</th>
+          <th>Class Roll No</th>
           <th>Name</th>
           <th>Class</th>
           <th>Section</th>
@@ -26,6 +27,7 @@ export default `
       <tbody>
         <tr v-for="(student, index) in students" :key="student._id">
           <td>{{ index + 1 }}</td>
+          <td>{{ student.student_code || '—' }}</td>
           <td>{{ student.roll_number }}</td>
           <td>{{ student.name }}</td>
           <td>{{ student.class }}</td>
@@ -54,11 +56,11 @@ export default `
         </tr>
 
         <tr v-if="!students.length && !loading">
-          <td colspan="9" class="text-center py-4">No students found</td>
+          <td colspan="10" class="text-center py-4">No students found</td>
         </tr>
 
         <tr v-if="loading">
-          <td colspan="9" class="text-center py-4">Loading…</td>
+          <td colspan="10" class="text-center py-4">Loading…</td>
         </tr>
 
       </tbody>

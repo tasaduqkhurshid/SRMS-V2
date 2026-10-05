@@ -45,6 +45,9 @@ pnpm-debug.log*
 # Docker
 docker-compose.override.yml
 
+# Portable database exports created by ./setup db-export
+sms-db/
+
 # OS
 .DS_Store
 Thumbs.db

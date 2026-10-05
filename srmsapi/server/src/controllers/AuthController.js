@@ -59,19 +59,20 @@ const login = async (req, res) => {
 
 const loginViaPin = async (req, res) => {
   try {
-    const { email, pin } = req.body || {};
-    if (!email || !pin) {
+    const { username, email, pin } = req.body || {};
+    const identifier = String(username || email || '').trim();
+    if (!identifier || !pin) {
       return res.status(STATUS.BAD_REQUEST).json({
         status: "error",
         success: false,
-        message: "email and pin are required",
+        message: "username/email and pin are required",
       });
     }
 
     if (req.isPlatformHost) {
       return res.status(STATUS.FORBIDDEN).json({ status: 'error', message: 'PIN login is not enabled for platform administrators' });
     }
-    const data = await AuthService.loginPin(email.trim(), pin, req.schoolId);
+    const data = await AuthService.loginPin(identifier, pin, req.schoolId);
     if (!data) {
       return res.status(STATUS.UNAUTHORIZED).json({
         status: "error",

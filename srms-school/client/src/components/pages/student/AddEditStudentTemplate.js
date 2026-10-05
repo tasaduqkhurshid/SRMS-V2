@@ -59,7 +59,7 @@ export default `
               <div class="row g-2">
 
                 <div class="col-md-4">
-                  <label class="form-label">Roll No</label>
+                  <label class="form-label">Class Roll No</label>
                   <input class="form-control" v-model="student.roll_number" data-vtype="number" />
                   </div>
 

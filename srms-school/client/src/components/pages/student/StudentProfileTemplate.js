@@ -42,7 +42,8 @@ export default `
                       <strong class="ms-3 me-1">Section:</strong>{{ student?.section || '—' }}
                     </p>
                     <p class="mb-2"><strong class="me-1">Admission #:</strong>{{ student?.admission_number || '—' }}</p>
-                    <p class="mb-0"><strong class="me-1">Roll:</strong>{{ student?.roll_number || '—' }}</p>
+                    <p class="mb-2"><strong class="me-1">Student ID:</strong>{{ student?.student_code || '—' }}</p>
+                    <p class="mb-0"><strong class="me-1">Class Roll No:</strong>{{ student?.roll_number || '—' }}</p>
                   </div>
                 </div>
               </div>
@@ -59,7 +60,7 @@ export default `
                     <table class="table table-bordered mb-0">
                       <tbody>
                         <tr>
-                          <th width="30%">Roll</th>
+                          <th width="30%">Class Roll No</th>
                           <td width="2%">:</td>
                           <td>{{ student?.roll_number || '—' }}</td>
                         </tr>

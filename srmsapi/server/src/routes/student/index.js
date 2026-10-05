@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { authenticateJwt, requireStudentAuth } = require('../../middleware/AuthService');
 const authController = require('../../controllers/student/auth.controller');
+const brandingController = require('../../controllers/platformBrandingController');
 
 router.get('/school/brand', authController.getSchoolBrand);
+router.get('/school/branding/:asset', brandingController.getBrandingAsset);
 router.get('/manifest', authController.manifest);
 router.use('/auth', require('./auth.routes'));
 router.use(authenticateJwt, requireStudentAuth);

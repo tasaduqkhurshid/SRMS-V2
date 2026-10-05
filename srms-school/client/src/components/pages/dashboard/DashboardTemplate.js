@@ -61,7 +61,7 @@ export default `
                 <thead class="table-light">
                   <tr>
                     <th>Name</th>
-                    <th>Roll No</th>
+                    <th>Class Roll No</th>
                     <th>Status</th>
                   </tr>
                 </thead>

@@ -1,54 +1,37 @@
 "use strict";
 
 const mongoose = require("mongoose");
-const path = require("path");
 const tenantScopePlugin = require("../../middleware/tenantScopePlugin");
+const logger = require("../../utils/logger");
+const { getDatabaseConfig } = require("../../config/database");
 
+mongoose.set("debug", String(process.env.MONGO_DEBUG || "false").toLowerCase() === "true");
 mongoose.plugin(tenantScopePlugin);
 
 const db = {};
-
-// Load all schemas from the schemas directory
 const schemas = require("../schemas");
 Object.assign(db, schemas);
 
-// Get MongoDB URI from environment or use default
-const getMongoUri = () => {
-  return process.env.MONGO_URI || 
-    (process.env.NODE_ENV === 'production' 
-      ? require(path.join(__dirname, "../../config/config.json")).production.mongodb.uri
-      : require(path.join(__dirname, "../../config/config.json")).development.mongodb.uri);
-};
-
-// MongoDB connection options
-const mongoOptions = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-};
-
-// MongoDB connection
 const connectDB = async () => {
+  let config;
   try {
-    const mongoUri = getMongoUri();
-    
-    console.log("🔄 Connecting to MongoDB...");
-    console.log(`   URI: ${mongoUri.replace(/\/\/.*:.*@/, '//<credentials>@')}`);
-    
-    await mongoose.connect(mongoUri, mongoOptions);
-    console.log("✅ MongoDB connected successfully");
+    config = getDatabaseConfig();
+    logger.info(`Database configuration:\n  Type      : ${config.type}\n  Host      : ${config.host}\n  Port      : ${config.port}\n  Database  : ${config.name}`);
+    await mongoose.connect(config.uri);
+    logger.info("Connected to MongoDB successfully.");
   } catch (error) {
-    console.error("❌ MongoDB connection error:", error.message);
+    const target = config ? ` (${config.type} at ${config.host}:${config.port}/${config.name})` : '';
+    logger.error(`MongoDB connection failed${target}:`, error.message);
     throw error;
   }
 };
 
-// Connection event handlers
 mongoose.connection.on("disconnected", () => {
-  console.log("❌ MongoDB disconnected");
+  logger.warn("MongoDB disconnected");
 });
 
 mongoose.connection.on("error", (error) => {
-  console.error("❌ MongoDB error:", error);
+  logger.error("MongoDB connection error:", error.message);
 });
 
 db.connectDB = connectDB;

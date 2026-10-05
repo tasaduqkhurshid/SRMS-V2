@@ -2,6 +2,7 @@
 
 const db = require("../models");
 const bcrypt = require("bcryptjs");
+const { seedNewSchool } = require("./seeders/school.seeder");
 
 const SCHOOL_CODE = "HIT";
 const ADMIN_PASSWORD = "password";
@@ -60,10 +61,7 @@ const upsertBy = async (Model, filter, update) => {
   );
 };
 
-const run = async () => {
-  try {
-    await db.connectDB();
-
+const seedDemo = async () => {
     const school = await upsertBy(
       db.School,
       { school_code: SCHOOL_CODE },
@@ -92,6 +90,8 @@ const run = async () => {
       slug: 'schoolb',
       status: 'active',
     });
+    await seedNewSchool({ schoolId: hanfiaSchool._id, slug: hanfiaSchool.slug, name: hanfiaSchool.school_name });
+    await seedNewSchool({ schoolId: schoolB._id, slug: schoolB.slug, name: schoolB.school_name });
 
     await upsertBy(db.User, { username: 'hanfia-admin' }, {
       username: 'hanfia-admin',
@@ -115,6 +115,7 @@ const run = async () => {
       admission_number: 'STU001',
       roll_number: '1',
       name: 'Hanfia Demo Student',
+      dob: new Date('2012-05-14T00:00:00.000Z'),
       class: '1st',
       section: 'A',
       password_hash: bcrypt.hashSync(demoStudentPassword, 10),
@@ -125,6 +126,7 @@ const run = async () => {
       admission_number: 'STU001',
       roll_number: '1',
       name: 'School B Demo Student',
+      dob: new Date('2011-09-22T00:00:00.000Z'),
       class: '1st',
       section: 'A',
       password_hash: bcrypt.hashSync(process.env.SCHOOLB_STUDENT_PASSWORD || 'schoolb-student-local-only', 10),
@@ -142,14 +144,6 @@ const run = async () => {
         school_id: school._id
       }
     );
-
-    await upsertBy(db.User, { username: 'platform-admin' }, {
-      username: 'platform-admin',
-      email: 'platform-admin@sms.local',
-      password: bcrypt.hashSync(process.env.SUPER_ADMIN_PASSWORD || 'platform-admin-local-only', 10),
-      role: 'SUPER_ADMIN',
-      school_id: null,
-    });
 
     const currentYear = new Date().getFullYear();
     const academicYear = await upsertBy(
@@ -197,19 +191,12 @@ const run = async () => {
       });
     }
 
-    console.log("Mongo seed completed");
-    console.log(`Platform Super Admin: platform-admin / ${process.env.SUPER_ADMIN_PASSWORD || 'platform-admin-local-only'}`);
+    console.log("Mongo demo seed completed");
     console.log(`Admin login: admin / ${ADMIN_PASSWORD}`);
     console.log(`Admin PIN login: admin@hubiinfotech.com / ${ADMIN_PIN}`);
     console.log(`Hanfia school admin: hanfia-admin / ${process.env.HANFIA_ADMIN_PASSWORD || 'hanfia-admin-local-only'}`);
     console.log(`Hanfia demo student: STU001 / ${demoStudentPassword}`);
     console.log(`School B test tenant: schoolb / ${process.env.SCHOOLB_ADMIN_PASSWORD || 'schoolb-admin-local-only'}`);
-  } catch (error) {
-    console.error("Mongo seed failed:", error);
-    process.exitCode = 1;
-  } finally {
-    await db.mongoose.connection.close();
-  }
 };
 
-run();
+module.exports = { seedDemo };

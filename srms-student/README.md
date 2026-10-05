@@ -7,7 +7,7 @@ The deployed Student Portal/PWA is Vue 3 + Vite + Vue Router, served by the root
 From the repository root, add `127.0.0.1 hanfia.srms.local schoolb.srms.local` to the OS hosts file, then run:
 
 ```sh
-./setup up
+./start-all.sh up
 ```
 
 Open `http://hanfia.srms.local/login`. See the root README for local seeded credentials, Docker services, tenant testing, and environment configuration.

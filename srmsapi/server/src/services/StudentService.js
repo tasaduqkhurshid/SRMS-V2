@@ -2,12 +2,13 @@
 
 const path = require("path");
 const fs = require("fs").promises; // kept in case you extend, not used for blob storage
+const { randomInt } = require("crypto");
 
 const ModelUtils = require("../utils/ModelUtils");
 const logger  = require("../utils/logger");
 const PwpConstants = require("../constants/PwpConstants");
 const ImageService = require("./ImageService");
-const { Student, Image, Subject, StudentSubject, AcademicYear } = require("../db/models");
+const { Student, School, Image, Subject, StudentSubject, AcademicYear } = require("../db/models");
 
 const { getKeysFromArray } = require("../helpers/helper");
 
@@ -20,13 +21,28 @@ const { getKeysFromArray } = require("../helpers/helper");
  * saveStudentImage(studentId, file) // expects multer file with buffer
  */
 
-/**
- * Create student and return plain object
- * Auto-assigns current/latest academic year if not provided
- */
+const getSchoolInitials = (schoolName = "") => {
+  const initials = String(schoolName)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean)
+    .map((word) => Array.from(word)[0].toUpperCase())
+    .join("");
+
+  return initials || "S";
+};
+
+const isStudentCodeConflict = (error) =>
+  error?.code === 11000 && (
+    Boolean(error.keyPattern?.student_code) ||
+    String(error.message || "").includes("unique_student_code")
+  );
+
+/** Create student, assign academic year and reserve a unique school-facing ID. */
 const createStudent = async (payload) => {
   if (!payload) return null;
-  
+
   // Auto-assign current academic year if not provided
   if (!payload.academic_year_id && payload.school_id) {
     try {
@@ -42,9 +58,42 @@ const createStudent = async (payload) => {
       logger.warn('Failed to auto-assign academic year:', err.message);
     }
   }
-  
-  const created = await ModelUtils.createAndReturn(Student, payload);
-  return created || null;
+
+  if (!payload.school_id) throw new Error("school_id is required to assign a student ID");
+
+  const [school, academicYear] = await Promise.all([
+    ModelUtils.findOne(School, { _id: payload.school_id }),
+    payload.academic_year_id
+      ? ModelUtils.findOne(AcademicYear, { _id: payload.academic_year_id, school_id: payload.school_id })
+      : Promise.resolve(null)
+  ]);
+  if (!school) throw new Error("School not found while assigning student ID");
+
+  const yearFromName = String(academicYear?.name || "").match(/\b\d{4}\b/)?.[0];
+  const admissionYear = academicYear?.start_date
+    ? String(new Date(academicYear.start_date).getFullYear())
+    : yearFromName || String(new Date().getFullYear());
+  const initials = getSchoolInitials(school.school_name || school.name);
+  let suffix = randomInt(1000, 10000);
+
+  // A unique index backs up the availability query and the duplicate-key retry,
+  // including when two creates happen at the same time.
+  for (let attempt = 0; attempt < 10000; attempt += 1, suffix += 1) {
+    const studentCode = `${initials}-${admissionYear}-${String(suffix).padStart(4, "0")}`;
+    if (await Student.collection.findOne({ student_code: studentCode }, { projection: { _id: 1 } })) continue;
+
+    try {
+      const created = await ModelUtils.createAndReturn(Student, {
+        ...payload,
+        student_code: studentCode
+      });
+      return created || null;
+    } catch (error) {
+      if (!isStudentCodeConflict(error)) throw error;
+    }
+  }
+
+  throw new Error("Could not reserve a unique student ID");
 };
 
 /**
@@ -136,7 +185,8 @@ const listStudents = async ({ page = 1, limit = 20, query = "", reqParams = {} }
     const searchRegex = new RegExp(query.trim(), 'i'); // case-insensitive search
     filter.$or = [
       { name: { $regex: searchRegex } },
-      { roll_number: { $regex: searchRegex } }
+      { roll_number: { $regex: searchRegex } },
+      { student_code: { $regex: searchRegex } }
     ];
   }
 

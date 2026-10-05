@@ -1,138 +1,112 @@
 export default `
-<div class="login-split min-vh-100 d-flex">
-  <!-- Left -->
-  <aside class="login-left d-flex flex-column justify-content-center align-items-start p-5">
-    <div class="card left-card w-100 border-0 shadow-sm p-4">
-      <div class="d-flex align-items-start gap-3">
-        <div class="flex-fill ms-2">
-          <img :src="app.logoUrl" alt="App Logo" class="mb-3 login-logo" style="height:120px; width:auto; max-width:100%;" />
-          <h6 class="text-muted mb-1">Welcome To</h6>
-          <h2 class="fw-bold mb-2">{{ app.name }}</h2>
-          <p class="text-muted mb-3">{{ app.tagline }}</p>
-          <ul class="list-unstyled text-muted small mb-0">
-            <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Manage students & classes</li>
-            <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Create exams & publish results</li>
-            <li><i class="fa-solid fa-check text-success me-2"></i> Import / export & backups</li>
-          </ul>
+<div class="school-login-page">
+  <section class="welcome-hero" aria-label="School welcome">
+    <div class="welcome-cover" aria-hidden="true">
+      <img :src="heroImageUrl" alt="" @error="handleHeroImageError" />
+    </div>
+    <div class="welcome-shade" aria-hidden="true"></div>
+
+    <div class="welcome-content">
+      <div class="school-identity">
+        <img v-if="app.logoUrl" :src="app.logoUrl" :alt="app.name + ' logo'" class="school-identity-logo" @error="handleLogoError" />
+        <img v-else src="/admin/assets/images/school-welcome.svg" alt="School emblem illustration" class="school-identity-logo school-identity-fallback" />
+        <div class="school-identity-copy">
+          <span>Welcome to</span>
+          <h1>{{ app.name }}</h1>
+          <p>Learning <i></i> Character <i></i> Bright futures</p>
         </div>
       </div>
-      <div class="mt-4 pt-3 border-top text-muted small">
-        &copy; {{ year }} — Built by Hubi-Infotech
+
+      <div class="welcome-message">
+        <p class="welcome-kicker">YOUR SCHOOL, ALL IN ONE PLACE</p>
+        <h2>{{ app.tagline }}</h2>
+        <span class="welcome-rule"></span>
+        <p class="welcome-description">{{ app.description }}</p>
+      </div>
+
+      <div class="welcome-features" aria-label="School portal features">
+        <article><i class="fa-solid fa-users"></i><span>Manage<br />Students</span></article>
+        <article><i class="fa-solid fa-book-open"></i><span>Academic<br />Records</span></article>
+        <article><i class="fa-solid fa-chart-column"></i><span>Exams &amp;<br />Results</span></article>
+        <article><i class="fa-solid fa-chart-pie"></i><span>Reports &amp;<br />Analytics</span></article>
       </div>
     </div>
-  </aside>
 
-  <!-- Right -->
-  <main class="login-right d-flex align-items-center justify-content-center p-4">
-    <div class="card shadow-lg p-4" style="max-width:600px; width:100%; border-radius:12px;">
-      <!-- LOGIN MODE -->
+    <div class="welcome-wave" aria-hidden="true"></div>
+    <footer class="welcome-footer">
+      <blockquote><span aria-hidden="true">“</span><p>Education is the light that guides us toward a brighter future.</p></blockquote>
+      <p class="welcome-copyright">&copy; {{ year }} — Built by Hubi-Infotech</p>
+    </footer>
+  </section>
+
+  <main class="login-panel">
+    <div class="login-card-modern" :class="{ 'registration-card': isRegisterMode }">
       <div v-if="!isRegisterMode">
-        <div class="mb-3 text-center">
-          <h5 class="mb-1">Sign in to continue</h5>
-          <p class="text-muted small mb-0">Enter your credentials to access the admin panel</p>
-        </div>
+        <header class="login-card-heading">
+          <h2>School Admin Login</h2>
+          <p>Enter your credentials to access the school portal</p>
+        </header>
 
-        <!-- Auto-validated form -->
-        <form id="loginForm" data-vform @validated-submit="handleLogin" novalidate>
-          <!-- Email -->
-          <div class="mb-3">
-            <label class="form-label">Email</label>
-            <input
-              id="login_email"
-              v-model.trim="email"
-              type="email"
-              class="form-control form-control-lg"
-              placeholder="admin@example.com"
-              data-vtype="email"
-            />
-          </div>
+        <form id="loginForm" class="modern-login-form" @submit.prevent="handleLogin" novalidate>
+          <label class="modern-field">
+            <span>Username or email</span>
+            <div class="modern-input-wrap">
+              <i class="fa-regular fa-user" aria-hidden="true"></i>
+              <input id="login_email" v-model.trim="identifier" type="text" placeholder="Username or email" autocomplete="username" />
+            </div>
+          </label>
 
-          <!-- PIN (shown in PIN mode) -->
-          <div class="mb-3" v-if="isPinLogin">
-            <label class="form-label">PIN</label>
-            <div class="position-relative">
-              <i class="fa-solid fa-key position-absolute"
-                 style="left:14px; top:50%; transform:translateY(-50%); color:#6c757d;"></i>
-
+          <label class="modern-field">
+            <span>{{ isPinLogin ? 'PIN' : 'Password' }}</span>
+            <div class="modern-input-wrap">
+              <i class="fa-solid fa-lock" aria-hidden="true"></i>
               <input
+                v-if="isPinLogin"
                 id="login_pin"
-                :type="showPin ? 'text' : 'password'"
                 v-model="pin"
-                class="form-control"
-                placeholder="••••"
+                :type="showPin ? 'text' : 'password'"
+                placeholder="Enter 4-digit PIN"
                 inputmode="numeric"
                 maxlength="4"
-                pattern="[0-9]*"
+                autocomplete="one-time-code"
                 @input="pin = pin.replace(/\\D/g, '').slice(0, 4)"
                 @blur="handlePinBlur"
-                style="
-                  padding-left: 42px;
-                  letter-spacing: 0.6rem;
-                  font-size: 2.1rem;
-                  height: 52px;
-                  font-weight: 600;
-                  text-align: center;
-                "
-                data-vtype="number"
-                data-vmin="4" 
-                data-vmax="4"   
               />
+              <input
+                v-else
+                id="login_password"
+                v-model="password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+              />
+              <button v-if="isPinLogin" class="visibility-toggle" type="button" :aria-label="showPin ? 'Hide PIN' : 'Show PIN'" @click="showPin = !showPin"><i :class="showPin ? 'fa-solid fa-eye-slash' : 'fa-regular fa-eye'" aria-hidden="true"></i></button>
+              <button v-else class="visibility-toggle" type="button" :aria-label="showPassword ? 'Hide password' : 'Show password'" @click="showPassword = !showPassword"><i :class="showPassword ? 'fa-solid fa-eye-slash' : 'fa-regular fa-eye'" aria-hidden="true"></i></button>
             </div>
+            <small v-if="isPinLogin" class="field-hint">PIN must be exactly 4 digits.</small>
+          </label>
 
-            <div class="d-flex justify-content-between mt-1">
-              <span class="small text-primary" style="cursor:pointer;" @click="showPin = !showPin">
-                {{ showPin ? "Hide PIN" : "Show PIN" }}
-              </span>
-              <span class="small text-primary" style="cursor:pointer;" @click="switchToPassword">
-                Use password instead
-              </span>
-            </div>
-
-            <div class="form-text">PIN must be exactly 4 digits.</div>
+          <div class="login-options">
+            <label class="remember-option"><input type="checkbox" v-model="remember" /><span>Remember me</span></label>
+            <a href="#/forgot">{{ isPinLogin ? 'Forgot PIN?' : 'Forgot password?' }}</a>
           </div>
 
-          <!-- Password (shown in password mode) -->
-          <div class="mb-2" v-else>
-            <label class="form-label">Password</label>
-            <input
-              id="login_password"
-              :type="showPassword ? 'text' : 'password'"
-              v-model.trim="password"
-              class="form-control form-control-lg"
-              placeholder="Enter password"
-              data-vtype="text"
-              data-vmin="4"
-            />
-            <div class="d-flex justify-content-between mt-1">
-              <span class="small text-primary" style="cursor:pointer;" @click="showPassword = !showPassword">
-                {{ showPassword ? "Hide Password" : "Show Password" }}
-              </span>
-              <span class="small text-primary" style="cursor:pointer;" @click="isPinLogin = true">
-                Use PIN instead
-              </span>
-            </div>
-          </div>
-
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="remember" v-model="remember" />
-              <label class="form-check-label small" for="remember">Remember me</label>
-            </div>
-            <a class="small" href="#/forgot">Forgot?</a>
-          </div>
-
-          <button type="submit" class="btn btn-primary btn-lg w-100" :disabled="loading">
-            <span v-if="!loading">Login</span>
-            <span v-else>Logging in…</span>
+          <button type="submit" class="login-submit" :disabled="loading">
+            <span>{{ loading ? 'Signing in…' : 'Login' }}</span>
+            <i v-if="!loading" class="fa-solid fa-arrow-right" aria-hidden="true"></i>
           </button>
         </form>
 
-        <div class="text-center mt-3 small text-muted">
-          Don't have an account? <a href="#" @click.prevent="isRegisterMode = true" class="text-primary fw-bold">Register here</a>
-        </div>
+        <div class="login-divider"><span>OR</span></div>
+        <button class="alternate-login" type="button" @click="isPinLogin ? switchToPassword() : switchToPin()">
+          <i :class="isPinLogin ? 'fa-solid fa-key' : 'fa-solid fa-hashtag'" aria-hidden="true"></i>
+          {{ isPinLogin ? 'Login with password' : 'Login with PIN' }}
+        </button>
+        <p class="secure-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Secure access for authorized school staff only</p>
+        <p class="registration-link">Don't have an account? <a href="#" @click.prevent="isRegisterMode = true">Register here</a></p>
       </div>
 
-      <!-- REGISTER MODE -->
+      <!-- Registration remains available for installations that use it. -->
       <div v-else>
         <div class="mb-3 text-center">
           <h5 class="mb-1">Register Your School</h5>

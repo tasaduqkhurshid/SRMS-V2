@@ -10,10 +10,11 @@ const router = createRouter({
 
 
 router.beforeEach((to, _from, next) => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
   let role = "";
   try {
-    role = String(JSON.parse(localStorage.getItem("user") || "{}").role || "").toUpperCase();
+    const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user") || "{}";
+    role = String(JSON.parse(storedUser).role || "").toUpperCase();
   } catch {
     role = "";
   }
