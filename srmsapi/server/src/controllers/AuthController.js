@@ -17,7 +17,9 @@ const login = async (req, res) => {
         message: "username/email and password are required",
       });
     }
-    const data = await AuthService.login(identifier, password);
+    const data = req.isPlatformHost
+      ? await AuthService.loginSuperAdmin(identifier, password)
+      : await AuthService.login(identifier, password, req.schoolId);
 
     if (!data) {
       return res.status(STATUS.UNAUTHORIZED).json({
@@ -66,7 +68,10 @@ const loginViaPin = async (req, res) => {
       });
     }
 
-    const data = await AuthService.loginPin(email.trim(), pin);
+    if (req.isPlatformHost) {
+      return res.status(STATUS.FORBIDDEN).json({ status: 'error', message: 'PIN login is not enabled for platform administrators' });
+    }
+    const data = await AuthService.loginPin(email.trim(), pin, req.schoolId);
     if (!data) {
       return res.status(STATUS.UNAUTHORIZED).json({
         status: "error",
@@ -121,6 +126,9 @@ const verifyJWTToken = async (req, res) => {
         valid: false,
         error: "Invalid or expired token",
       });
+    }
+    if (req.isPlatformHost ? user.role !== 'SUPER_ADMIN' : String(user.school_id) !== String(req.schoolId)) {
+      return res.status(STATUS.UNAUTHORIZED).json({ valid: false, error: 'Token belongs to a different portal' });
     }
 
     return res.status(STATUS.OK).json({

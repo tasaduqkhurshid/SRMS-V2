@@ -1,0 +1,11 @@
+services:
+  srms-student-portal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: srms-student-portal
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

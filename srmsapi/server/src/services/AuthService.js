@@ -51,20 +51,21 @@ const buildAuthResponse = (userRecord) => {
   };
 };
 
-const login = async (identifier, password) => {
+const login = async (identifier, password, schoolId) => {
   // allow identifier to be either username or email
   if (!identifier || !password) return null;
+  if (!schoolId) return null;
 
   // first try by username
   let userRecord = await ModelUtils.findOne(User,
-    { username: identifier },
+    { username: identifier, school_id: schoolId },
     { populate: { path: 'school_id' } }
   );
 
   // if not found try by email
   if (!userRecord) {
     userRecord = await ModelUtils.findOne(User,
-      { email: identifier },
+      { email: identifier, school_id: schoolId },
       { populate: { path: 'school_id' } }
     );
   }
@@ -72,14 +73,25 @@ const login = async (identifier, password) => {
   if (!userRecord) return null;
 
   const ok = await bcrypt.compare(password, userRecord.password);
-  if (!ok) return null;
+  if (!ok || !["ADMIN", "SCHOOL_ADMIN"].includes(String(userRecord.role).toUpperCase())) return null;
 
   return buildAuthResponse(userRecord);
 };
 
-const loginPin = async (email, pin) => {
+const loginSuperAdmin = async (identifier, password) => {
+  if (!identifier || !password) return null;
+  const userRecord = await User.findOne({
+    $or: [{ username: identifier }, { email: identifier }],
+    role: 'SUPER_ADMIN',
+    school_id: null,
+  }).lean();
+  if (!userRecord || !(await bcrypt.compare(password, userRecord.password || ''))) return null;
+  return buildAuthResponse(userRecord);
+};
+
+const loginPin = async (email, pin, schoolId) => {
   const userRecord = await ModelUtils.findOne(User,
-    { email },
+    { email, school_id: schoolId },
     { populate: { path: 'school_id' } }
   );
   if (!userRecord) return null;
@@ -112,4 +124,4 @@ const verifyToken = async (token) => {
   }
 };
 
-module.exports = { login, loginPin, signJwt, verifyToken };
+module.exports = { login, loginSuperAdmin, loginPin, signJwt, verifyToken };

@@ -1,0 +1,12 @@
+{
+  "name": "SRMS Student Portal",
+  "short_name": "SRMS Student",
+  "start_url": "/login",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f3f7fb",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    { "src": "/portal-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

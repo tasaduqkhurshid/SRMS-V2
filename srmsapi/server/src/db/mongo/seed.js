@@ -78,6 +78,58 @@ const run = async () => {
       }
     );
 
+    const hanfiaSchool = await upsertBy(db.School, { slug: 'hanfia' }, {
+      school_name: 'Hanfia Noor Ul Aiza Islamia High School',
+      name: 'Hanfia Noor Ul Aiza Islamia High School',
+      school_code: 'HANFIA',
+      slug: 'hanfia',
+      status: 'active',
+    });
+    const schoolB = await upsertBy(db.School, { slug: 'schoolb' }, {
+      school_name: 'SRMS School B Test Campus',
+      name: 'SRMS School B Test Campus',
+      school_code: 'SCHOOLB',
+      slug: 'schoolb',
+      status: 'active',
+    });
+
+    await upsertBy(db.User, { username: 'hanfia-admin' }, {
+      username: 'hanfia-admin',
+      email: 'admin@hanfia.srms.local',
+      password: bcrypt.hashSync(process.env.HANFIA_ADMIN_PASSWORD || 'hanfia-admin-local-only', 10),
+      role: 'ADMIN',
+      school_id: hanfiaSchool._id,
+    });
+    await upsertBy(db.User, { username: 'schoolb-admin' }, {
+      username: 'schoolb-admin',
+      email: 'admin@schoolb.srms.local',
+      password: bcrypt.hashSync(process.env.SCHOOLB_ADMIN_PASSWORD || 'schoolb-admin-local-only', 10),
+      role: 'ADMIN',
+      school_id: schoolB._id,
+    });
+
+    const demoStudentPassword = process.env.DEMO_STUDENT_PASSWORD || 'student-local-only';
+    await upsertBy(db.Student, { school_id: hanfiaSchool._id, student_code: 'STU001' }, {
+      school_id: hanfiaSchool._id,
+      student_code: 'STU001',
+      admission_number: 'STU001',
+      roll_number: '1',
+      name: 'Hanfia Demo Student',
+      class: '1st',
+      section: 'A',
+      password_hash: bcrypt.hashSync(demoStudentPassword, 10),
+    });
+    await upsertBy(db.Student, { school_id: schoolB._id, student_code: 'STU001' }, {
+      school_id: schoolB._id,
+      student_code: 'STU001',
+      admission_number: 'STU001',
+      roll_number: '1',
+      name: 'School B Demo Student',
+      class: '1st',
+      section: 'A',
+      password_hash: bcrypt.hashSync(process.env.SCHOOLB_STUDENT_PASSWORD || 'schoolb-student-local-only', 10),
+    });
+
     await upsertBy(
       db.User,
       { username: "admin" },
@@ -90,6 +142,14 @@ const run = async () => {
         school_id: school._id
       }
     );
+
+    await upsertBy(db.User, { username: 'platform-admin' }, {
+      username: 'platform-admin',
+      email: 'platform-admin@sms.local',
+      password: bcrypt.hashSync(process.env.SUPER_ADMIN_PASSWORD || 'platform-admin-local-only', 10),
+      role: 'SUPER_ADMIN',
+      school_id: null,
+    });
 
     const currentYear = new Date().getFullYear();
     const academicYear = await upsertBy(
@@ -138,8 +198,12 @@ const run = async () => {
     }
 
     console.log("Mongo seed completed");
+    console.log(`Platform Super Admin: platform-admin / ${process.env.SUPER_ADMIN_PASSWORD || 'platform-admin-local-only'}`);
     console.log(`Admin login: admin / ${ADMIN_PASSWORD}`);
     console.log(`Admin PIN login: admin@hubiinfotech.com / ${ADMIN_PIN}`);
+    console.log(`Hanfia school admin: hanfia-admin / ${process.env.HANFIA_ADMIN_PASSWORD || 'hanfia-admin-local-only'}`);
+    console.log(`Hanfia demo student: STU001 / ${demoStudentPassword}`);
+    console.log(`School B test tenant: schoolb / ${process.env.SCHOOLB_ADMIN_PASSWORD || 'schoolb-admin-local-only'}`);
   } catch (error) {
     console.error("Mongo seed failed:", error);
     process.exitCode = 1;

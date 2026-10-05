@@ -2,6 +2,9 @@
 
 const redis = require('redis');
 const logger = require('../utils/logger');
+const { getTenantContext } = require('../middleware/tenantContext');
+
+const scopedCacheKey = (key) => `${getTenantContext()?.schoolId || 'global'}:${key}`;
 
 // Initialize Redis client
 let redisClient = null;
@@ -13,22 +16,16 @@ let isConnected = false;
 const initializeRedis = async () => {
   try {
     redisClient = redis.createClient({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379,
-      db: process.env.REDIS_DB || 0,
+      socket: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: Number(process.env.REDIS_PORT || 6379),
+        reconnectStrategy: (retries) => {
+          if (retries > 10) return new Error('Redis retry limit reached');
+          return Math.min(retries * 100, 3000);
+        },
+      },
+      database: Number(process.env.REDIS_DB || 0),
       password: process.env.REDIS_PASSWORD || undefined,
-      retryStrategy: (options) => {
-        if (options.error && options.error.code === 'ECONNREFUSED') {
-          logger && logger.warn && logger.warn('Redis connection refused, will retry...');
-        }
-        if (options.total_retry_time > 1000 * 60 * 60) {
-          return new Error('Redis retry time exhausted');
-        }
-        if (options.attempt > 10) {
-          return undefined;
-        }
-        return Math.min(options.attempt * 100, 3000);
-      }
     });
 
     redisClient.on('error', (err) => {
@@ -36,20 +33,14 @@ const initializeRedis = async () => {
       isConnected = false;
     });
 
-    redisClient.on('connect', () => {
+    redisClient.on('ready', () => {
       logger && logger.info && logger.info('Redis connected');
       isConnected = true;
     });
+    redisClient.on('end', () => { isConnected = false; });
 
-    // Promisify redis client
-    redisClient = {
-      ...redisClient,
-      getAsync: promisify(redisClient.get),
-      setAsync: promisify(redisClient.set),
-      delAsync: promisify(redisClient.del),
-      existsAsync: promisify(redisClient.exists),
-      expireAsync: promisify(redisClient.expire)
-    };
+    await redisClient.connect();
+    isConnected = redisClient.isReady;
 
     return redisClient;
   } catch (error) {
@@ -59,29 +50,16 @@ const initializeRedis = async () => {
 };
 
 /**
- * Promisify callback-based function
- */
-const promisify = (fn) => {
-  return (...args) => {
-    return new Promise((resolve, reject) => {
-      fn.apply(redisClient, [...args, (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      }]);
-    });
-  };
-};
-
-/**
  * Get value from cache
  */
 const get = async (key) => {
   try {
     if (!isConnected || !redisClient) return null;
-    
-    const value = await redisClient.getAsync(key);
+
+    const cacheKey = scopedCacheKey(key);
+    const value = await redisClient.get(cacheKey);
     if (value) {
-      logger && logger.debug && logger.debug(`Cache HIT: ${key}`);
+      logger && logger.debug && logger.debug(`Cache HIT: ${cacheKey}`);
       return JSON.parse(value);
     }
     return null;
@@ -99,13 +77,10 @@ const set = async (key, value, ttl = 3600) => {
     if (!isConnected || !redisClient) return false;
 
     const serialized = JSON.stringify(value);
-    await redisClient.setAsync(key, serialized);
+    const cacheKey = scopedCacheKey(key);
+    await redisClient.set(cacheKey, serialized, ttl ? { EX: ttl } : {});
     
-    if (ttl) {
-      await redisClient.expireAsync(key, ttl);
-    }
-    
-    logger && logger.debug && logger.debug(`Cache SET: ${key} (TTL: ${ttl}s)`);
+    logger && logger.debug && logger.debug(`Cache SET: ${cacheKey} (TTL: ${ttl}s)`);
     return true;
   } catch (error) {
     logger && logger.error && logger.error(`Redis SET error for key ${key}:`, error);
@@ -120,8 +95,9 @@ const del = async (key) => {
   try {
     if (!isConnected || !redisClient) return false;
 
-    const result = await redisClient.delAsync(key);
-    logger && logger.debug && logger.debug(`Cache DELETE: ${key}`);
+    const cacheKey = scopedCacheKey(key);
+    const result = await redisClient.del(cacheKey);
+    logger && logger.debug && logger.debug(`Cache DELETE: ${cacheKey}`);
     return result > 0;
   } catch (error) {
     logger && logger.error && logger.error(`Redis DEL error for key ${key}:`, error);
@@ -137,29 +113,14 @@ const deleteByPattern = async (pattern) => {
     if (!isConnected || !redisClient) return 0;
 
     // Get all keys matching pattern
-    const keys = await new Promise((resolve, reject) => {
-      const cursor = '0';
-      const matches = [];
-      
-      const scanRecursive = (cursor) => {
-        redisClient.scan(cursor, 'MATCH', pattern, (err, result) => {
-          if (err) reject(err);
-          else {
-            matches.push(...result[1]);
-            if (result[0] === '0') {
-              resolve(matches);
-            } else {
-              scanRecursive(result[0]);
-            }
-          }
-        });
-      };
-      
-      scanRecursive(cursor);
-    });
+    const scopedPattern = scopedCacheKey(pattern);
+    const keys = [];
+    for await (const key of redisClient.scanIterator({ MATCH: scopedPattern, COUNT: 100 })) {
+      keys.push(key);
+    }
 
     if (keys.length > 0) {
-      await redisClient.delAsync(...keys);
+      await redisClient.del(keys);
       logger && logger.debug && logger.debug(`Cache DELETE pattern: ${pattern} (${keys.length} keys)`);
       return keys.length;
     }
@@ -177,8 +138,8 @@ const exists = async (key) => {
   try {
     if (!isConnected || !redisClient) return false;
 
-    const result = await redisClient.existsAsync(key);
-    return result === 1;
+    const result = await redisClient.exists(scopedCacheKey(key));
+    return result > 0;
   } catch (error) {
     logger && logger.error && logger.error(`Redis EXISTS error for key ${key}:`, error);
     return false;
@@ -219,15 +180,7 @@ const clear = async () => {
   try {
     if (!isConnected || !redisClient) return false;
 
-    await new Promise((resolve, reject) => {
-      redisClient.flushdb((err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-
-    logger && logger.debug && logger.debug('Cache FLUSH');
-    return true;
+    return await deleteByPattern('*') >= 0;
   } catch (error) {
     logger && logger.error && logger.error('Redis FLUSH error:', error);
     return false;

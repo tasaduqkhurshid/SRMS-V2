@@ -2,6 +2,9 @@
 
 const mongoose = require("mongoose");
 const path = require("path");
+const tenantScopePlugin = require("../../middleware/tenantScopePlugin");
+
+mongoose.plugin(tenantScopePlugin);
 
 const db = {};
 

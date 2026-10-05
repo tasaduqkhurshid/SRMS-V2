@@ -11,6 +11,11 @@ const UserSchema = new mongoose.Schema(
     password: String,
     pin: String,
     role: String,
+    student_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Student',
+      default: null
+    },
     school_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School'

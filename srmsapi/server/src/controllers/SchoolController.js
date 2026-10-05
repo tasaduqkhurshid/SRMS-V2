@@ -8,6 +8,8 @@ exports.register = async (req, res) => {
     const school = {
       school_name: schoolData?.school_name,
       school_code: schoolData?.school_code,
+      slug: schoolData?.slug || schoolData?.school_code?.toLowerCase(),
+      status: schoolData?.status || 'active',
       address: schoolData?.address || null,
       contact_number: schoolData?.contact_number || null,
       phone: schoolData?.contact_number || null,
@@ -42,9 +44,10 @@ exports.register = async (req, res) => {
   }
 };
 
-exports.me = async (_req, res) => {
+exports.me = async (req, res) => {
   try {
-    const s = await SchoolService.getSchool();
+    const s = req.school;
+    if (!s) return res.status(404).json({ success: false, message: "School not found" });
     res.json({ school: s });
   } catch (e) {
     res.status(400).json({ message: e.message });
@@ -56,9 +59,12 @@ exports.me = async (_req, res) => {
  */
 exports.getById = async (req, res) => {
   try {
-    const schoolId = req.params.id || req.schoolData?._id || req.session?.school?._id;
+    const schoolId = req.schoolId;
     if (!schoolId) {
-      return res.status(400).json({ success: false, message: "School ID not found" });
+      return res.status(404).json({ success: false, message: "School not found" });
+    }
+    if (req.params.id && String(req.params.id) !== String(schoolId)) {
+      return res.status(404).json({ success: false, message: "School not found" });
     }
 
     const school = await SchoolService.getSchoolById(schoolId);
@@ -73,9 +79,12 @@ exports.getById = async (req, res) => {
  */
 exports.update = async (req, res) => {
   try {
-    const schoolId = req.params.id || req.schoolData?._id || req.session?.school?._id;
+    const schoolId = req.schoolId;
     if (!schoolId) {
-      return res.status(400).json({ success: false, message: "School ID not found" });
+      return res.status(404).json({ success: false, message: "School not found" });
+    }
+    if (req.params.id && String(req.params.id) !== String(schoolId)) {
+      return res.status(404).json({ success: false, message: "School not found" });
     }
 
     const updated = await SchoolService.updateSchool(schoolId, req.body);

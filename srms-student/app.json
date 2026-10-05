@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "SRMS Student Portal",
+    "slug": "srms-student-portal",
+    "scheme": "srmsstudent",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "icon": "./assets/icon.png",
+    "splash": {
+      "backgroundColor": "#f3f7fb",
+      "image": "./assets/splash.png"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.greenvalley.srmsstudent",
+      "infoPlist": {
+        "CFBundleDisplayName": "SRMS Student Portal"
+      }
+    },
+    "android": {
+      "package": "com.greenvalley.srmsstudent",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#E6F4FE"
+      },
+      "displayName": "SRMS Student Portal",
+      "permissions": [
+        "INTERNET"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "themeColor": "#1d4ed8",
+      "backgroundColor": "#f3f7fb",
+      "display": "standalone"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

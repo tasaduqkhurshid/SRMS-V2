@@ -2,6 +2,8 @@
 const  StudentService = require("../services/StudentService");
 const { STATUS } = require("../constants/status");
 const logger = require("../utils/logger")
+const bcrypt = require("bcryptjs");
+const { Student } = require("../db/models");
 const { normalizeImageToFile } = require("../services/ImageService");
 
 const saveStudentDetails = async (req, res) => {
@@ -143,6 +145,23 @@ const saveStudentDetails = async (req, res) => {
       message: "Something went wrong while saving student",
       error: err.message,
     });
+  }
+};
+
+const setStudentPassword = async (req, res) => {
+  try {
+    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+    if (password.length < 8) return res.status(STATUS.BAD_REQUEST).json({ status: 'error', message: 'Password must be at least 8 characters' });
+    const updated = await Student.findOneAndUpdate(
+      { _id: req.params.id, school_id: req.schoolId },
+      { $set: { password_hash: await bcrypt.hash(password, 12) } },
+      { new: true },
+    ).select('_id');
+    if (!updated) return res.status(STATUS.NOT_FOUND).json({ status: 'error', message: 'Student not found' });
+    return res.json({ status: 'success', message: 'Student password updated' });
+  } catch (err) {
+    logger && logger.error && logger.error('setStudentPassword error:', err);
+    return res.status(STATUS.INTERNAL_SERVER_ERROR).json({ status: 'error', message: 'Failed to update student password' });
   }
 };
 
@@ -488,6 +507,7 @@ module.exports = {
   listStudentSubjects,
   setStudentSubjects,
   uploadStudentImage,
+  setStudentPassword,
   setStudentCourse,
   bulkImportStudents
 };

@@ -15,6 +15,8 @@ const StudentSchema = new mongoose.Schema(
     gender: String,
     dob: Date,
     admission_number: String,
+    password_hash: { type: String, select: false },
+    student_code: String,
     father_name: String,
     mother_name: String,
     address: String,

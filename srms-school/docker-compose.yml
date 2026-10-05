@@ -1,0 +1,22 @@
+services:
+  # Frontend Client
+  srms-school:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: srms-school
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    environment:
+      NODE_ENV: production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - srms-network
+
+volumes: {}
+
+networks:
+  srms-network:
+    driver: bridge

@@ -1,0 +1,144 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password}
+      MONGO_INITDB_DATABASE: school-system
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok' --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin | grep -q 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [srms-internal]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [srms-internal]
+
+  sms-api:
+    build:
+      context: ./srmsapi
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["sh", "-c", "npm run migrate && if [ \"$${SEED_DEMO_DATA}\" = \"true\" ]; then npm run seed; fi && npm start"]
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
+      JWT_SECRET: ${JWT_SECRET:-dev_secret_change_me}
+      MONGO_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-password}@mongodb:27017/school-system?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      HANFIA_ADMIN_PASSWORD: ${HANFIA_ADMIN_PASSWORD:-hanfia-admin-local-only}
+      DEMO_STUDENT_PASSWORD: ${DEMO_STUDENT_PASSWORD:-student-local-only}
+      SCHOOLB_ADMIN_PASSWORD: ${SCHOOLB_ADMIN_PASSWORD:-schoolb-admin-local-only}
+      SCHOOLB_STUDENT_PASSWORD: ${SCHOOLB_STUDENT_PASSWORD:-schoolb-student-local-only}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-platform-admin-local-only}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      TRUST_PROXY: "1"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    networks: [srms-internal]
+
+  sms-school:
+    build:
+      context: ./srms-school
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: /api/
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [srms-internal]
+
+  sms-student:
+    build:
+      context: ./srms-student
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [srms-internal]
+
+  sms-admin:
+    build:
+      context: ./srms-admin
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [srms-internal]
+
+  sms-nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    environment:
+      ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
+      NGINX_LISTEN_PORT: 80
+      NGINX_ENVSUBST_FILTER: '^(ROOT_DOMAIN|NGINX_LISTEN_PORT)$'
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./deploy/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./deploy/proxy_params:/etc/nginx/proxy_params:ro
+    depends_on:
+      sms-school:
+        condition: service_healthy
+      sms-student:
+        condition: service_healthy
+      sms-admin:
+        condition: service_healthy
+      sms-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [srms-internal]
+
+volumes:
+  mongodb_data:
+  mongodb_config:
+  redis_data:
+
+networks:
+  srms-internal:
+    driver: bridge

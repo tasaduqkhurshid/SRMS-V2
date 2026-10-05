@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 
 const ResultSchema = new mongoose.Schema(
   {
+    school_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'School',
+      index: true
+    },
     student_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
