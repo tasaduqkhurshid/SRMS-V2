@@ -33,6 +33,19 @@ const resolveTenant = async (req, res, next) => {
   const required = tenantRequiredForPath(req.path) && req.path !== '/api/health';
 
   if (!slug) {
+    const defaultSlug = process.env.DEFAULT_TENANT_SLUG;
+    if (defaultSlug) {
+      try {
+        const school = await School.findOne({ slug: defaultSlug, status: 'active' }).lean();
+        if (school) {
+          req.school = school;
+          req.schoolId = school._id;
+          return runWithTenant(school, next);
+        }
+      } catch (error) {
+        return next(error);
+      }
+    }
     if (required) return res.status(400).json({ status: 'error', message: 'Use a school-specific hostname' });
     return runWithTenant(null, next);
   }

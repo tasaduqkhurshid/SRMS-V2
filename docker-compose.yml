@@ -68,6 +68,7 @@ services:
       R2_ENDPOINT: ${R2_ENDPOINT:-}
       R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
       TRUST_PROXY: "1"
+      DEFAULT_TENANT_SLUG: ${DEFAULT_TENANT_SLUG:-}
     depends_on:
       mongodb:
         condition: service_healthy
