@@ -1,6 +1,7 @@
 import template from "./StudentListTemplate.js";
 import { api } from "../../../Services/api.js";
-const { ref, onMounted } = Vue;
+const { ref, onMounted, watch } = Vue;
+const { useRoute } = VueRouter;
 
 export default {
   name: "StudentList",
@@ -8,6 +9,7 @@ export default {
   emits: ["edit","view","assign"],
 
   setup(_, { emit }) {
+    const route = useRoute();
     const loading = ref(false);
     const students = ref([]);
     const total = ref(0);
@@ -115,7 +117,22 @@ export default {
       getStudentList();
     };
 
-    onMounted(getStudentList);
+    onMounted(() => {
+      // support arriving here from the global header search
+      const q = route.query.q;
+      if (typeof q === "string" && q.trim()) {
+        searchTerm.value = q.trim();
+      }
+      getStudentList();
+    });
+
+    // keep the list in sync when the header search updates the query
+    watch(() => route.query.q, (q) => {
+      if (typeof q === "string") {
+        searchTerm.value = q.trim();
+        getStudentList();
+      }
+    });
 
     // initial load only; parent will refresh via template ref when needed
 

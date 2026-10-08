@@ -1,34 +1,60 @@
 export default `
-<header class="d-flex justify-content-between align-items-center p-3 bg-white border-bottom shadow-sm">
-  <h5 class="mb-0 fw-bold">School Result Management System</h5>
+<header class="app-header-bar">
+  <!-- Left: school context + search -->
+  <div class="header-left d-flex align-items-center gap-3">
+    <span class="header-school">{{ schoolName }}</span>
 
-  <!-- User dropdown -->
-  <div class="dropdown">
+    <div class="header-search d-none d-md-block">
+      <i class="fa-solid fa-search search-icon"></i>
+      <input
+        type="text"
+        placeholder="Search..."
+        v-model="searchQuery"
+        @keyup.enter="handleSearch"
+        aria-label="Search"
+      />
+    </div>
+  </div>
+
+  <!-- Right: actions + user -->
+  <div class="header-right">
     <button
-      class="btn bg-transparent border-0 d-flex align-items-center dropdown-toggle"
       type="button"
-      id="userDropdown"
-      data-bs-toggle="dropdown"
-      aria-expanded="false"
+      class="header-icon-btn"
+      title="Notifications"
+      aria-label="Notifications"
+      @click="handleNotifications"
     >
-      <img src="/admin/assets/images/avatar.png" alt="avatar" class="rounded-circle" height="36" />
-      <span class="ms-2 text-muted fw-semibold">Admin</span>
+      <i class="fa-solid fa-bell"></i>
     </button>
 
-    <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdown">
-      <li>
-        <a class="dropdown-item d-flex align-items-center" href="/profile">
-          <i class="fa-solid fa-user me-2 text-secondary"></i> Profile
-        </a>
-      </li>
-      <li><hr class="dropdown-divider"></li>
-      <li>
-        <a class="dropdown-item d-flex align-items-center text-danger" href="#" id="logoutBtn">
-          <i class="fa-solid fa-right-from-bracket me-2"></i> Logout
-        </a>
-      </li>
-    </ul>
+    <!-- User dropdown -->
+    <div class="dropdown">
+      <button
+        class="header-user dropdown-toggle"
+        type="button"
+        id="userDropdown"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+      >
+        <img src="/assets/images/avatar.png" alt="avatar" class="rounded-circle" />
+        <span class="header-username">{{ user.username || user.name || 'hanfia-admin' }}</span>
+      </button>
+
+      <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdown">
+        <li>
+          <a class="dropdown-item d-flex align-items-center" href="/profile">
+            <i class="fa-solid fa-user me-2 text-secondary"></i> Profile
+          </a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+          <a class="dropdown-item d-flex align-items-center text-danger" href="#" @click.prevent="handleLogout">
+            <i class="fa-solid fa-right-from-bracket me-2"></i> Logout
+          </a>
+        </li>
+      </ul>
+    </div>
   </div>
 </header>
-
 `

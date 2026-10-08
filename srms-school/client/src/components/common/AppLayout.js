@@ -1,21 +1,21 @@
 import template from "./AppLayout-template.js"
 import Header from "./Header.js"
 import Sidebar from "./Sidebar.js"
-import Footer from "./Footer.js"
 const { ref } = Vue
 
 export default {
   name: "AppLayout",
-  components: { Header, Sidebar, Footer },
+  components: { Header, Sidebar },
   template,
   setup() {
-    // 👤 Dummy user object
-    const user = ref({
-      name: "Admin User",
-      email: "admin@example.com",
-      image: "/admin/assets/images/avatar.png"
-    })
+    const sidebarRef = ref(null)
 
-    return { user }
+    const handleToggleSidebar = () => {
+      if (sidebarRef.value?.toggle) {
+        sidebarRef.value.toggle()
+      }
+    }
+
+    return { sidebarRef, handleToggleSidebar }
   }
 }
