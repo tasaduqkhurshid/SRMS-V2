@@ -5,6 +5,8 @@ import PlatformSidebar from './components/common/PlatformSidebar.js';
 import PlatformStats from './components/pages/dashboard/PlatformStats.js';
 import SchoolList from './components/pages/school/SchoolList.js';
 import SchoolDetails from './components/pages/school/SchoolDetails.js';
+import SchoolModalComponent from './components/pages/school/SchoolModalComponent.js';
+import AddUserModal from './components/pages/school/AddUserModal.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -25,14 +27,23 @@ const paginatedSchools = computed(() => {
 const schoolPageStart = computed(() => schools.value.length ? (currentSchoolPage.value - 1) * schoolPageSize + 1 : 0);
 const schoolPageEnd = computed(() => Math.min(currentSchoolPage.value * schoolPageSize, schools.value.length));
 const adminForm = ref({ username: '', email: '', password: '' });
-const editingSchool = ref(false);
 const statistics = ref({ schools: 0, activeSchools: 0, inactiveSchools: 0, students: 0, schoolAdministrators: 0 });
 const loading = ref(false);
 const saving = ref(false);
 const error = ref('');
 const success = ref('');
-const form = ref({ school_name: '', slug: '', email: '', address: '', status: 'active' });
-async function api(path, options = {}) {
+
+// Modal state
+const modalOpen = ref(false);
+const modalMode = ref('create'); // 'create' | 'edit'
+const modalSchool = ref(null);
+const modalSaving = ref(false);
+
+// Add User Modal state
+const addUserModalOpen = ref(false);
+const addUserModalSchool = ref(null);
+
+const api = async (path, options = {}) => {
   const response = await fetch(`/api/admin${path}`, {
     ...options,
     headers: {
@@ -44,9 +55,9 @@ async function api(path, options = {}) {
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.message || `Request failed (${response.status})`);
   return result.data;
-}
+};
 
-async function loadSchools() {
+const loadSchools = async () => {
   loading.value = true;
   error.value = '';
   try {
@@ -67,71 +78,111 @@ async function loadSchools() {
   } finally {
     loading.value = false;
   }
-}
+};
 
-async function viewSchool(school) {
+const viewSchool = async (school) => {
   await router.push(`/schools/${school._id}`);
-}
+};
 
-function schoolPortalUrl(school, path = '/admin/') {
+const schoolPortalUrl = (school, path = '/admin/') => {
   const { protocol, hostname, port } = window.location;
   const rootDomain = hostname.replace(/^admin\./, '');
   const portalDomain = ['localhost', '127.0.0.1'].includes(rootDomain) ? 'sms.local' : rootDomain;
   const portSuffix = port ? `:${port}` : '';
   return `${protocol}//${school.slug}.${portalDomain}${portSuffix}${path}`;
-}
+};
 
-function beginEditSchool() {
-  form.value = {
-    school_name: selectedSchool.value.school_name,
-    slug: selectedSchool.value.slug,
-    email: selectedSchool.value.email || '',
-    address: selectedSchool.value.address || '',
-    status: selectedSchool.value.status || 'active',
-    tagline: selectedSchool.value.branding?.tagline || '',
-    description: selectedSchool.value.branding?.description || '',
-  };
-  editingSchool.value = true;
-}
+// Modal handlers
+const openCreateModal = () => {
+  modalMode.value = 'create';
+  modalSchool.value = null;
+  modalOpen.value = true;
+};
 
-async function saveSchoolEdit() {
-  saving.value = true;
+const openEditModal = (school) => {
+  const schoolToEdit = school || selectedSchool.value;
+  if (!schoolToEdit) return;
+  modalMode.value = 'edit';
+  modalSchool.value = schoolToEdit;
+  modalOpen.value = true;
+};
+
+const closeModal = () => {
+  modalOpen.value = false;
+  modalSchool.value = null;
+};
+
+const openAddUserModal = (school) => {
+  addUserModalSchool.value = school;
+  addUserModalOpen.value = true;
+};
+
+const closeAddUserModal = () => {
+  addUserModalOpen.value = false;
+  addUserModalSchool.value = null;
+};
+
+const handleModalSubmit = async (formData) => {
+  modalSaving.value = true;
   error.value = '';
   success.value = '';
   try {
-    await api(`/schools/${selectedSchool.value._id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ school_name: form.value.school_name, email: form.value.email, address: form.value.address, status: form.value.status, branding: { tagline: form.value.tagline, description: form.value.description } }),
-    });
-    editingSchool.value = false;
-    success.value = 'School details updated.';
+    if (modalMode.value === 'create') {
+      const data = await api('/schools', { method: 'POST', body: JSON.stringify(formData) });
+      const rootDomain = window.location.hostname.replace(/^admin\./, '');
+      success.value = `${data.school_name} created at ${data.slug}.${rootDomain}`;
+    } else {
+      await api(`/schools/${modalSchool.value._id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          school_name: formData.school_name,
+          email: formData.email,
+          address: formData.address,
+          status: formData.status,
+          branding: {
+            tagline: formData.tagline,
+            description: formData.description,
+          },
+        }),
+      });
+      success.value = 'School details updated.';
+    }
+    closeModal();
     await loadSchools();
-  } catch (cause) { error.value = cause.message; }
-  finally { saving.value = false; }
-}
+  } catch (cause) {
+    error.value = cause.message;
+    throw cause; // Re-throw to let modal handle it
+  } finally {
+    modalSaving.value = false;
+  }
+};
 
-async function uploadBrandingAsset(asset, event) {
+const uploadBrandingAsset = async (asset, event) => {
   const file = event.target.files?.[0];
   if (!file || !selectedSchool.value) return;
   saving.value = true; error.value = ''; success.value = '';
-  try { const data = new FormData(); data.append('file', file); await api('/schools/' + selectedSchool.value._id + '/branding/' + asset, { method: 'POST', body: data }); success.value = (asset === 'logo' ? 'School logo' : 'Welcome image') + ' uploaded.'; await loadSchools(); }
-  catch (cause) { error.value = cause.message; }
+  try {
+    const data = new FormData(); data.append('file', file);
+    await api('/schools/' + selectedSchool.value._id + '/branding/' + asset, { method: 'POST', body: data });
+    success.value = (asset === 'logo' ? 'School logo' : 'Welcome image') + ' uploaded.';
+    await loadSchools();
+  } catch (cause) { error.value = cause.message; }
   finally { saving.value = false; event.target.value = ''; }
-}
+};
 
-function startPasswordReset(administrator) {
+const startPasswordReset = (administrator) => {
   passwordResetAdmin.value = administrator;
   adminNewPassword.value = '';
   error.value = '';
   success.value = '';
-}
+};
 
-function cancelPasswordReset() {
+const cancelPasswordReset = () => {
   passwordResetAdmin.value = null;
   adminNewPassword.value = '';
-}
+};
 
-async function updateAdministratorPassword() {
+const updateAdministratorPassword = async () => {
   if (!passwordResetAdmin.value || adminNewPassword.value.length < 8) return;
   saving.value = true;
   error.value = '';
@@ -148,9 +199,9 @@ async function updateAdministratorPassword() {
   } finally {
     saving.value = false;
   }
-}
+};
 
-async function createAdministrator() {
+const createAdministrator = async () => {
   saving.value = true;
   error.value = '';
   success.value = '';
@@ -161,40 +212,23 @@ async function createAdministrator() {
     success.value = 'School administrator created.';
   } catch (cause) { error.value = cause.message; }
   finally { saving.value = false; }
-}
+};
 
-async function createSchool() {
-  saving.value = true;
-  error.value = '';
-  success.value = '';
-  try {
-    const data = await api('/schools', { method: 'POST', body: JSON.stringify(form.value) });
-    const rootDomain = window.location.hostname.replace(/^admin\./, '');
-    success.value = `${data.school_name} created at ${data.slug}.${rootDomain}`;
-    form.value = { school_name: '', slug: '', email: '', address: '', status: 'active' };
-    await loadSchools();
-  } catch (cause) {
-    error.value = cause.message;
-  } finally {
-    saving.value = false;
-  }
-}
-
-async function toggleSchool(school) {
+const toggleSchool = async (school) => {
   const status = school.status === 'inactive' ? 'active' : 'inactive';
   if (!window.confirm(`${status === 'active' ? 'Activate' : 'Deactivate'} ${school.school_name}?`)) return;
   try {
     await api(`/schools/${school._id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
     await loadSchools();
   } catch (cause) { error.value = cause.message; }
-}
+};
 
-function logout() {
+const logout = () => {
   token.value = '';
   localStorage.removeItem('srms_platform_token');
   sessionStorage.removeItem('srms_platform_token');
   router.replace('/login');
-}
+};
 
 watch(() => route.path, () => { if (token.value) loadSchools(); });
 onMounted(() => { if (token.value) loadSchools(); });
@@ -208,18 +242,58 @@ onMounted(() => { if (token.value) loadSchools(); });
       <p v-if="error" class="alert error">{{ error }}</p>
       <p v-if="success" class="alert success">{{ success }}</p>
       <PlatformStats :statistics="statistics" />
-      <section v-if="!selectedSchool" class="panel create-panel">
-        <div><p class="eyebrow">SCHOOL DIRECTORY</p><h2>Add a school</h2><p class="muted">A unique slug becomes the school's hostname.</p></div>
-        <form class="school-form" @submit.prevent="createSchool">
-          <label>School name<input v-model.trim="form.school_name" placeholder="School name" required /></label>
-          <label>Hostname slug<input v-model.trim="form.slug" placeholder="hanfia" pattern="[a-z0-9]+(-[a-z0-9]+)*" required /></label>
-          <label>Email<input v-model.trim="form.email" type="email" placeholder="office@school.edu" /></label>
-          <label>Address<input v-model.trim="form.address" placeholder="School address" /></label>
-          <button class="primary" :disabled="saving">{{ saving ? 'Creating…' : 'Create school' }}</button>
-        </form>
-      </section>
-      <SchoolDetails v-if="selectedSchool" :school="selectedSchool" :administrators="administrators" :editing-school="editingSchool" :form="form" :saving="saving" :admin-form="adminForm" :password-reset-admin="passwordResetAdmin" :admin-new-password="adminNewPassword" :school-portal-url="schoolPortalUrl" @back="router.push('/dashboard')" @edit="beginEditSchool" @save-school="saveSchoolEdit" @cancel-edit="editingSchool = false" @upload-branding="uploadBrandingAsset" @start-password-reset="startPasswordReset" @cancel-password-reset="cancelPasswordReset" @update-password="updateAdministratorPassword" @update-admin-password="adminNewPassword = $event" @create-administrator="createAdministrator" />
-      <SchoolList v-else :loading="loading" :schools="schools" :paginated-schools="paginatedSchools" :page-start="schoolPageStart" :page-end="schoolPageEnd" :current-page="currentSchoolPage" :page-count="schoolPageCount" :school-portal-url="schoolPortalUrl" @refresh="loadSchools" @view="viewSchool" @toggle="toggleSchool" @previous="currentSchoolPage--" @next="currentSchoolPage++" />
+      <SchoolList
+        v-if="!selectedSchool"
+        :loading="loading"
+        :schools="schools"
+        :paginated-schools="paginatedSchools"
+        :page-start="schoolPageStart"
+        :page-end="schoolPageEnd"
+        :current-page="currentSchoolPage"
+        :page-count="schoolPageCount"
+        :school-portal-url="schoolPortalUrl"
+        @refresh="loadSchools"
+        @view="viewSchool"
+        @edit="openEditModal"
+        @toggle="toggleSchool"
+        @add-user="openAddUserModal"
+        @add="openCreateModal"
+        @previous="currentSchoolPage--"
+        @next="currentSchoolPage++"
+      />
+      <SchoolDetails
+        v-else
+        :school="selectedSchool"
+        :administrators="administrators"
+        :password-reset-admin="passwordResetAdmin"
+        :admin-new-password="adminNewPassword"
+        :admin-form="adminForm"
+        :saving="saving"
+        :school-portal-url="schoolPortalUrl"
+        @back="router.push('/dashboard')"
+        @edit="openEditModal"
+        @upload-branding="uploadBrandingAsset"
+        @start-password-reset="startPasswordReset"
+        @cancel-password-reset="cancelPasswordReset"
+        @update-password="updateAdministratorPassword"
+        @update-admin-password="adminNewPassword = $event"
+        @create-administrator="createAdministrator"
+      />
+      <SchoolModalComponent
+        :is-open="modalOpen"
+        :mode="modalMode"
+        :school="modalSchool"
+        :saving="modalSaving"
+        :school-portal-url="schoolPortalUrl"
+        @close="closeModal"
+        @submit="handleModalSubmit"
+        @cancel="closeModal"
+      />
+      <AddUserModal
+        :is-open="addUserModalOpen"
+        :school="addUserModalSchool"
+        @close="closeAddUserModal"
+      />
       <footer class="content-footer">© {{ currentYear }} Hubi-Infotech. All rights reserved.</footer>
     </main>
   </div>
