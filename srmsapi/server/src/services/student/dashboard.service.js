@@ -1,5 +1,10 @@
-const StudentPortalService = require('../StudentPortalService');
+"use strict";
 
-const getDashboard = async (user) => StudentPortalService.getStudentDashboard(user);
+const StudentPortalService = require("../StudentPortalService");
+const { success, failure } = require("../../utils/serviceResult");
+
+const getDashboard = async (user) => {
+  return await StudentPortalService.getStudentDashboard(user);
+};
 
 module.exports = { getDashboard };

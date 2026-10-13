@@ -1,8 +1,11 @@
-// services/auth.service.js
+"use strict";
+
 const { User } = require("../db/models");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const ModelUtils = require("../utils/ModelUtils");
+const { ValidationError, AuthenticationError, NotFoundError } = require("../utils/applicationErrors");
+const { success, failure } = require("../utils/serviceResult");
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 const JWT_EXPIRES_IN = "12h";
@@ -52,77 +55,92 @@ const buildAuthResponse = (userRecord) => {
 };
 
 const login = async (identifier, password, schoolId) => {
-  // allow identifier to be either username or email
-  if (!identifier || !password) return null;
-  if (!schoolId) return null;
+  try {
+    if (!identifier || !password) return success(null);
+    if (!schoolId) return success(null);
 
-  // first try by username
-  let userRecord = await ModelUtils.findOne(User,
-    { username: identifier, school_id: schoolId },
-    { populate: { path: 'school_id' } }
-  );
-
-  // if not found try by email
-  if (!userRecord) {
-    userRecord = await ModelUtils.findOne(User,
-      { email: identifier, school_id: schoolId },
-      { populate: { path: 'school_id' } }
+    let userRecord = await ModelUtils.findOne(User,
+      { username: identifier, school_id: schoolId },
+      { populate: { path: "school_id" } }
     );
+
+    if (!userRecord) {
+      userRecord = await ModelUtils.findOne(User,
+        { email: identifier, school_id: schoolId },
+        { populate: { path: "school_id" } }
+      );
+    }
+
+    if (!userRecord) return success(null);
+
+    const ok = await bcrypt.compare(password, userRecord.password);
+    if (!ok || !["ADMIN", "SCHOOL_ADMIN"].includes(String(userRecord.role).toUpperCase())) return success(null);
+
+    return success(buildAuthResponse(userRecord));
+  } catch (error) {
+    return failure(error);
   }
-
-  if (!userRecord) return null;
-
-  const ok = await bcrypt.compare(password, userRecord.password);
-  if (!ok || !["ADMIN", "SCHOOL_ADMIN"].includes(String(userRecord.role).toUpperCase())) return null;
-
-  return buildAuthResponse(userRecord);
 };
 
 const loginSuperAdmin = async (identifier, password) => {
-  if (!identifier || !password) return null;
-  const userRecord = await User.findOne({
-    $or: [{ username: identifier }, { email: identifier }],
-    role: 'SUPER_ADMIN',
-    school_id: null,
-  }).lean();
-  if (!userRecord || !(await bcrypt.compare(password, userRecord.password || ''))) return null;
-  return buildAuthResponse(userRecord);
+  try {
+    if (!identifier || !password) return success(null);
+    const userRecord = await User.findOne({
+      $or: [{ username: identifier }, { email: identifier }],
+      role: "SUPER_ADMIN",
+      school_id: null,
+    }).lean();
+    if (!userRecord || !(await bcrypt.compare(password, userRecord.password || ""))) return success(null);
+    return success(buildAuthResponse(userRecord));
+  } catch (error) {
+    return failure(error);
+  }
 };
 
 const loginPin = async (identifier, pin, schoolId) => {
-  if (!identifier || !pin || !schoolId) return null;
-  const userRecord = await ModelUtils.findOne(User,
-    { $or: [{ username: identifier }, { email: identifier }], school_id: schoolId },
-    { populate: { path: 'school_id' } }
-  );
-  if (!userRecord) return null;
+  try {
+    if (!identifier || !pin || !schoolId) return success(null);
+    const userRecord = await ModelUtils.findOne(User,
+      { $or: [{ username: identifier }, { email: identifier }], school_id: schoolId },
+      { populate: { path: "school_id" } }
+    );
+    if (!userRecord) return success(null);
 
-  const isValid = await bcrypt.compare(pin, userRecord.pin || "");
-  if (!isValid) return null;
+    const isValid = await bcrypt.compare(pin, userRecord.pin || "");
+    if (!isValid) return success(null);
 
-  return buildAuthResponse(userRecord);
+    return success(buildAuthResponse(userRecord));
+  } catch (error) {
+    return failure(error);
+  }
 };
 
-// ✅ Verify token service (this is what we need)
 const verifyToken = async (token) => {
   try {
+    if (!token) return success(null);
     const payload = jwt.verify(token, JWT_SECRET);
     const userRecord = await ModelUtils.findOne(
       User,
       { _id: payload.id },
       { populate: { path: "school_id" } }
     );
-    if (!userRecord) return null;
-    return {
+    if (!userRecord) return success(null);
+    return success({
       id: userRecord._id,
       username: userRecord.username,
       email: userRecord.email,
       role: userRecord.role,
       school_id: userRecord.school_id?._id || userRecord.school_id || null,
-    };
+    });
   } catch {
-    return null;
+    return success(null);
   }
 };
 
-module.exports = { login, loginSuperAdmin, loginPin, signJwt, verifyToken };
+module.exports = {
+  login,
+  loginSuperAdmin,
+  loginPin,
+  signJwt,
+  verifyToken,
+};

@@ -1,133 +1,108 @@
-const ResultService = require('../services/ResultService');
-const logger = require('../utils/logger');
-const STATUS = require('../constants/status');
+"use strict";
 
-const list = async (req, res) => {
-  try {
-    const { page, limit, student_id, course_id, subject_id, exam_id, academic_year_id } = req.query;
-    const data = await ResultService.listResultsByFilters({ page, limit, student_id, course_id, subject_id, exam_id, academic_year_id });
-    return res.json({ success: true, data });
-  } catch (err) {
-    logger.error('ResultController.list error', err);
-    return res.status(500).json({ success: false, error: err.message || 'Server error' });
+const ResultService = require("../services/ResultService");
+const logger = require("../utils/logger");
+const { STATUS } = require("../constants/status");
+const { ValidationError, NotFoundError } = require("../utils/applicationErrors");
+const { asyncHandler } = require("../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
+
+const listResults = asyncHandler(async (req, res, next) => {
+  const { page, limit, student_id, course_id, subject_id, exam_id, academic_year_id } = req.query;
+  const result = await ResultService.listResultsByFilters({ page, limit, student_id, course_id, subject_id, exam_id, academic_year_id });
+  if (result.error) return next(result.error);
+
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Results retrieved", data: result.data });
+});
+
+const getResult = asyncHandler(async (req, res, next) => {
+  const id = req.params.id;
+  if (!id) throw new ValidationError("Result ID is required");
+  const result = await ResultService.getResultById(id);
+  if (result.error) return next(result.error);
+  if (!result.data) throw new NotFoundError("Result");
+
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Result retrieved", data: result.data });
+});
+
+const saveResult = asyncHandler(async (req, res, next) => {
+  const payload = req.body || {};
+  logger.debug("ResultController.save payload:", payload);
+
+  if (!payload.student_id || !payload.subject_id || !payload.exam_id || !payload.academic_year_id) {
+    const missing = [];
+    if (!payload.student_id) missing.push("student_id");
+    if (!payload.subject_id) missing.push("subject_id");
+    if (!payload.exam_id) missing.push("exam_id");
+    if (!payload.academic_year_id) missing.push("academic_year_id");
+    throw new ValidationError(`Missing required fields: ${missing.join(", ")}`);
   }
-};
 
-const get = async (req, res) => {
-  try {
-    const id = req.params.id;
-    const data = await ResultService.getResultById(id);
-    return res.json({ success: true, data });
-  } catch (err) {
-    logger.error('ResultController.get error', err);
-    return res.status(500).json({ success: false, error: err.message || 'Server error' });
+  let savedResult;
+  const resId = payload._id || payload.id;
+  if (resId) {
+    savedResult = await ResultService.updateResultById(resId, payload);
+  } else {
+    savedResult = await ResultService.createNewResult(payload);
   }
-};
+  if (savedResult.error) return next(savedResult.error);
 
-const save = async (req, res) => {
-  try {
-    const payload = req.body || {};
-    console.log('ResultController.save payload:', JSON.stringify(payload, null, 2));
-    
-    // Validate required fields
-    if (!payload.student_id || !payload.subject_id || !payload.exam_id || !payload.academic_year_id) {
-      const missing = [];
-      if (!payload.student_id) missing.push('student_id');
-      if (!payload.subject_id) missing.push('subject_id');
-      if (!payload.exam_id) missing.push('exam_id');
-      if (!payload.academic_year_id) missing.push('academic_year_id');
-      return res.status(400).json({ success: false, error: `Missing required fields: ${missing.join(', ')}` });
-    }
-    
-    let saved;
-    const resId = payload._id || payload.id;
-    if (resId) {
-      saved = await ResultService.updateResultById(resId, payload);
-    } else {
-      saved = await ResultService.createNewResult(payload);
-    }
-    return res.json({ success: true, data: saved });
-  } catch (err) {
-    logger.error('ResultController.save error', err);
-    console.error('ResultController.save error details:', err.message, err.errors);
-    return res.status(500).json({ success: false, error: err.message || 'Server error', details: err.errors });
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Result saved", data: savedResult.data });
+});
+
+const bulkSaveResults = asyncHandler(async (req, res, next) => {
+  const { rows, academic_year_id } = req.body || {};
+  let schoolId = null;
+  if (req.user) schoolId = req.user.school_id || req.user.SchoolId || req.user.schoolId || null;
+
+  if (!rows || !Array.isArray(rows)) {
+    throw new ValidationError("rows array is required");
   }
-};
 
-const bulkSave = async (req, res) => {
-  try {
-    const { rows, academic_year_id } = req.body || {};
-    let schoolId = null;
-    if (req.user) schoolId = req.user.school_id || req.user.SchoolId || req.user.schoolId || null;
-
-    if (!rows || !Array.isArray(rows)) {
-      return res.status(400).json({ success: false, error: 'rows array is required' });
-    }
-
-    if (!academic_year_id) {
-      return res.status(400).json({ success: false, error: 'academic_year_id is required' });
-    }
-
-    const saved = await ResultService.bulkUpsertResults(rows, schoolId, academic_year_id);
-    return res.json({ success: true, data: { created_count: saved.length, results: saved } });
-  } catch (err) {
-    logger.error('ResultController.bulkSave error', err);
-    return res.status(500).json({ success: false, error: err.message || 'Server error' });
+  if (!academic_year_id) {
+    throw new ValidationError("academic_year_id is required");
   }
-};
 
-const remove = async (req, res) => {
-  try {
-    const id = req.params.id;
-    await ResultService.deleteResultById(id);
-    return res.json({ success: true });
-  } catch (err) {
-    logger.error('ResultController.remove error', err);
-    return res.status(500).json({ success: false, error: err.message || 'Server error' });
+  const result = await ResultService.bulkUpsertResults(rows, schoolId, academic_year_id);
+  if (result.error) return next(result.error);
+
+  return sendSuccessJsonResponse(res, {
+    statusCode: 200,
+    message: "Results bulk saved",
+    data: { created_count: result.data.length, results: result.data },
+  });
+});
+
+const deleteResult = asyncHandler(async (req, res, next) => {
+  const id = req.params.id;
+  if (!id) throw new ValidationError("Result ID is required");
+  const result = await ResultService.deleteResultById(id);
+  if (result.error) return next(result.error);
+
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Result deleted" });
+});
+
+const generateMarksheet = asyncHandler(async (req, res, next) => {
+  const { student_id, exam_ids, template_id, academic_year_id } = req.body;
+
+  if (!student_id || !exam_ids || !Array.isArray(exam_ids) || exam_ids.length === 0 || !template_id) {
+    throw new ValidationError("Required fields missing: student_id, exam_ids (array), template_id");
   }
-};
 
-const generateMarksheet = async (req, res) => {
-  try {
-    const { student_id, exam_ids, template_id, academic_year_id } = req.body;
-    
-    // Validate required fields
-    if (!student_id || !exam_ids || !Array.isArray(exam_ids) || exam_ids.length === 0 || !template_id) {
-      return res.status(400).json({
-        success: false,
-        error: 'Required fields missing: student_id, exam_ids (array), template_id'
-      });
-    }
+  const result = await ResultService.generateCompleteMarksheet(
+    student_id,
+    exam_ids,
+    template_id,
+    academic_year_id || null
+  );
+  if (result.error) return next(result.error);
 
-    const result = await ResultService.generateCompleteMarksheet(
-      student_id,
-      exam_ids,
-      template_id,
-      academic_year_id || null
-    );
+  return sendSuccessJsonResponse(res, {
+    statusCode: 200,
+    message: "Marksheet generated",
+    data: result.data,
+    html: result.data?.html,
+  });
+});
 
-    if (!result.success) {
-      return res.status(400).json({
-        success: false,
-        error: result.error,
-        details: result.details || null
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: result.data,
-      html: result.data?.html
-    });
-  } catch (err) {
-    logger.error('ResultController.generateMarksheet error', err);
-    console.error('Error details:', err.message, err.stack);
-    return res.status(500).json({ 
-      success: false, 
-      error: err.message || 'Server error',
-      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
-  }
-};
-
-module.exports = { list, get, save, bulkSave, remove, generateMarksheet };
+module.exports = { listResults, getResult, saveResult, bulkSaveResults, deleteResult, generateMarksheet };

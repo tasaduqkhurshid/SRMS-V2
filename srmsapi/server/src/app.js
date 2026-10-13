@@ -2,15 +2,43 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 dotenv.config();
+
 const { authenticateJwt, requireSchoolAdmin } = require("./middleware/AuthService");
 const { resolveTenant, requirePlatformHost } = require("./middleware/tenantResolver");
 const PlatformAdminRoutes = require("./routes/platformAdminRoutes");
+const { errorHandler, notFoundHandler, asyncHandler } = require("./middleware/errorHandler");
+const logger = require("./utils/logger");
+
+const SENSITIVE_QUERY_PARAMS = new Set([
+  "password",
+  "pin",
+  "token",
+  "secret",
+  "authorization",
+  "api_key",
+  "apikey",
+  "access_token",
+  "refresh_token",
+]);
+
+const sanitizeUrl = (url) => {
+  try {
+    const parsed = new URL(url, `http://${url.split("/")[0]}`);
+    for (const param of SENSITIVE_QUERY_PARAMS) {
+      if (parsed.searchParams.has(param)) {
+        parsed.searchParams.set(param, "[REDACTED]");
+      }
+    }
+    return parsed.pathname + parsed.search;
+  } catch {
+    return url;
+  }
+};
 
 // Initialize Redis cache
 const RedisCacheService = require("./services/RedisCacheService");
 RedisCacheService.initializeRedis().catch(err => {
-  console.error("Failed to initialize Redis cache:", err);
-  // App can still run without Redis, it will just skip caching
+  logger.error("Failed to initialize Redis cache", err);
 });
 
 const app = express();
@@ -21,9 +49,14 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 }));
 
-// 🔥 Log every route hit
+// Request logging middleware
 app.use((req, res, next) => {
-  console.log(`➡️  ${req.method} ${req.originalUrl}`);
+  req.requestId = req.headers["x-request-id"] || require("crypto").randomUUID();
+  logger.debug(`${req.method} ${sanitizeUrl(req.originalUrl)}`, {
+    requestId: req.requestId,
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  });
   next();
 });
 
@@ -41,7 +74,6 @@ const ResultRoutes = require("./routes/resultRoutes");
 const MarksheetTemplateRoutes = require("./routes/marksheetTemplateRoutes");
 const DynamicOptionRoutes = require("./routes/DynamicOptionRoutes");
 const StudentPortalRoutes = require("./routes/studentPortalRoutes");
-const logger = require("./utils/logger");
 
 app.get("/api/health", (_req, res) => {
   res.status(200).json({ status: "healthy" });
@@ -60,32 +92,13 @@ const mountAdminApi = (prefix) => {
   app.use(`${prefix}/school`, authenticateJwt, requireSchoolAdmin, SchoolRoutes);
 };
 
-// School-admin API retains its existing resource paths. Platform APIs exist only on admin.<root domain>.
 app.use('/api/admin/auth', requirePlatformHost, AuthRoutes);
 app.use('/api/admin', authenticateJwt, require("./middleware/AuthService").requireSuperAdmin, PlatformAdminRoutes);
 mountAdminApi("");
 app.use("/api/student", StudentPortalRoutes);
 
-app.use((req, res, next) => {
-  const ingressPath = String(req.get("x-original-uri") || req.originalUrl).split("?")[0];
-  if (ingressPath.startsWith("/api/")) {
-    return res.status(404).json({ status: "error", message: "API endpoint not found" });
-  }
-  return next();
-});
-
-app.use("/api", (req, res) =>
-  res.status(404).json({ status: "error", message: "API endpoint not found" })
-);
-
-// Global error handling middleware
-app.use((err, req, res, next) => {
-  logger.error(`[${req.method}] ${req.originalUrl}:`, err);
-  return res.status(500).json({ 
-    status: "error", 
-    message: "Internal server error", 
-    error: err.message 
-  });
-});
+app.use("/api", notFoundHandler);
+app.use(errorHandler);
 
 module.exports = app;
+module.exports.asyncHandler = asyncHandler;

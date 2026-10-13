@@ -1,76 +1,138 @@
-const SchoolService = require('../services/SchoolService');
-const { Student, User } = require('../db/models');
+"use strict";
 
-const list = async (_req, res, next) => {
-  try {
-    const schools = await SchoolService.listSchools();
-    const [totalStudents, totalUsers] = await Promise.all([
-      Student.countDocuments({}),
-      User.countDocuments({ role: { $in: ['ADMIN', 'SCHOOL_ADMIN'] } }),
-    ]);
-    return res.json({ status: 'success', data: { schools, statistics: { schools: schools.length, activeSchools: schools.filter((s) => s.status !== 'inactive').length, inactiveSchools: schools.filter((s) => s.status === 'inactive').length, students: totalStudents, schoolAdministrators: totalUsers } } });
-  } catch (error) { return next(error); }
+const SchoolService = require("../services/SchoolService");
+const { Student, User } = require("../db/models");
+const { ValidationError, NotFoundError } = require("../utils/applicationErrors");
+const { asyncHandler } = require("../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
+
+const listSchools = asyncHandler(async (_req, res, next) => {
+  const result = await SchoolService.listSchools();
+  if (result.error) return next(result.error);
+
+  const schools = result.data;
+  const [totalStudents, totalUsers] = await Promise.all([
+    Student.countDocuments({}),
+    User.countDocuments({ role: { $in: ["ADMIN", "SCHOOL_ADMIN"] } }),
+  ]);
+
+  return sendSuccessJsonResponse(res, {
+    statusCode: 200,
+    message: "Schools retrieved",
+    data: {
+      schools,
+      statistics: {
+        schools: schools.length,
+        activeSchools: schools.filter((s) => s.status !== "inactive").length,
+        inactiveSchools: schools.filter((s) => s.status === "inactive").length,
+        students: totalStudents,
+        schoolAdministrators: totalUsers,
+      },
+    },
+  });
+});
+
+const createSchool = asyncHandler(async (req, res, next) => {
+  const result = await SchoolService.createSchoolRecord(req.body || {});
+  if (result.error) return next(result.error);
+
+  return sendSuccessJsonResponse(res, { statusCode: 201, message: "School created", data: result.data });
+});
+
+const getSchool = asyncHandler(async (req, res, next) => {
+  const result = await SchoolService.getSchoolById(req.params.id);
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new NotFoundError("School");
+  }
+  const school = result.data;
+  const schoolId = school._id;
+  const [administrators, students, teachers] = await Promise.all([
+    User.countDocuments({
+      school_id: schoolId,
+      role: { $in: ["ADMIN", "SCHOOL_ADMIN"] },
+    }),
+    Student.countDocuments({ school_id: schoolId }),
+    User.countDocuments({
+      school_id: schoolId,
+      role: { $regex: /^teacher$/i },
+    }),
+  ]);
+  return sendSuccessJsonResponse(res, {
+    statusCode: 200,
+    message: "School retrieved",
+    data: { ...school, statistics: { administrators, students, teachers } },
+  });
+});
+
+const updateSchool = asyncHandler(async (req, res, next) => {
+  const result = await SchoolService.updatePlatformSchool(
+    req.params.id,
+    req.body || {}
+  );
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new NotFoundError("School");
+  }
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "School updated", data: result.data });
+});
+
+const listAdministrators = asyncHandler(async (req, res, next) => {
+  const result = await SchoolService.listSchoolAdministrators(
+    req.params.id
+  );
+  if (result.error) return next(result.error);
+
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Administrators retrieved", data: result.data });
+});
+
+const updateAdministratorPassword = asyncHandler(async (req, res, next) => {
+  const password = typeof req.body?.password === "string" ? req.body.password : "";
+  if (password.length < 8) {
+    throw new ValidationError("Password must be at least 8 characters");
+  }
+  const result = await SchoolService.updateSchoolAdministratorPassword(
+    req.params.id,
+    req.params.adminId,
+    password
+  );
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new NotFoundError("School administrator");
+  }
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "School administrator password updated" });
+});
+
+const createAdministrator = asyncHandler(async (req, res, next) => {
+  const result = await SchoolService.getSchoolById(req.params.id);
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new NotFoundError("School");
+  }
+  const adminResult = await SchoolService.createSchoolAdministrator(
+    req.params.id,
+    req.body || {}
+  );
+  if (adminResult.error) return next(adminResult.error);
+
+  return sendSuccessJsonResponse(res, {
+    statusCode: 201,
+    message: "Administrator created",
+    data: {
+      id: adminResult.data._id,
+      username: adminResult.data.username,
+      email: adminResult.data.email,
+      role: adminResult.data.role,
+    },
+  });
+});
+
+module.exports = {
+  listSchools,
+  createSchool,
+  getSchool,
+  updateSchool,
+  listAdministrators,
+  createAdministrator,
+  updateAdministratorPassword,
 };
-
-const create = async (req, res, next) => {
-  try {
-    const school = await SchoolService.createSchoolRecord(req.body || {});
-    return res.status(201).json({ status: 'success', data: school });
-  } catch (error) { return res.status(400).json({ status: 'error', message: error.message }); }
-};
-
-const update = async (req, res, next) => {
-  try {
-    const school = await SchoolService.updatePlatformSchool(req.params.id, req.body || {});
-    if (!school) return res.status(404).json({ status: 'error', message: 'School not found' });
-    return res.json({ status: 'success', data: school });
-  } catch (error) { return res.status(400).json({ status: 'error', message: error.message }); }
-};
-
-const getOne = async (req, res, next) => {
-  try {
-    const school = await SchoolService.getSchoolById(req.params.id);
-    if (!school) return res.status(404).json({ status: 'error', message: 'School not found' });
-    const schoolId = school._id;
-    const [administrators, students, teachers] = await Promise.all([
-      User.countDocuments({ school_id: schoolId, role: { $in: ['ADMIN', 'SCHOOL_ADMIN'] } }),
-      Student.countDocuments({ school_id: schoolId }),
-      User.countDocuments({ school_id: schoolId, role: { $regex: /^teacher$/i } }),
-    ]);
-    return res.json({ status: 'success', data: { ...school, statistics: { administrators, students, teachers } } });
-  } catch (error) { return next(error); }
-};
-
-const listAdministrators = async (req, res, next) => {
-  try {
-    const administrators = await SchoolService.listSchoolAdministrators(req.params.id);
-    return res.json({ status: 'success', data: administrators });
-  } catch (error) { return next(error); }
-};
-
-const updateAdministratorPassword = async (req, res, next) => {
-  try {
-    const password = typeof req.body?.password === 'string' ? req.body.password : '';
-    if (password.length < 8) {
-      return res.status(400).json({ status: 'error', message: 'Password must be at least 8 characters' });
-    }
-    const updated = await SchoolService.updateSchoolAdministratorPassword(
-      req.params.id,
-      req.params.adminId,
-      password,
-    );
-    if (!updated) return res.status(404).json({ status: 'error', message: 'School administrator not found' });
-    return res.json({ status: 'success', message: 'School administrator password updated' });
-  } catch (error) { return next(error); }
-};
-
-const createAdministrator = async (req, res, next) => {
-  try {
-    const school = await SchoolService.getSchoolById(req.params.id);
-    if (!school) return res.status(404).json({ status: 'error', message: 'School not found' });
-    const administrator = await SchoolService.createSchoolAdministrator(req.params.id, req.body || {});
-    return res.status(201).json({ status: 'success', data: { id: administrator._id, username: administrator.username, email: administrator.email, role: administrator.role } });
-  } catch (error) { return res.status(400).json({ status: 'error', message: error.message }); }
-};
-
-module.exports = { list, create, getOne, update, listAdministrators, createAdministrator, updateAdministratorPassword };

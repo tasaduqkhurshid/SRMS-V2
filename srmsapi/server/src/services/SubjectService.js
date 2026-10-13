@@ -2,125 +2,134 @@
 
 const ModelUtils = require("../utils/ModelUtils");
 const RedisCacheService = require("./RedisCacheService");
-const logger  = require("../utils/logger");
+const logger = require("../utils/logger");
 const { Subject } = require("../db/models");
+const { ValidationError, NotFoundError } = require("../utils/applicationErrors");
+const { success, failure } = require("../utils/serviceResult");
 
 const CACHE_KEYS = {
   SUBJECTS_LIST: "subjects:list",
-  SUBJECT: (id) => `subject:${id}`
+  SUBJECT: (id) => `subject:${id}`,
 };
 
-/**
- * Subject service
- * - createSubject(payload)
- * - updateSubject(id, payload)
- * - getSubjectDetails(id)
- * - listSubjects({ page, limit, query })
- * - deleteSubject(id)
- */
-
 const createSubject = async (payload) => {
-  if (!payload) return null;
-  const created = await ModelUtils.createAndReturn(Subject, payload);
-  
-  // Invalidate cache
-  if (created) {
-    await RedisCacheService.del(CACHE_KEYS.SUBJECTS_LIST);
+  try {
+    if (!payload) return success(null);
+    const created = await ModelUtils.createAndReturn(Subject, payload);
+
+    if (created) {
+      await RedisCacheService.del(CACHE_KEYS.SUBJECTS_LIST);
+    }
+
+    return success(created || null);
+  } catch (error) {
+    return failure(error);
   }
-  
-  return created || null;
 };
 
 const updateSubject = async (id, payload) => {
-  if (!id) return null;
-
-  const where = { _id: id };
-  const updatedRows = await ModelUtils.updateAndReturn(Subject, where, payload);
-
-  if (updatedRows?.rows?.length) {
-    // Invalidate cache
-    await RedisCacheService.del(CACHE_KEYS.SUBJECT(id));
-    await RedisCacheService.del(CACHE_KEYS.SUBJECTS_LIST);
-    return updatedRows[0];
-  }
-
-  const fresh = await ModelUtils.findOne(Subject, { _id: id });
-  return fresh || null;
-};
-
-const getSubjectDetails = async (id) => {
-  if (!id) return null;
-  return await RedisCacheService.getOrSet(
-    CACHE_KEYS.SUBJECT(id),
-    async () => await ModelUtils.findOne(Subject, { _id: id }),
-    3600
-  );
-};
-
-/**
- * Get all subjects for select dropdowns (cached)
- */
-const getAllSubjects = async () => {
-  logger.debug('SubjectService.getAllSubjects: Fetching all subjects');
   try {
-    return await RedisCacheService.getOrSet(
+    if (!id) return success(null);
+
+    const where = { _id: id };
+    const updatedRows = await ModelUtils.updateAndReturn(Subject, where, payload);
+
+    if (updatedRows?.rows?.length) {
+      await RedisCacheService.del(CACHE_KEYS.SUBJECT(id));
+      await RedisCacheService.del(CACHE_KEYS.SUBJECTS_LIST);
+      return success(updatedRows[0]);
+    }
+
+    const fresh = await ModelUtils.findOne(Subject, { _id: id });
+    return success(fresh || null);
+  } catch (error) {
+    return failure(error);
+  }
+};
+
+const getSubjectById = async (id) => {
+  try {
+    if (!id) return success(null);
+    const subject = await RedisCacheService.getOrSet(
+      CACHE_KEYS.SUBJECT(id),
+      async () => await ModelUtils.findOne(Subject, { _id: id }),
+      3600
+    );
+    return success(subject);
+  } catch (error) {
+    return failure(error);
+  }
+};
+
+const getAllSubjects = async () => {
+  try {
+    logger.debug("SubjectService.getAllSubjects: Fetching all subjects");
+    const subjects = await RedisCacheService.getOrSet(
       CACHE_KEYS.SUBJECTS_LIST,
       async () => {
-        logger.debug('SubjectService.getAllSubjects: Cache miss, querying database');
-        const subjects = await ModelUtils.findAll(Subject, {}, { sort: { subject_name: 1 } });
-        logger.info(`SubjectService.getAllSubjects: Found ${subjects ? subjects.length : 0} subjects`);
-        return subjects || [];
+        logger.debug("SubjectService.getAllSubjects: Cache miss, querying database");
+        const subjectsData = await ModelUtils.findAll(Subject, {}, { sort: { subject_name: 1 } });
+        logger.info(`SubjectService.getAllSubjects: Found ${subjectsData ? subjectsData.length : 0} subjects`);
+        return subjectsData || [];
       },
-      3600 // Cache for 1 hour
+      3600
     );
+    return success(subjects);
   } catch (error) {
-    logger.error('SubjectService.getAllSubjects error:', error);
-    throw error;
+    logger.error("SubjectService.getAllSubjects error:", error);
+    return failure(error);
   }
 };
 
 const listSubjects = async ({ page = 1, limit = 20, query = "" } = {}) => {
-  const pg = Math.max(1, Number(page || 1));
-  const lim = Math.max(1, Number(limit || 20));
-  const skip = (pg - 1) * lim;
+  try {
+    const pg = Math.max(1, Number(page || 1));
+    const lim = Math.max(1, Number(limit || 20));
+    const skip = (pg - 1) * lim;
 
-  const where = {};
-  if (query && String(query).trim()) {
-    const regex = new RegExp(String(query).trim(), 'i');
-    where.$or = [
-      { subject_name: regex },
-      { subject_code: regex },
-    ];
+    const where = {};
+    if (query && String(query).trim()) {
+      const regex = new RegExp(String(query).trim(), "i");
+      where.$or = [
+        { subject_name: regex },
+        { subject_code: regex },
+      ];
+    }
+
+    const result = await ModelUtils.findAndCountAll(Subject, where, { limit: lim, skip, sort: { _id: -1 } });
+
+    return success({
+      meta: {
+        page: pg,
+        limit: lim,
+        total: result.count,
+        pages: Math.ceil(result.count / lim),
+      },
+      subjects: result.rows,
+    });
+  } catch (error) {
+    return failure(error);
   }
-
-  const result = await ModelUtils.findAndCountAll(Subject, where, { limit: lim, skip, sort: { _id: -1 } });
-
-  return {
-    meta: {
-      page: pg,
-      limit: lim,
-      total: result.count,
-      pages: Math.ceil(result.count / lim),
-    },
-    subjects: result.rows,
-  };
 };
 
 const deleteSubject = async (id) => {
-  if (!id) return false;
-  await ModelUtils.remove(Subject, { _id: id });
-  
-  // Invalidate cache
-  await RedisCacheService.del(CACHE_KEYS.SUBJECT(id));
-  await RedisCacheService.del(CACHE_KEYS.SUBJECTS_LIST);
-  
-  return true;
+  try {
+    if (!id) return success(false);
+    await ModelUtils.remove(Subject, { _id: id });
+
+    await RedisCacheService.del(CACHE_KEYS.SUBJECT(id));
+    await RedisCacheService.del(CACHE_KEYS.SUBJECTS_LIST);
+
+    return success(true);
+  } catch (error) {
+    return failure(error);
+  }
 };
 
 module.exports = {
   createSubject,
   updateSubject,
-  getSubjectDetails,
+  getSubjectById,
   getAllSubjects,
   listSubjects,
   deleteSubject,

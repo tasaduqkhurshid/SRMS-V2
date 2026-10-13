@@ -21,10 +21,10 @@ const uploadBrandingImage = (req, res, next) => brandingUpload(req, res, (error)
   return res.status(status).json({ success: false, message: status === 413 ? 'Branding images must be 5 MB or smaller' : error.message });
 });
 
-router.get('/schools', controller.list);
-router.post('/schools', controller.create);
-router.get('/schools/:id', controller.getOne);
-router.patch('/schools/:id', controller.update);
+router.get('/schools', controller.listSchools);
+router.post('/schools', controller.createSchool);
+router.get('/schools/:id', controller.getSchool);
+router.patch('/schools/:id', controller.updateSchool);
 router.get('/schools/:id/admins', controller.listAdministrators);
 router.post('/schools/:id/admins', controller.createAdministrator);
 router.patch('/schools/:id/admins/:adminId/password', controller.updateAdministratorPassword);

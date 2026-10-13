@@ -1,12 +1,17 @@
-const NotificationsService = require('../../services/student/notifications.service');
+"use strict";
 
-const getNotifications = async (req, res) => {
-  try {
-    const notifications = await NotificationsService.getNotifications(req.user);
-    return res.status(200).json({ status: 'success', data: notifications });
-  } catch (error) {
-    return res.status(500).json({ status: 'error', message: 'Unable to fetch notifications', error: error.message });
+const NotificationsService = require("../../services/student/notifications.service");
+const { NotFoundError } = require("../../utils/applicationErrors");
+const { asyncHandler } = require("../../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
+
+const getNotifications = asyncHandler(async (req, res, next) => {
+  const result = await NotificationsService.getNotifications(req.user);
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new NotFoundError("Notifications");
   }
-};
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Notifications retrieved", data: result.data });
+});
 
 module.exports = { getNotifications };

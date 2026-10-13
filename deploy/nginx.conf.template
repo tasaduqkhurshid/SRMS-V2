@@ -13,17 +13,10 @@ server {
     return 200 "healthy\n";
   }
 
-  location ^~ /api/admin/ {
+  location ^~ /api/ {
     proxy_pass http://sms-api:5000;
     include /etc/nginx/proxy_params;
   }
-
-  location = /api/admin {
-    proxy_pass http://sms-api:5000;
-    include /etc/nginx/proxy_params;
-  }
-
-  location ^~ /api/ { return 404; }
 
   location / {
     proxy_pass http://sms-admin;
@@ -51,6 +44,7 @@ server {
     include /etc/nginx/proxy_params;
   }
 
+  # Explicit /api routes that Express mounts at /api/... level
   location = /api {
     proxy_pass http://sms-api:5000;
     include /etc/nginx/proxy_params;
@@ -66,8 +60,70 @@ server {
     include /etc/nginx/proxy_params;
   }
 
+  # mountAdminApi("") routes - explicitly listed to avoid over-broad rewrite
+  # These are mounted at ROOT level in Express (no /api prefix)
+  location ^~ /api/auth/ {
+    rewrite ^/api/auth(/.*)$ /auth$1 break;
+    proxy_pass http://sms-api:5000;
+    include /etc/nginx/proxy_params;
+  }
+
+  location ^~ /api/options/ {
+    rewrite ^/api/options(/.*)$ /options$1 break;
+    proxy_pass http://sms-api:5000;
+    include /etc/nginx/proxy_params;
+  }
+
+  location ^~ /api/students/ {
+    rewrite ^/api/students(/.*)$ /students$1 break;
+    proxy_pass http://sms-api:5000;
+    include /etc/nginx/proxy_params;
+  }
+
+  location ^~ /api/subjects/ {
+    rewrite ^/api/subjects(/.*)$ /subjects$1 break;
+    proxy_pass http://sms-api:5000;
+    include /etc/nginx/proxy_params;
+  }
+
+  location ^~ /api/courses/ {
+    rewrite ^/api/courses(/.*)$ /courses$1 break;
+    proxy_pass http://sms-api:5000;
+    include /etc/nginx/proxy_params;
+  }
+
+  location ^~ /api/exams/ {
+    rewrite ^/api/exams(/.*)$ /exams$1 break;
+    proxy_pass http://sms-api:5000;
+    include /etc/nginx/proxy_params;
+  }
+
+  location ^~ /api/academic-years/ {
+    rewrite ^/api/academic-years(/.*)$ /academic-years$1 break;
+    proxy_pass http://sms-api:5000;
+    include /etc/nginx/proxy_params;
+  }
+
+  location ^~ /api/results/ {
+    rewrite ^/api/results(/.*)$ /results$1 break;
+    proxy_pass http://sms-api:5000;
+    include /etc/nginx/proxy_params;
+  }
+
+  location ^~ /api/marksheet-templates/ {
+    rewrite ^/api/marksheet-templates(/.*)$ /marksheet-templates$1 break;
+    proxy_pass http://sms-api:5000;
+    include /etc/nginx/proxy_params;
+  }
+
+  location ^~ /api/school/ {
+    rewrite ^/api/school(/.*)$ /school$1 break;
+    proxy_pass http://sms-api:5000;
+    include /etc/nginx/proxy_params;
+  }
+
+  # Fallback for any other /api/ paths - proxy to API (Express notFoundHandler will handle 404)
   location ^~ /api/ {
-    rewrite ^/api/(.*)$ /$1 break;
     proxy_pass http://sms-api:5000;
     include /etc/nginx/proxy_params;
   }

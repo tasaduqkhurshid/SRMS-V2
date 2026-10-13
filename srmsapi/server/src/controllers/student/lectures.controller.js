@@ -1,12 +1,17 @@
-const LecturesService = require('../../services/student/lectures.service');
+"use strict";
 
-const getLectures = async (req, res) => {
-  try {
-    const lectures = await LecturesService.getLectures(req.user);
-    return res.status(200).json({ status: 'success', data: lectures });
-  } catch (error) {
-    return res.status(500).json({ status: 'error', message: 'Unable to fetch lectures', error: error.message });
+const LecturesService = require("../../services/student/lectures.service");
+const { NotFoundError } = require("../../utils/applicationErrors");
+const { asyncHandler } = require("../../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
+
+const getLectures = asyncHandler(async (req, res, next) => {
+  const result = await LecturesService.getLectures(req.user);
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new NotFoundError("Lectures");
   }
-};
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Lectures retrieved", data: result.data });
+});
 
 module.exports = { getLectures };

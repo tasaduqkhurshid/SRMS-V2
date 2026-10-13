@@ -1,58 +1,61 @@
-const AuthService = require('../../services/student/auth.service');
+"use strict";
+
+const AuthService = require("../../services/student/auth.service");
+const { NotFoundError, AuthenticationError } = require("../../utils/applicationErrors");
+const { asyncHandler } = require("../../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
 
 const manifest = (req, res) => {
-  if (!req.school) return res.status(404).json({ status: 'error', message: 'School hostname not found' });
+  if (!req.school) {
+    throw new NotFoundError("School hostname not found");
+  }
   const name = `${req.school.name || req.school.school_name} Student Portal`;
-  res.set('Cache-Control', 'private, no-store');
-  return res.json({
-    name,
-    short_name: req.school.abbreviation || req.school.slug,
-    start_url: '/login',
-    scope: '/',
-    display: 'standalone',
-    background_color: '#f3f7fb',
-    theme_color: '#1d4ed8',
-    icons: [{ src: '/portal-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
+  res.set("Cache-Control", "private, no-store");
+  return sendSuccessJsonResponse(res, {
+    statusCode: 200,
+    message: "Manifest retrieved",
+    data: {
+      name,
+      short_name: req.school.abbreviation || req.school.slug,
+      start_url: "/login",
+      scope: "/",
+      display: "standalone",
+      background_color: "#f3f7fb",
+      theme_color: "#1d4ed8",
+      icons: [{ src: "/portal-icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }],
+    },
   });
 };
 
-const getSchoolBrand = async (req, res) => {
-  try {
-    const school = await AuthService.getSchoolBrand(req.school);
-    if (!school) {
-      return res.status(404).json({ status: 'error', success: false, message: 'School not found' });
-    }
-    res.set('Cache-Control', 'private, no-store');
-    return res.status(200).json({ status: 'success', success: true, data: school });
-  } catch (error) {
-    return res.status(500).json({ status: 'error', success: false, message: 'Unable to load school branding' });
+const getSchoolBrand = asyncHandler(async (req, res, next) => {
+  const result = await AuthService.getSchoolBrand(req.school);
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new NotFoundError("School");
   }
+  res.set("Cache-Control", "private, no-store");
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "School brand retrieved", data: result.data });
+});
+
+const login = asyncHandler(async (req, res, next) => {
+  const { studentId, password } = req.body || {};
+  const result = await AuthService.login({ studentId, password, school: req.school });
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new AuthenticationError("Invalid credentials");
+  }
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Login successful", data: result.data });
+});
+
+const logout = (_req, res) => {
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Logged out successfully" });
 };
 
-const login = async (req, res) => {
-  try {
-    const { studentId, password } = req.body || {};
-    const payload = await AuthService.login({ studentId, password, school: req.school });
-    if (!payload) {
-      return res.status(401).json({ status: 'error', success: false, message: 'Invalid credentials' });
-    }
-    return res.status(200).json({ status: 'success', success: true, data: payload });
-  } catch (error) {
-    return res.status(500).json({ status: 'error', success: false, message: 'Student login failed', error: error.message });
-  }
-};
+const me = asyncHandler(async (req, res, next) => {
+  const result = await AuthService.me(req.user);
+  if (result.error) return next(result.error);
 
-const logout = async (_req, res) => {
-  return res.status(200).json({ status: 'success', message: 'Logged out successfully' });
-};
-
-const me = async (req, res) => {
-  try {
-    const profile = await AuthService.me(req.user);
-    return res.status(200).json({ status: 'success', data: profile });
-  } catch (error) {
-    return res.status(500).json({ status: 'error', message: 'Unable to load current student', error: error.message });
-  }
-};
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Profile retrieved", data: result.data });
+});
 
 module.exports = { manifest, getSchoolBrand, login, logout, me };

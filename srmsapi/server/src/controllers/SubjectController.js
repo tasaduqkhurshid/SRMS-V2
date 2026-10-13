@@ -1,119 +1,93 @@
+"use strict";
+
 const SubjectService = require("../services/SubjectService");
 const { STATUS } = require("../constants/status");
-const logger  = require("../utils/logger");
+const logger = require("../utils/logger");
+const { ValidationError, NotFoundError } = require("../utils/applicationErrors");
+const { asyncHandler } = require("../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
 
-/**
- * Controller for subjects
- */
-const listSubjects = async (req, res) => {
-  try {
-    const reqParams = { ...req.query, ...req.body, ...req.params };
-    logger && logger.debug && logger.debug("listSubjects reqParams:", reqParams);
+const listSubjects = asyncHandler(async (req, res, next) => {
+  const reqParams = { ...req.query, ...req.body, ...req.params };
+  logger.debug("listSubjects reqParams:", reqParams);
 
-    const page = Number(reqParams.page || 1);
-    const limit = Number(reqParams.limit || 20);
-    const query = reqParams.q || reqParams.query || "";
+  const page = Number(reqParams.page || 1);
+  const limit = Number(reqParams.limit || 20);
+  const query = reqParams.q || reqParams.query || "";
 
-    const result = await SubjectService.listSubjects({ page, limit, query });
+  const result = await SubjectService.listSubjects({ page, limit, query });
+  if (result.error) return next(result.error);
 
-    return res.status(STATUS.OK).json({ status: "success", data: result });
-  } catch (err) {
-    logger && logger.error && logger.error("listSubjects controller error:", err);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).json({ status: "error", message: "Failed to list subjects", error: err.message });
+  return sendSuccessJsonResponse(res, { statusCode: STATUS.OK, message: "Subjects retrieved", data: result.data });
+});
+
+const getAllSubjects = asyncHandler(async (req, res, next) => {
+  const result = await SubjectService.getAllSubjects();
+  if (result.error) return next(result.error);
+
+  return sendSuccessJsonResponse(res, { statusCode: STATUS.OK, message: "All subjects retrieved", data: result.data });
+});
+
+const saveSubject = asyncHandler(async (req, res, next) => {
+  const requestParams = { ...(req.query || {}), ...(req.params || {}), ...(req.body || {}) };
+  if (req.user) {
+    const userSchoolId = req.user.school_id || req.user.SchoolId || req.user.schoolId || null;
+    if (userSchoolId) requestParams.school_id = userSchoolId;
   }
-};
 
-/**
- * Get all subjects for select dropdowns (cached)
- */
-const getAllSubjects = async (req, res) => {
-  try {
-    const subjects = await SubjectService.getAllSubjects();
-    return res.status(STATUS.OK).json({ status: "success", data: subjects });
-  } catch (err) {
-    logger && logger.error && logger.error("getAllSubjects controller error:", err);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).json({ status: "error", message: "Failed to fetch subjects", error: err.message });
+  logger.debug("saveSubject requestParams:", requestParams);
+
+  const subjectId = requestParams._id || null;
+
+  if (!subjectId && (!requestParams.subject_name || !requestParams.subject_code)) {
+    throw new ValidationError("subject_name and subject_code are required");
   }
-};
 
-const saveSubject = async (req, res) => {
-  try {
-    const requestParams = { ...(req.query || {}), ...(req.params || {}), ...(req.body || {}) };
-    // ensure school_id from authenticated user if available
-    if (req.user) {
-      const userSchoolId = req.user.school_id || req.user.SchoolId || req.user.schoolId || null;
-      if (userSchoolId) requestParams.school_id = userSchoolId;
-    }
-
-    logger && logger.debug && logger.debug("saveSubject requestParams:", requestParams);
-
-    const subjectId = requestParams._id || null;
-
-    if (!subjectId && (!requestParams.subject_name || !requestParams.subject_code)) {
-      return res.status(STATUS.BAD_REQUEST).json({ status: "error", message: "subject_name and subject_code are required" });
-    }
-
-    let subject;
-    if (subjectId) {
-      subject = await SubjectService.updateSubject(subjectId, requestParams);
-      if (!subject) return res.status(STATUS.INTERNAL_SERVER_ERROR).json({ status: "error", message: "Failed to update subject" });
-    } else {
-      subject = await SubjectService.createSubject(requestParams);
-      if (!subject) return res.status(STATUS.INTERNAL_SERVER_ERROR).json({ status: "error", message: "Failed to create subject" });
-    }
-
-    return res.status(STATUS.OK).json({ status: "success", data: subject });
-  } catch (err) {
-    logger && logger.error && logger.error("saveSubject controller error:", err);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).json({ status: "error", message: "Failed to save subject", error: err.message });
+  let subjectResult;
+  if (subjectId) {
+    subjectResult = await SubjectService.updateSubject(subjectId, requestParams);
+  } else {
+    subjectResult = await SubjectService.createSubject(requestParams);
   }
-};
+  if (subjectResult.error) return next(subjectResult.error);
+  if (!subjectResult.data) throw new NotFoundError("Subject");
 
-const getSubjectDetails = async (req, res) => {
-  try {
-    const id = req.params.id;
-    if (!id) return res.status(STATUS.BAD_REQUEST).json({ status: "error", message: "subject id is required" });
+  return sendSuccessJsonResponse(res, { statusCode: STATUS.OK, message: subjectId ? "Subject updated" : "Subject created", data: subjectResult.data });
+});
 
-    const subject = await SubjectService.getSubjectDetails(id);
-    if (!subject) return res.status(STATUS.NOT_FOUND).json({ status: "error", message: "Subject not found" });
+const getSubjectDetails = asyncHandler(async (req, res, next) => {
+  const id = req.params.id;
+  if (!id) throw new ValidationError("subject id is required");
 
-    return res.status(STATUS.OK).json({ status: "success", data: subject });
-  } catch (err) {
-    logger && logger.error && logger.error("getSubjectDetails controller error:", err);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).json({ status: "error", message: "Failed to fetch subject", error: err.message });
-  }
-};
+  const result = await SubjectService.getSubjectById(id);
+  if (result.error) return next(result.error);
+  if (!result.data) throw new NotFoundError("Subject");
 
-const updateSubject = async (req, res) => {
-  try {
-    const id = req.params.id;
-    const payload = req.body || {};
-    if (!id) return res.status(STATUS.BAD_REQUEST).json({ status: "error", message: "subject id is required" });
+  return sendSuccessJsonResponse(res, { statusCode: STATUS.OK, message: "Subject retrieved", data: result.data });
+});
 
-    const updated = await SubjectService.updateSubject(id, payload);
-    if (!updated) return res.status(STATUS.NOT_FOUND).json({ status: "error", message: "Subject not found or nothing to update" });
+const updateSubject = asyncHandler(async (req, res, next) => {
+  const id = req.params.id;
+  const payload = req.body || {};
+  if (!id) throw new ValidationError("subject id is required");
 
-    return res.status(STATUS.OK).json({ status: "success", data: updated });
-  } catch (err) {
-    logger && logger.error && logger.error("updateSubject controller error:", err);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).json({ status: "error", message: "Something went wrong while updating subject", error: err.message });
-  }
-};
+  const result = await SubjectService.updateSubject(id, payload);
+  if (result.error) return next(result.error);
+  if (!result.data) throw new NotFoundError("Subject");
 
-const deleteSubject = async (req, res) => {
-  try {
-    const id = req.params.id;
-    if (!id) return res.status(STATUS.BAD_REQUEST).json({ status: "error", message: "subject id is required" });
+  return sendSuccessJsonResponse(res, { statusCode: STATUS.OK, message: "Subject updated", data: result.data });
+});
 
-    const deleted = await SubjectService.deleteSubject(id);
-    if (!deleted) return res.status(STATUS.NOT_FOUND).json({ status: "error", message: "Subject not found or could not be deleted" });
+const deleteSubject = asyncHandler(async (req, res, next) => {
+  const id = req.params.id;
+  if (!id) throw new ValidationError("subject id is required");
 
-    return res.status(STATUS.OK).json({ status: "success", message: "Subject deleted" });
-  } catch (err) {
-    logger && logger.error && logger.error("deleteSubject controller error:", err);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).json({ status: "error", message: "Failed to delete subject", error: err.message });
-  }
-};
+  const result = await SubjectService.deleteSubject(id);
+  if (result.error) return next(result.error);
+  if (!result.data) throw new NotFoundError("Subject");
+
+  return sendSuccessJsonResponse(res, { statusCode: STATUS.OK, message: "Subject deleted" });
+});
 
 module.exports = {
   listSubjects,

@@ -1,15 +1,17 @@
-const ProfileService = require('../../services/student/profile.service');
+"use strict";
 
-const getProfile = async (req, res) => {
-  try {
-    const profile = await ProfileService.getProfile(req.user);
-    if (!profile) {
-      return res.status(404).json({ status: 'error', message: 'Student profile not found' });
-    }
-    return res.status(200).json({ status: 'success', data: profile });
-  } catch (error) {
-    return res.status(500).json({ status: 'error', message: 'Unable to fetch student profile', error: error.message });
+const ProfileService = require("../../services/student/profile.service");
+const { NotFoundError } = require("../../utils/applicationErrors");
+const { asyncHandler } = require("../../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
+
+const getProfile = asyncHandler(async (req, res, next) => {
+  const result = await ProfileService.getProfile(req.user);
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new NotFoundError("Student profile");
   }
-};
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Profile retrieved", data: result.data });
+});
 
 module.exports = { getProfile };

@@ -1,15 +1,17 @@
-const DashboardService = require('../../services/student/dashboard.service');
+"use strict";
 
-const getDashboard = async (req, res) => {
-  try {
-    const dashboard = await DashboardService.getDashboard(req.user);
-    if (!dashboard) {
-      return res.status(404).json({ status: 'error', message: 'Student dashboard not found' });
-    }
-    return res.status(200).json({ status: 'success', data: dashboard });
-  } catch (error) {
-    return res.status(500).json({ status: 'error', message: 'Unable to fetch student dashboard', error: error.message });
+const DashboardService = require("../../services/student/dashboard.service");
+const { NotFoundError } = require("../../utils/applicationErrors");
+const { asyncHandler } = require("../../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
+
+const getDashboard = asyncHandler(async (req, res, next) => {
+  const result = await DashboardService.getDashboard(req.user);
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new NotFoundError("Student dashboard");
   }
-};
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Dashboard retrieved", data: result.data });
+});
 
 module.exports = { getDashboard };

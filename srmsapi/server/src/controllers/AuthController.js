@@ -1,168 +1,119 @@
-// controllers/auth.controller.js
+"use strict";
+
 const AuthService = require("../services/AuthService");
 const SessionStore = require("../utils/SessionStore");
 const { STATUS } = require("../constants/status");
-const logger  = require("../utils/logger");
+const logger = require("../utils/logger");
+const { asyncHandler } = require("../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
+const { ValidationError, AuthenticationError, AuthorizationError } = require("../utils/applicationErrors");
 
-const login = async (req, res) => {
-  try {
-    // accept either username or email for login
-    const { username, email, password } = req.body || {};
-    const identifier = (username || email || "").trim();
+const login = asyncHandler(async (req, res, next) => {
+  const { username, email, password } = req.body || {};
+  const identifier = (username || email || "").trim();
 
-    if (!identifier || !password) {
-      return res.status(STATUS.BAD_REQUEST).json({
-        status: "error",
-        success: false,
-        message: "username/email and password are required",
-      });
-    }
-    const data = req.isPlatformHost
-      ? await AuthService.loginSuperAdmin(identifier, password)
-      : await AuthService.login(identifier, password, req.schoolId);
-
-    if (!data) {
-      return res.status(STATUS.UNAUTHORIZED).json({
-        status: "error",
-        success: false,
-        message: "Invalid credentials",
-      });
-    }
-
-    // Store user and school data in session
-    try {
-      if (data.user) {
-        SessionStore.storeUserInSession(req, data.user);
-      }
-      if (data.school) {
-        SessionStore.storeSchoolInSession(req, data.school);
-      }
-    } catch (sessionErr) {
-      logger && logger.warn && logger.warn("Failed to store session data:", sessionErr);
-    }
-
-    return res.status(STATUS.OK).json({
-      status: "success",
-      success: true,
-      data,
-    });
-  } catch (err) {
-  logger && logger.error && logger.error("login controller error:", err);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).json({
-      status: "error",
-      success: false,
-      message: "Something went wrong while logging in",
-      error: err.message,
-    });
+  if (!identifier || !password) {
+    throw new ValidationError("username/email and password are required");
   }
-};
 
-const loginViaPin = async (req, res) => {
-  try {
-    const { username, email, pin } = req.body || {};
-    const identifier = String(username || email || '').trim();
-    if (!identifier || !pin) {
-      return res.status(STATUS.BAD_REQUEST).json({
-        status: "error",
-        success: false,
-        message: "username/email and pin are required",
-      });
-    }
+  const result = req.isPlatformHost
+    ? await AuthService.loginSuperAdmin(identifier, password)
+    : await AuthService.login(identifier, password, req.schoolId);
 
-    if (req.isPlatformHost) {
-      return res.status(STATUS.FORBIDDEN).json({ status: 'error', message: 'PIN login is not enabled for platform administrators' });
-    }
-    const data = await AuthService.loginPin(identifier, pin, req.schoolId);
-    if (!data) {
-      return res.status(STATUS.UNAUTHORIZED).json({
-        status: "error",
-        success: false,
-        message: "Invalid credentials",
-      });
-    }
-
-    // Store user and school data in session
-    try {
-      if (data.user) {
-        SessionStore.storeUserInSession(req, data.user);
-      }
-      if (data.school) {
-        SessionStore.storeSchoolInSession(req, data.school);
-      }
-    } catch (sessionErr) {
-      logger && logger.warn && logger.warn("Failed to store session data:", sessionErr);
-    }
-
-    return res.status(STATUS.OK).json({
-      status: "success",
-      success: true,
-      data,
-    });
-  } catch (err) {
-  logger && logger.error && logger.error("loginViaPin controller error:", err);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).json({
-      status: "error",
-      success: false,
-      message: "Something went wrong while logging in via pin",
-      error: err.message,
-    });
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new AuthenticationError("Invalid credentials");
   }
-};
 
-const verifyJWTToken = async (req, res) => {
   try {
-    const token = req.query.token; // read from query param
-
-    if (!token) {
-      return res.status(STATUS.BAD_REQUEST).json({
-        valid: false,
-        error: "Token is required",
-      });
+    if (result.data.user) {
+      SessionStore.storeUserInSession(req, result.data.user);
     }
-
-    const user = await AuthService.verifyToken(token);
-
-    if (!user) {
-      return res.status(STATUS.UNAUTHORIZED).json({
-        valid: false,
-        error: "Invalid or expired token",
-      });
+    if (result.data.school) {
+      SessionStore.storeSchoolInSession(req, result.data.school);
     }
-    if (req.isPlatformHost ? user.role !== 'SUPER_ADMIN' : String(user.school_id) !== String(req.schoolId)) {
-      return res.status(STATUS.UNAUTHORIZED).json({ valid: false, error: 'Token belongs to a different portal' });
-    }
-
-    return res.status(STATUS.OK).json({
-      valid: true,
-      user,
-    });
-  } catch (err) {
-  logger && logger.error && logger.error("verifyJWTToken controller error:", err);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).json({
-      valid: false,
-      error: "Failed to verify token",
-      details: err.message,
-    });
+  } catch (sessionErr) {
+    logger.warn("Failed to store session data:", sessionErr);
   }
-};
 
-const logout = async (req, res) => {
+  return sendSuccessJsonResponse(res, {
+    statusCode: STATUS.OK,
+    message: "Login successful",
+    data: result.data,
+  });
+});
+
+const loginViaPin = asyncHandler(async (req, res, next) => {
+  const { username, email, pin } = req.body || {};
+  const identifier = String(username || email || "").trim();
+
+  if (!identifier || !pin) {
+    throw new ValidationError("username/email and pin are required");
+  }
+
+  if (req.isPlatformHost) {
+    throw new AuthorizationError("PIN login is not enabled for platform administrators");
+  }
+
+  const result = await AuthService.loginPin(identifier, pin, req.schoolId);
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new AuthenticationError("Invalid credentials");
+  }
+
   try {
-    // Clear session data
-    SessionStore.clearSession(req);
-
-    return res.status(STATUS.OK).json({
-      status: "success",
-      message: "Logged out successfully",
-    });
-  } catch (err) {
-  logger && logger.error && logger.error("logout controller error:", err);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).json({
-      status: "error",
-      message: "Failed to logout",
-      error: err.message,
-    });
+    if (result.data.user) {
+      SessionStore.storeUserInSession(req, result.data.user);
+    }
+    if (result.data.school) {
+      SessionStore.storeSchoolInSession(req, result.data.school);
+    }
+  } catch (sessionErr) {
+    logger.warn("Failed to store session data:", sessionErr);
   }
-};
+
+  return sendSuccessJsonResponse(res, {
+    statusCode: STATUS.OK,
+    message: "PIN login successful",
+    data: result.data,
+  });
+});
+
+const verifyJWTToken = asyncHandler(async (req, res, next) => {
+  const token = req.query.token;
+
+  if (!token) {
+    throw new ValidationError("Token is required");
+  }
+
+  const result = await AuthService.verifyToken(token);
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new AuthenticationError("Invalid or expired token");
+  }
+
+  if (
+    req.isPlatformHost
+      ? result.data.role !== "SUPER_ADMIN"
+      : String(result.data.school_id) !== String(req.schoolId)
+  ) {
+    throw new AuthorizationError("Token belongs to a different portal");
+  }
+
+  return sendSuccessJsonResponse(res, {
+    statusCode: STATUS.OK,
+    message: "Token verified",
+    data: { valid: true, user: result.data },
+  });
+});
+
+const logout = asyncHandler(async (req, res) => {
+  SessionStore.clearSession(req);
+
+  return sendSuccessJsonResponse(res, {
+    statusCode: STATUS.OK,
+    message: "Logged out successfully",
+  });
+});
 
 module.exports = { login, loginViaPin, verifyJWTToken, logout };
