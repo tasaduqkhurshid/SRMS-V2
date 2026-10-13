@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 
 const SchoolSchema = new mongoose.Schema(
   {
-    _id: mongoose.Schema.Types.ObjectId,
     school_name: {
       type: String,
       required: true

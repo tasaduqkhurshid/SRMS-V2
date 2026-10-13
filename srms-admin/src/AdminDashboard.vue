@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { getSchoolAdminUrl, getStudentPortalUrl } from './utils/portalUrls.js';
 import PlatformSidebar from './components/common/PlatformSidebar.js';
 import PlatformStats from './components/pages/dashboard/PlatformStats.js';
 import SchoolList from './components/pages/school/SchoolList.js';
@@ -84,13 +85,8 @@ const viewSchool = async (school) => {
   await router.push(`/schools/${school._id}`);
 };
 
-const schoolPortalUrl = (school, path = '/admin/') => {
-  const { protocol, hostname, port } = window.location;
-  const rootDomain = hostname.replace(/^admin\./, '');
-  const portalDomain = ['localhost', '127.0.0.1'].includes(rootDomain) ? 'sms.local' : rootDomain;
-  const portSuffix = port ? `:${port}` : '';
-  return `${protocol}//${school.slug}.${portalDomain}${portSuffix}${path}`;
-};
+const schoolPortalUrl = (school, path = '/admin/') => getSchoolAdminUrl(school, path);
+const studentPortalUrl = (school, path = '/') => getStudentPortalUrl(school, path);
 
 // Modal handlers
 const openCreateModal = () => {
@@ -223,6 +219,40 @@ const toggleSchool = async (school) => {
   } catch (cause) { error.value = cause.message; }
 };
 
+const handleEditAdmin = async (school, admin) => {
+  const newEmail = window.prompt(`Edit email for ${admin.username}:`, admin.email);
+  if (!newEmail || newEmail === admin.email) return;
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+    error.value = 'Please enter a valid email address';
+    return;
+  }
+
+  saving.value = true;
+  error.value = '';
+  success.value = '';
+  try {
+    await api(`/schools/${school._id}/admins/${admin._id}`, { method: 'PATCH', body: JSON.stringify({ email: newEmail }) });
+    success.value = `Email updated for ${admin.username}.`;
+    await loadSchools();
+  } catch (cause) { error.value = cause.message; }
+  finally { saving.value = false; }
+};
+
+const handleDeleteAdmin = async (school, admin) => {
+  if (!window.confirm(`Delete administrator "${admin.username}" from ${school.school_name}? This action cannot be undone.`)) return;
+
+  saving.value = true;
+  error.value = '';
+  success.value = '';
+  try {
+    await api(`/schools/${school._id}/admins/${admin._id}`, { method: 'DELETE' });
+    success.value = `Administrator "${admin.username}" deleted.`;
+    await loadSchools();
+  } catch (cause) { error.value = cause.message; }
+  finally { saving.value = false; }
+};
+
 const logout = () => {
   token.value = '';
   localStorage.removeItem('srms_platform_token');
@@ -252,12 +282,15 @@ onMounted(() => { if (token.value) loadSchools(); });
         :current-page="currentSchoolPage"
         :page-count="schoolPageCount"
         :school-portal-url="schoolPortalUrl"
+        :student-portal-url="studentPortalUrl"
         @refresh="loadSchools"
         @view="viewSchool"
         @edit="openEditModal"
         @toggle="toggleSchool"
         @add-user="openAddUserModal"
         @add="openCreateModal"
+        @edit-admin="handleEditAdmin"
+        @delete-admin="handleDeleteAdmin"
         @previous="currentSchoolPage--"
         @next="currentSchoolPage++"
       />

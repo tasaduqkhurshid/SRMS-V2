@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { copyToClipboard, openInNewTab } from '../../../utils/portalUrls.js';
 import template from './SchoolListTemplate.js';
 
 export default {
@@ -12,12 +13,15 @@ export default {
     currentPage: { type: Number, required: true },
     pageCount: { type: Number, required: true },
     schoolPortalUrl: { type: Function, required: true },
+    studentPortalUrl: { type: Function, required: true },
   },
-  emits: ['refresh', 'view', 'edit', 'toggle', 'add-user', 'previous', 'next', 'add'],
+  emits: ['refresh', 'view', 'edit', 'toggle', 'add-user', 'previous', 'next', 'add', 'edit-admin', 'delete-admin'],
   setup(props, { emit }) {
     const expandedSchoolId = ref(null);
     const schoolAdmins = ref({}); // schoolId -> administrators array
     const loadingAdmins = ref({}); // schoolId -> boolean
+    const copyingUrl = ref(null); // schoolId -> 'admin' | 'student'
+    const copySuccess = ref(null); // schoolId -> 'admin' | 'student'
 
     const api = async (path, options = {}) => {
       const token = localStorage.getItem('srms_platform_token') || sessionStorage.getItem('srms_platform_token') || '';
@@ -63,14 +67,61 @@ export default {
 
     const isLoadingAdmins = (school) => loadingAdmins.value[school._id];
 
+    const handleCopyUrl = async (school, type) => {
+      const url = type === 'admin' ? props.schoolPortalUrl(school) : props.studentPortalUrl(school);
+      if (!url) return;
+
+      copyingUrl.value = school._id;
+      try {
+        await copyToClipboard(url);
+        copySuccess.value = school._id;
+        setTimeout(() => {
+          copySuccess.value = null;
+        }, 2000);
+      } catch (error) {
+        console.error('Failed to copy URL:', error);
+      } finally {
+        copyingUrl.value = null;
+      }
+    };
+
+    const handleOpenUrl = (school, type) => {
+      const url = type === 'admin' ? props.schoolPortalUrl(school) : props.studentPortalUrl(school);
+      if (url) openInNewTab(url);
+    };
+
+    const handleEditAdmin = (school, admin) => {
+      emit('edit-admin', school, admin);
+    };
+
+    const handleDeleteAdmin = (school, admin) => {
+      emit('delete-admin', school, admin);
+    };
+
+    const isCopying = (school, type) => copyingUrl.value === school._id;
+    const isCopySuccess = (school, type) => copySuccess.value === school._id;
+
+    const getSchoolAdminUrl = (school) => props.schoolPortalUrl(school);
+    const getStudentPortalUrl = (school) => props.studentPortalUrl(school);
+
     return {
       expandedSchoolId,
       schoolAdmins,
       loadingAdmins,
+      copyingUrl,
+      copySuccess,
       toggleExpand,
       isExpanded,
       getAdmins,
       isLoadingAdmins,
+      handleCopyUrl,
+      handleOpenUrl,
+      handleEditAdmin,
+      handleDeleteAdmin,
+      getSchoolAdminUrl,
+      getStudentPortalUrl,
+      isCopying,
+      isCopySuccess,
       api,
     };
   },

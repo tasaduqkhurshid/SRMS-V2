@@ -27,6 +27,8 @@ router.get('/schools/:id', controller.getSchool);
 router.patch('/schools/:id', controller.updateSchool);
 router.get('/schools/:id/admins', controller.listAdministrators);
 router.post('/schools/:id/admins', controller.createAdministrator);
+router.patch('/schools/:id/admins/:adminId', controller.updateAdministrator);
+router.delete('/schools/:id/admins/:adminId', controller.deleteAdministrator);
 router.patch('/schools/:id/admins/:adminId/password', controller.updateAdministratorPassword);
 router.post('/schools/:schoolId/branding/:asset', uploadBrandingImage, brandingController.uploadBranding);
 

@@ -12,7 +12,122 @@ This repository evolves the existing SRMS applications into a shared, multi-scho
 
 ## Local hostnames
 
-Add these entries to the operating system hosts file:
+### Automatic wildcard DNS (recommended for development)
+
+For automatic resolution of all school subdomains (e.g., `admin.sms.local`, `hanfia.sms.local`, `test-school-3.sms.local`, `any-new-school.sms.local`), configure local wildcard DNS once. After this, newly created schools work immediately without adding individual hosts-file entries.
+
+**Linux (Linux Mint / Ubuntu / Debian with systemd-resolved):**
+
+```bash
+# From project root
+./setup local-dns install
+```
+
+This runs the automated setup that:
+1. Installs `dnsmasq` (if not present)
+2. Configures dnsmasq to resolve `*.sms.local` → `127.0.0.1`
+3. Configures `systemd-resolved` to forward `sms.local` queries to dnsmasq
+4. Starts and enables the dnsmasq service
+5. Verifies the configuration
+
+**Manual Linux setup (if automated script fails):**
+
+```bash
+# 1. Install dnsmasq
+sudo apt update && sudo apt install -y dnsmasq
+
+# 2. Configure dnsmasq
+sudo tee /etc/dnsmasq.d/srms-v2.conf > /dev/null <<'EOF'
+listen-address=127.0.0.1
+port=53
+bind-interfaces
+address=/sms.local/127.0.0.1
+server=/sms.local/
+EOF
+
+# 3. Configure systemd-resolved
+sudo tee /etc/systemd/resolved.conf.d/srms-v2.conf > /dev/null <<'EOF'
+[Resolve]
+DNS=127.0.0.1
+Domains=~sms.local
+DNSSEC=no
+DNSOverTLS=no
+EOF
+
+# 4. Restart services
+sudo systemctl restart dnsmasq
+sudo systemctl restart systemd-resolved
+```
+
+**Windows (Docker Desktop with WSL2):**
+
+```powershell
+# Run in Administrator PowerShell
+
+# 1. Install dnsmasq in Docker Desktop's WSL2 backend
+wsl -d docker-desktop -- apt update && apt install -y dnsmasq
+
+# 2. Configure dnsmasq in WSL
+wsl -d docker-desktop -- sh -c 'cat > /etc/dnsmasq.d/srms-v2.conf <<EOF
+listen-address=127.0.0.1
+port=53
+bind-interfaces
+address=/sms.local/127.0.0.1
+server=/sms.local/
+EOF'
+
+# 3. Start dnsmasq in WSL
+wsl -d docker-desktop -- sudo systemctl enable dnsmasq
+wsl -d docker-desktop -- sudo systemctl start dnsmasq
+
+# 4. Configure Windows to use WSL2 DNS
+$wslIp = wsl -d docker-desktop -- hostname -I | awk '{print $1}'
+Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ServerAddresses ("$wslIp", "8.8.8.8")
+```
+
+**Windows fallback (Acrylic DNS Proxy):**
+
+If the WSL2 approach is not preferred, install [Acrylic DNS Proxy](http://mayakron.altervista.org/acrylic), add `127.0.0.1 *.sms.local` to its `AcrylicHosts.txt`, and set Windows DNS to `127.0.0.1`.
+
+**Verification (all platforms):**
+
+```bash
+# Linux / WSL
+getent hosts admin.sms.local
+getent hosts hanfia.sms.local
+getent hosts new-school.sms.local
+
+# Windows PowerShell
+Resolve-DnsName admin.sms.local
+Resolve-DnsName new-school.sms.local
+
+# All should return 127.0.0.1
+# External DNS should still work:
+getent hosts google.com
+```
+
+**Uninstall / rollback (Linux):**
+
+```bash
+sudo systemctl stop dnsmasq
+sudo systemctl disable dnsmasq
+sudo rm -f /etc/dnsmasq.d/srms-v2.conf
+sudo rm -f /etc/systemd/resolved.conf.d/srms-v2.conf
+sudo systemctl restart systemd-resolved
+```
+
+**Uninstall / rollback (Windows):**
+
+```powershell
+wsl -d docker-desktop -- sudo systemctl stop dnsmasq
+wsl -d docker-desktop -- sudo systemctl disable dnsmasq
+wsl -d docker-desktop -- sudo rm /etc/dnsmasq.d/srms-v2.conf
+Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ResetServerAddresses
+```
+
+### Manual hosts file entries (fallback)
+
+If you cannot use wildcard DNS, add individual entries to the operating system hosts file:
 
 ```text
 127.0.0.1 hanfia.sms.local schoolb.sms.local admin.sms.local
@@ -153,13 +268,31 @@ The Student PWA manifest is dynamically served by the API at the edge's `/manife
 ## Production notes / current limits
 
 - Configure TLS and a wildcard certificate at the Nginx edge for `*.srms.com`; this repository's unified Compose stack is HTTP-only for local development.
+- **Production wildcard DNS:** Add a wildcard DNS record pointing to your load balancer or ingress IP (e.g., `*.srms.com A 203.0.113.10` or equivalent CNAME). The Nginx configuration already uses `server_name _ *.${ROOT_DOMAIN}` and the API dynamically resolves school slugs from the `Host` header. No per-school Nginx or DNS configuration is needed.
 - The Super Admin Portal is served on `admin.<ROOT_DOMAIN>` by its own container.
 - Password reset delivery, rate limiting, audit logging, and real student credential provisioning remain operational work; do not rely on the local seed credentials.
 - Existing standalone Compose files and launchers are retained for compatibility, but multi-portal hostname testing must use the root Compose stack and root Nginx.
 
+### Local vs production DNS
+
+| Aspect | Local Development (`sms.local`) | Production (`srms.com` or custom) |
+|--------|----------------------------------|-----------------------------------|
+| DNS resolution | `dnsmasq` + `systemd-resolved` (Linux) / WSL2 dnsmasq (Windows) | Public wildcard DNS record (`*.example.com`) |
+| TLS | None (HTTP only) | Wildcard TLS certificate at Nginx edge |
+| Per-school setup | None (automatic via wildcard) | None (automatic via wildcard) |
+| Nginx config | `server_name _ *.sms.local` | `server_name _ *.srms.com` (via `ROOT_DOMAIN`) |
+| API tenant resolution | Dynamic from `Host` header | Dynamic from `Host` header |
+
 ## Verification checklist
 
 ```sh
+# DNS resolution (after local-dns setup)
+getent hosts admin.sms.local
+getent hosts hanfia.sms.local
+getent hosts new-school.sms.local
+# All should return 127.0.0.1
+getent hosts google.com  # external DNS still works
+
 docker compose config --services
 curl -i http://admin.sms.local
 curl -i http://hanfia.sms.local/admin
@@ -171,3 +304,10 @@ curl -i http://doesnotexist.sms.local/api/student/school/brand
 ```
 
 After startup, inspect `docker compose ps` and logs. Then log into each tenant with its own seeded `STU001` credentials and confirm Hanfia credentials fail on School B (and vice versa); validate `/admin/students` refresh and student nested-route refresh in a browser. A hostname mismatch should return a JSON 401/404, not data from another school.
+
+**New school test (verifies wildcard DNS):**
+
+1. Create a new school via Super Admin Portal with slug `brand-new-school`
+2. Immediately test: `getent hosts brand-new-school.sms.local`
+3. Test: `curl http://brand-new-school.sms.local/api/health`
+4. Should work without any DNS or hosts file changes

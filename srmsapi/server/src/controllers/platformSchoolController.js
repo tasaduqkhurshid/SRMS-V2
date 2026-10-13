@@ -33,10 +33,14 @@ const listSchools = asyncHandler(async (_req, res, next) => {
 });
 
 const createSchool = asyncHandler(async (req, res, next) => {
-  const result = await SchoolService.createSchoolRecord(req.body || {});
+  const { school: schoolData } = req.body || {};
+  if (!schoolData) {
+    throw new ValidationError("School data is required");
+  }
+  const result = await SchoolService.registerSchool({ school: schoolData, admin: null });
   if (result.error) return next(result.error);
 
-  return sendSuccessJsonResponse(res, { statusCode: 201, message: "School created", data: result.data });
+  return sendSuccessJsonResponse(res, { statusCode: 201, message: "School created", data: { school_id: result.data } });
 });
 
 const getSchool = asyncHandler(async (req, res, next) => {
@@ -84,6 +88,47 @@ const listAdministrators = asyncHandler(async (req, res, next) => {
   if (result.error) return next(result.error);
 
   return sendSuccessJsonResponse(res, { statusCode: 200, message: "Administrators retrieved", data: result.data });
+});
+
+const updateAdministrator = asyncHandler(async (req, res, next) => {
+  const { email } = req.body || {};
+  if (!email) {
+    throw new ValidationError("Email is required");
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new ValidationError("Please enter a valid email address");
+  }
+  const result = await SchoolService.updateSchoolAdministrator(
+    req.params.id,
+    req.params.adminId,
+    { email }
+  );
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new NotFoundError("School administrator");
+  }
+  return sendSuccessJsonResponse(res, {
+    statusCode: 200,
+    message: "Administrator updated",
+    data: {
+      id: result.data._id,
+      username: result.data.username,
+      email: result.data.email,
+      role: result.data.role,
+    },
+  });
+});
+
+const deleteAdministrator = asyncHandler(async (req, res, next) => {
+  const result = await SchoolService.deleteSchoolAdministrator(
+    req.params.id,
+    req.params.adminId
+  );
+  if (result.error) return next(result.error);
+  if (!result.data) {
+    throw new NotFoundError("School administrator");
+  }
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "School administrator deleted" });
 });
 
 const updateAdministratorPassword = asyncHandler(async (req, res, next) => {
@@ -134,5 +179,7 @@ module.exports = {
   updateSchool,
   listAdministrators,
   createAdministrator,
+  updateAdministrator,
+  deleteAdministrator,
   updateAdministratorPassword,
 };

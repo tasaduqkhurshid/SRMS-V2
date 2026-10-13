@@ -26,6 +26,32 @@ export default `<section class="panel">
               <span class="school-date">{{ school.createdAt ? new Date(school.createdAt).toLocaleDateString() : '—' }}</span>
             </div>
           </div>
+          <div class="school-portals">
+            <div class="portal-group">
+              <a v-if="getSchoolAdminUrl(school)" :href="getSchoolAdminUrl(school)" target="_blank" rel="noopener noreferrer" class="portal-link" @click.stop title="Open School Portal">
+                <i class="fa-solid fa-school" style="font-size: 14px;"></i>
+                <span>School</span>
+                <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 12px; margin-left: 4px;"></i>
+              </a>
+              <button class="icon-btn portal-copy-btn" @click.stop="handleCopyUrl(school, 'admin')" :disabled="isCopying(school, 'admin')" :title="isCopying(school, 'admin') ? 'Copying...' : 'Copy to clipboard'" aria-label="Copy School Portal URL">
+                <i v-if="!isCopying(school, 'admin') && !isCopySuccess(school, 'admin')" class="fa-regular fa-copy" style="font-size: 14px;"></i>
+                <i v-if="isCopying(school, 'admin')" class="fa-solid fa-spinner fa-spin" style="font-size: 14px;"></i>
+                <i v-if="isCopySuccess(school, 'admin')" class="fa-solid fa-check" style="font-size: 14px; color: var(--success-color, #10b981);"></i>
+              </button>
+            </div>
+            <div class="portal-group">
+              <a v-if="getStudentPortalUrl(school)" :href="getStudentPortalUrl(school)" target="_blank" rel="noopener noreferrer" class="portal-link" @click.stop title="Open Student Portal">
+                <i class="fa-solid fa-graduation-cap" style="font-size: 14px;"></i>
+                <span>Students</span>
+                <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 12px; margin-left: 4px;"></i>
+              </a>
+              <button class="icon-btn portal-copy-btn" @click.stop="handleCopyUrl(school, 'student')" :disabled="isCopying(school, 'student')" :title="isCopying(school, 'student') ? 'Copying...' : 'Copy to clipboard'" aria-label="Copy Student Portal URL">
+                <i v-if="!isCopying(school, 'student') && !isCopySuccess(school, 'student')" class="fa-regular fa-copy" style="font-size: 14px;"></i>
+                <i v-if="isCopying(school, 'student')" class="fa-solid fa-spinner fa-spin" style="font-size: 14px;"></i>
+                <i v-if="isCopySuccess(school, 'student')" class="fa-solid fa-check" style="font-size: 14px; color: var(--success-color, #10b981);"></i>
+              </button>
+            </div>
+          </div>
           <div class="school-actions">
             <button class="icon-btn" @click.stop="$emit('view', school)" aria-label="View school details" title="View details">
               <i class="fa-solid fa-eye" style="font-size: 16px;"></i>
@@ -33,7 +59,7 @@ export default `<section class="panel">
             <button class="icon-btn" @click.stop="$emit('edit', school)" aria-label="Edit school" title="Edit school">
               <i class="fa-solid fa-pen-to-square" style="font-size: 16px;"></i>
             </button>
-            <button class="icon-btn" @click.stop="$emit('add-user', school)" aria-label="Add user to {{ school.school_name }}" title="Add user">
+            <button class="icon-btn" @click.stop="$emit('add-user', school)" aria-label="Add user to {{ school.school_name }}" title="Add administrator">
               <i class="fa-solid fa-user-plus" style="font-size: 16px;"></i>
             </button>
             <button class="icon-btn" :class="school.status === 'inactive' ? 'activate' : 'deactivate'" @click.stop="$emit('toggle', school)" :aria-label="school.status === 'inactive' ? 'Activate school' : 'Deactivate school'" :title="school.status === 'inactive' ? 'Activate' : 'Deactivate'">
@@ -48,11 +74,23 @@ export default `<section class="panel">
           <div v-else class="accordion-users">
             <div class="user-group">
               <h5>Administrators <span class="count">{{ getAdmins(school).length }}</span></h5>
-              <ul v-if="getAdmins(school).length" class="user-list">
-                <li v-for="admin in getAdmins(school)" :key="admin._id">
-                  <span class="user-name">{{ admin.username }}</span>
-                  <span class="user-email">{{ admin.email || 'No email' }}</span>
-                  <span class="user-role">{{ admin.role }}</span>
+              <ul v-if="getAdmins(school).length" class="admin-list">
+                <li v-for="admin in getAdmins(school)" :key="admin._id" class="admin-row">
+                  <div class="admin-info">
+                    <div class="admin-identity">
+                      <span class="admin-name">{{ admin.username }}</span>
+                      <span class="admin-role-badge">{{ admin.role }}</span>
+                    </div>
+                    <span class="admin-email">{{ admin.email || 'No email' }}</span>
+                  </div>
+                  <div class="admin-actions">
+                    <button class="icon-btn edit-admin" @click.stop="handleEditAdmin(school, admin)" aria-label="Edit administrator" title="Edit">
+                      <i class="fa-solid fa-pen-to-square" style="font-size: 14px;"></i>
+                    </button>
+                    <button class="icon-btn delete-admin" @click.stop="handleDeleteAdmin(school, admin)" aria-label="Delete administrator" title="Delete">
+                      <i class="fa-solid fa-trash" style="font-size: 14px;"></i>
+                    </button>
+                  </div>
                 </li>
               </ul>
               <p v-else class="no-users">No administrators</p>

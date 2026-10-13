@@ -2181,6 +2181,7 @@ button:focus-visible {
 
 .modal-container {
   max-width: 890px;
+  min-width: 600px;
   max-height: 90vh;
   background: #fff;
   border: 1px solid #e7ebf2;
@@ -2395,6 +2396,11 @@ button:focus-visible {
   font-size: 11px
 }
 
+.field-hint.error {
+  color: #d76352;
+  font-weight: 500;
+}
+
 .branding-hint {
   margin: 0 0 8px
 }
@@ -2602,6 +2608,16 @@ button:focus-visible {
   font-size: 12px
 }
 
+.form-success {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #bcecc8;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #16845a;
+  font-size: 12px
+}
+
 .school-form-modal .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -2791,7 +2807,133 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0
+  flex-shrink: 0;
+  margin-left: 130px
+}
+
+/* School Portal Links */
+.school-portals {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 1px solid #edf0f5;
+}
+
+.portal-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.portal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: #2559d6;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  background: #eef3fc;
+  border: 1px solid #d6e4fa;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.portal-link:hover {
+  background: #dbe8fc;
+  border-color: #b8d0f7;
+  color: #1743ae;
+}
+
+.portal-link i:first-child {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.portal-link i:last-child {
+  font-size: 11px;
+  margin-left: 4px;
+  opacity: 0.8;
+}
+
+.portal-copy-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: transparent;
+  color: #62728a;
+  border: 1px solid #edf0f5;
+}
+
+.portal-copy-btn:hover {
+  background: #f0f3f8;
+  color: #2559d6;
+  border-color: #dce3ed;
+}
+
+.portal-copy-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments for school accordion header */
+@media (max-width: 1100px) {
+  .school-accordion-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .school-main-info {
+    flex-basis: calc(100% - 120px);
+    order: 1;
+  }
+
+  .school-portals {
+    order: 2;
+    flex-basis: auto;
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    margin-top: 8px;
+    width: 100%;
+  }
+
+  .school-actions {
+    order: 3;
+    flex-basis: auto;
+  }
+}
+
+@media (max-width: 700px) {
+  .school-accordion-header {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .school-portals {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .portal-link {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  .school-actions {
+    gap: 4px;
+  }
+
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+  }
 }
 
 .icon-btn {
@@ -2862,8 +3004,8 @@ button:focus-visible {
 }
 
 .accordion-users {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 16px;
   padding-top: 16px
 }
@@ -2888,7 +3030,7 @@ button:focus-visible {
   border-radius: 999px
 }
 
-.user-list {
+.admin-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -2897,12 +3039,11 @@ button:focus-visible {
   gap: 6px
 }
 
-.user-list li {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 8px;
+.admin-row {
+  display: flex;
   align-items: center;
-  padding: 8px 10px;
+  gap: 12px;
+  padding: 10px 12px;
   border: 1px solid #e8edf4;
   border-radius: 8px;
   background: #fff;
@@ -2910,11 +3051,26 @@ button:focus-visible {
   transition: border-color 0.15s
 }
 
-.user-list li:hover {
+.admin-row:hover {
   border-color: #dce3ed
 }
 
-.user-name {
+.admin-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-name {
   font-weight: 600;
   color: #122449;
   overflow: hidden;
@@ -2922,22 +3078,47 @@ button:focus-visible {
   white-space: nowrap
 }
 
-.user-email {
+.admin-role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #e7efff;
+  color: #2559d6;
+  font-weight: 600;
+  white-space: nowrap
+}
+
+.admin-email {
   color: #62728a;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap
 }
 
-.user-role,
-.user-class {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: #e8edf4;
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.admin-actions .icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: transparent;
+  color: #62728a;
+  border: 1px solid #edf0f5;
+}
+
+.admin-actions .icon-btn:hover {
+  background: #f0f3f8;
   color: #2559d6;
-  font-weight: 600;
-  white-space: nowrap
+  border-color: #dce3ed;
 }
 
 .no-users {
@@ -2953,7 +3134,24 @@ button:focus-visible {
 
 @media(max-width:900px) {
   .accordion-users {
-    grid-template-columns: 1fr 1fr
+    /* Keep single column on smaller screens */
+  }
+}
+
+@media(max-width:600px) {
+  .admin-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .admin-actions {
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  .admin-actions .icon-btn {
+    width: 36px;
+    height: 36px;
   }
 }
 

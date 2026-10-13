@@ -21,14 +21,13 @@ const validateSlug = (value) => {
 
 const registerSchool = async ({ school, admin }) => {
   try {
+    console.log("registerSchool received school:", JSON.stringify(school, null, 2));
     if (
       !school?.school_name ||
       !school?.school_code ||
-      !school?.slug ||
-      !admin?.username ||
-      !admin?.password
+      !school?.slug
     ) {
-      throw new ValidationError("Missing required fields");
+      throw new ValidationError("Missing required fields: school_name, school_code, slug");
     }
 
     const safeSchool = { ...school, slug: validateSlug(school.slug) };
@@ -37,17 +36,26 @@ const registerSchool = async ({ school, admin }) => {
 
     const schoolRecord = await ModelUtils.createAndReturn(School, safeSchool);
 
-    const existingUser = await ModelUtils.findOne(User, { school_id: schoolRecord._id, username: admin.username });
-    if (existingUser) {
-      throw new ConflictError("Admin user already exists for this school");
-    }
+    if (admin) {
+      const existingUser = await ModelUtils.findOne(User, { school_id: schoolRecord._id, username: admin.username });
+      if (existingUser) {
+        throw new ConflictError("Admin user already exists for this school");
+      }
 
-    await seedNewSchool({
-      schoolId: schoolRecord._id,
-      slug: schoolRecord.slug,
-      name: schoolRecord.school_name,
-      admin: { ...admin, role: "ADMIN" },
-    });
+      await seedNewSchool({
+        schoolId: schoolRecord._id,
+        slug: schoolRecord.slug,
+        name: schoolRecord.school_name,
+        admin: { ...admin, role: "ADMIN" },
+      });
+    } else {
+      await seedNewSchool({
+        schoolId: schoolRecord._id,
+        slug: schoolRecord.slug,
+        name: schoolRecord.school_name,
+        admin: null,
+      });
+    }
 
     return success(schoolRecord._id);
   } catch (error) {
@@ -205,6 +213,40 @@ const createSchoolAdministrator = async (schoolId, data) => {
   }
 };
 
+const updateSchoolAdministrator = async (schoolId, administratorId, data) => {
+  try {
+    const { email } = data || {};
+    if (!email) throw new ValidationError("Email is required");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ValidationError("Please enter a valid email address");
+
+    const updated = await User.findOneAndUpdate(
+      { _id: administratorId, school_id: schoolId, role: { $in: ["ADMIN", "SCHOOL_ADMIN"] } },
+      { $set: { email: email.toLowerCase() } },
+      { new: true }
+    ).select("_id username email role");
+
+    if (!updated) return success(null);
+    return success(updated);
+  } catch (error) {
+    return failure(error);
+  }
+};
+
+const deleteSchoolAdministrator = async (schoolId, administratorId) => {
+  try {
+    const deleted = await User.findOneAndDelete({
+      _id: administratorId,
+      school_id: schoolId,
+      role: { $in: ["ADMIN", "SCHOOL_ADMIN"] },
+    }).select("_id");
+
+    if (!deleted) return success(null);
+    return success(deleted);
+  } catch (error) {
+    return failure(error);
+  }
+};
+
 const getSchoolById = async (schoolId) => {
   try {
     if (!schoolId) throw new ValidationError("School ID required");
@@ -308,6 +350,8 @@ module.exports = {
   updatePlatformSchool,
   listSchoolAdministrators,
   createSchoolAdministrator,
+  updateSchoolAdministrator,
+  deleteSchoolAdministrator,
   updateSchoolAdministratorPassword,
   getSchoolById,
   updateSchool,
