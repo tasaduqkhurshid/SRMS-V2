@@ -57,7 +57,7 @@ const registerSchool = async ({ school, admin }) => {
       });
     }
 
-    return success(schoolRecord._id);
+    return success(schoolRecord);
   } catch (error) {
     return failure(error);
   }

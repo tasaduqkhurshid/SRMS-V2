@@ -26,6 +26,12 @@ export default `<div v-if="isOpen" class="modal-overlay" @click.self="$emit('clo
                   <span class="form-label">School name <span class="required">*</span></span>
                   <input v-model.trim="form.school_name" :disabled="submitting" required autocomplete="off" placeholder="School name" class="form-input" />
                 </div>
+                <div class="form-field">
+                  <span class="form-label">School code <span class="required">*</span></span>
+                  <input v-model.trim="form.school_code" :disabled="submitting || mode === 'edit'" required pattern="[A-Z0-9]+" placeholder="HFS" autocomplete="off" class="form-input" />
+                  <small class="field-hint" v-if="mode === 'create'">Uppercase letters and numbers only</small>
+                  <small class="field-hint" v-else>School code cannot be changed after creation</small>
+                </div>
                 <div class="form-field" v-if="mode === 'create'">
                   <span class="form-label">Hostname slug <span class="required">*</span></span>
                   <input v-model.trim="form.slug" :disabled="submitting" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="hanfia" autocomplete="off" class="form-input" />
@@ -39,10 +45,6 @@ export default `<div v-if="isOpen" class="modal-overlay" @click.self="$emit('clo
                 <div class="form-field">
                   <span class="form-label">Email</span>
                   <input v-model.trim="form.email" type="email" :disabled="submitting" placeholder="office@school.edu" autocomplete="email" class="form-input" />
-                </div>
-                <div class="form-field">
-                  <span class="form-label">Address</span>
-                  <input v-model.trim="form.address" :disabled="submitting" placeholder="School address" autocomplete="street-address" class="form-input" />
                 </div>
                 <div class="form-field" v-if="mode === 'edit'">
                   <span class="form-label">Status</span>
@@ -158,6 +160,12 @@ export default `<div v-if="isOpen" class="modal-overlay" @click.self="$emit('clo
                   </div>
                 </div>
                 <p v-if="welcomeUploadState === 'error' && welcomeUploadError" class="upload-error">{{ welcomeUploadError }}</p>
+              </div>
+
+              <!-- School Address -->
+              <div class="form-field full-width">
+                <span class="form-label">Address</span>
+                <input v-model.trim="form.address" :disabled="submitting" placeholder="School address" autocomplete="street-address" class="form-input" />
               </div>
             </fieldset>
           </div>

@@ -16,6 +16,7 @@ export default {
     const form = ref({
       school_name: '',
       slug: '',
+      school_code: '',
       email: '',
       address: '',
       status: 'active',
@@ -87,6 +88,7 @@ export default {
       if (submitting.value || props.saving) return true;
       if (!form.value.school_name?.trim()) return true;
       if (props.mode === 'create' && !form.value.slug?.trim()) return true;
+      if (props.mode === 'create' && !form.value.school_code?.trim()) return true;
       if (hasPendingUploads.value) return true;
       return false;
     });
@@ -130,6 +132,7 @@ export default {
         form.value = {
           school_name: '',
           slug: '',
+          school_code: '',
           email: '',
           address: '',
           status: 'active',
@@ -149,6 +152,7 @@ export default {
       form.value = {
         school_name: '',
         slug: '',
+        school_code: '',
         email: '',
         address: '',
         status: 'active',
@@ -181,6 +185,7 @@ export default {
       form.value = {
         school_name: school.school_name || '',
         slug: school.slug || '',
+        school_code: school.school_code || '',
         email: school.email || '',
         address: school.address || '',
         status: school.status || 'active',

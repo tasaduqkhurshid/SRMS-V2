@@ -119,15 +119,20 @@ const closeAddUserModal = () => {
 };
 
 const handleModalSubmit = async (formData) => {
-  modalSaving.value = true;
-  error.value = '';
-  success.value = '';
-  try {
-    if (modalMode.value === 'create') {
-      const data = await api('/schools', { method: 'POST', body: JSON.stringify(formData) });
-      const rootDomain = window.location.hostname.replace(/^admin\./, '');
-      success.value = `${data.school_name} created at ${data.slug}.${rootDomain}`;
-    } else {
+    modalSaving.value = true;
+    error.value = '';
+    success.value = '';
+    try {
+      if (modalMode.value === 'create') {
+        const data = await api('/schools', {
+          method: 'POST',
+          body: JSON.stringify({
+            school: formData,
+          }),
+        });
+        const rootDomain = window.location.hostname.replace(/^admin\./, '');
+        success.value = `${data.school_name} created at ${data.slug}.${rootDomain}`;
+      } else {
       await api(`/schools/${modalSchool.value._id}`, {
         method: 'PATCH',
         body: JSON.stringify({
