@@ -246,7 +246,180 @@ To enable it later:
 
 Super Admin school details provide logo and welcome image uploads. Uploads accept JPEG, PNG, or WebP up to 5 MB. With R2 disabled, upload endpoints return JSON `503` and existing/placeholder login branding continues to work. R2 credentials remain server-side.
 
-## Frontend development/build checks
+## Development Workflow with Hot Reload (Docker)
+
+The recommended development workflow uses Docker Compose with a development override that enables hot reload for all services:
+
+### Start everything (complete development environment)
+
+```bash
+./start-all.sh
+# or equivalently:
+docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build --wait
+```
+
+This starts:
+- MongoDB and Redis (shared infrastructure)
+- API with Nodemon (hot reload on source changes)
+- School Portal with Vite HMR (port 5173)
+- Admin Portal with Vite HMR (port 5174)
+- Student Portal with Vite HMR (port 8080)
+- Nginx reverse proxy (port 80, routes to dev servers)
+
+### Start all three clients only
+
+```bash
+./start-client.sh
+```
+
+Starts School, Admin, and Student frontend development servers. Does not start API, MongoDB, or Redis (assumes they're already running or will be started separately).
+
+### Start API only
+
+```bash
+./start-server.sh
+```
+
+Starts API with Nodemon, MongoDB, and Redis. Does not start frontend portals.
+
+### Start individual portals
+
+```bash
+./start-school.sh    # School Admin Portal on http://localhost:5173/admin/
+./start-admin.sh     # Super Admin Portal on http://localhost:5174/
+./start-student.sh   # Student Portal on http://localhost:8080/
+```
+
+Each starts only its respective frontend development server.
+
+### Development URLs (direct container access)
+
+| Service | URL |
+|---------|-----|
+| API | http://localhost:5000 |
+| API Health | http://localhost:5000/api/health |
+| School Portal | http://localhost:5173/admin/ |
+| Admin Portal | http://localhost:5174/ |
+| Student Portal | http://localhost:8080/ |
+| Nginx Proxy (via hostnames) | http://admin.sms.local, http://hanfia.sms.local/admin/, http://hanfia.sms.local/ |
+
+### Stopping services
+
+```bash
+./start-all.sh down           # Stop everything
+./start-client.sh down        # Stop all three clients
+./start-server.sh down        # Stop API, MongoDB, Redis
+./start-school.sh down        # Stop School Portal
+./start-admin.sh down         # Stop Admin Portal
+./start-student.sh down       # Stop Student Portal
+```
+
+Or use the shortcut:
+```bash
+./stop-all.sh
+```
+
+### Viewing logs
+
+```bash
+./start-all.sh logs           # All services
+./start-client.sh logs        # All three clients
+./start-server.sh logs        # API only
+./start-school.sh logs        # School only
+./start-admin.sh logs         # Admin only
+./start-student.sh logs       # Student only
+```
+
+### Checking status
+
+```bash
+./start-all.sh status
+./start-client.sh status
+./start-server.sh status
+./start-school.sh status
+./start-admin.sh status
+./start-student.sh status
+```
+
+### Hot reload behavior
+
+**Frontend (Vite HMR):**
+- All three frontends run Vite dev servers inside Docker containers
+- Source code is bind-mounted from the host
+- `CHOKIDAR_USEPOLLING=true` and `WATCHPACK_POLLING=true` enable file watching on all platforms
+- Saving a `.vue`, `.js`, `.ts`, or `.css` file triggers instant HMR update in the browser
+- No container rebuild or restart required
+
+**API (Nodemon):**
+- API runs with `npm run dev` (Nodemon) inside Docker
+- Source code is bind-mounted from `srmsapi/server`
+- `legacyWatch: true` in `nodemon.json` enables polling for reliable file watching
+- Saving a `.js` or `.json` file in `src/` or `server.js` triggers automatic API restart
+- Excludes `node_modules`, logs, seeders, migrations, and Docker files from watching
+
+### Database modes
+
+Set `DB_TYPE` in `.env` (or export it):
+
+```bash
+# Docker MongoDB (default)
+DB_TYPE=docker ./start-all.sh
+
+# Local MongoDB on host
+DB_TYPE=local ./start-all.sh
+```
+
+With `DB_TYPE=local`, the API container connects to the host MongoDB via `host.docker.internal`. The host MongoDB must be running and accessible.
+
+### One-time setup after configuration changes
+
+- After changing `.env` values: restart with `./start-all.sh restart`
+- After adding new npm dependencies: rebuild with `./start-all.sh up --build` (or `docker compose build`)
+- After modifying `docker-compose.yml` or `docker-compose.override.yml`: restart with `./start-all.sh restart`
+- To initialize/reset database: `./setup db` (runs migrations and seeders)
+
+### Cross-platform notes
+
+- **Linux/macOS:** Works natively with Docker Engine
+- **Windows:** Requires Docker Desktop with WSL2 backend
+- File watching uses polling (`CHOKIDAR_USEPOLLING`) for reliability on all platforms
+- No native shell scripts required on Windows — use equivalent Docker Compose commands directly:
+  ```powershell
+  docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build --wait
+  ```
+
+### Troubleshooting
+
+**Port conflicts:**
+- Ensure ports 5000, 5173, 5174, 8080, 80, 27017, 6379 are not in use
+- Change ports in `.env` (`HTTP_PORT`) or docker-compose.override.yml if needed
+
+**Container unhealthy:**
+- Check logs: `./start-all.sh logs`
+- Verify MongoDB/Redis are healthy: `docker compose ps`
+- For local MongoDB: ensure it's running and `host.docker.internal` resolves
+
+**HMR not working:**
+- Verify source files are in the correct directories (srms-school/client, srms-admin, srms-student, srmsapi/server)
+- Check container logs for Vite/Nodemon errors
+- Ensure `CHOKIDAR_USEPOLLING=true` is set in container environment
+
+**Duplicate containers:**
+- Use `./start-all.sh down` before switching modes
+- Each command targets specific services; they don't duplicate MongoDB/Redis if already running
+
+### Development vs Production
+
+| Aspect | Development | Production |
+|--------|-------------|------------|
+| Frontend | Vite dev server (HMR) | Nginx serving built assets |
+| API | Nodemon (auto-restart) | Node.js (no watch) |
+| Source mounts | Yes (bind mounts) | No |
+| MongoDB | Docker or local | Docker (or managed) |
+| Nginx | Proxies to dev servers | Proxies to built frontend containers |
+| Build | On-the-fly | `docker compose build` |
+
+Frontend development/build checks
 
 ```sh
 npm --prefix srms-school/client install
