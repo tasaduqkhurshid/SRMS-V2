@@ -262,7 +262,21 @@ export default {
       }
     };
 
-    const removeLogoSelection = () => {
+    const removeLogoSelection = async () => {
+      // If there's an existing key on the server, call DELETE API to remove it
+      if (logoExistingKey.value && props.school?._id) {
+        try {
+          await api(`/schools/${props.school._id}/branding/logo`, {
+            method: 'DELETE',
+          });
+          // Clear the existing key since it's been deleted from server
+          logoExistingKey.value = '';
+        } catch (error) {
+          console.error('Failed to remove logo:', error);
+          // Don't throw, just log - user can retry
+        }
+      }
+
       if (logoUploadAbortController.value) {
         logoUploadAbortController.value.abort();
         logoUploadAbortController.value = null;
@@ -273,14 +287,9 @@ export default {
       logoFile.value = null;
       logoPreviewUrl.value = null;
       logoUploadError.value = '';
-      logoUploadState.value = logoExistingKey.value ? 'existing' : 'empty';
+      logoUploadState.value = 'empty';
       logoUploadProgress.value = 0;
       if (logoInput.value) logoInput.value.value = '';
-
-      // Restore existing preview if there was one
-      if (logoExistingKey.value && props.school) {
-        logoPreviewUrl.value = props.schoolPortalUrl(props.school, '/api/student/school/branding/logo');
-      }
     };
 
     const replaceLogo = () => {
@@ -371,7 +380,21 @@ export default {
       }
     };
 
-    const removeWelcomeSelection = () => {
+    const removeWelcomeSelection = async () => {
+      // If there's an existing key on the server, call DELETE API to remove it
+      if (welcomeExistingKey.value && props.school?._id) {
+        try {
+          await api(`/schools/${props.school._id}/branding/welcome-image`, {
+            method: 'DELETE',
+          });
+          // Clear the existing key since it's been deleted from server
+          welcomeExistingKey.value = '';
+        } catch (error) {
+          console.error('Failed to remove welcome image:', error);
+          // Don't throw, just log - user can retry
+        }
+      }
+
       if (welcomeUploadAbortController.value) {
         welcomeUploadAbortController.value.abort();
         welcomeUploadAbortController.value = null;
@@ -382,14 +405,9 @@ export default {
       welcomeFile.value = null;
       welcomePreviewUrl.value = null;
       welcomeUploadError.value = '';
-      welcomeUploadState.value = welcomeExistingKey.value ? 'existing' : 'empty';
+      welcomeUploadState.value = 'empty';
       welcomeUploadProgress.value = 0;
       if (welcomeInput.value) welcomeInput.value.value = '';
-
-      // Restore existing preview if there was one
-      if (welcomeExistingKey.value && props.school) {
-        welcomePreviewUrl.value = props.schoolPortalUrl(props.school, '/api/student/school/branding/welcome-image');
-      }
     };
 
     const replaceWelcome = () => {

@@ -103,4 +103,41 @@ const getBrandingAsset = asyncHandler(async (req, res, next) => {
   }
 });
 
-module.exports = { uploadBranding, getBrandingAsset, MIME_TO_EXTENSION };
+const deleteBrandingAsset = asyncHandler(async (req, res, next) => {
+  const configAsset = assetConfig(req.params.asset);
+  if (!configAsset) throw new NotFoundError("Branding asset");
+  if (!req.isPlatformHost || String(req.user?.role).toUpperCase() !== "SUPER_ADMIN") {
+    throw new AuthorizationError("Super Admin access required");
+  }
+  if (!storage.isConfigured()) {
+    throw new ValidationError("Cloud storage is not configured");
+  }
+
+  const school = await School.findById(req.params.schoolId).lean();
+  if (!school) throw new NotFoundError("School");
+
+  const key = school.branding?.[configAsset.field];
+  if (!key) {
+    return sendSuccessJsonResponse(res, {
+      statusCode: 200,
+      message: "No branding asset to remove",
+      data: { asset: req.params.asset },
+    });
+  }
+
+  // Delete from storage (both buckets for safety)
+  await storage.deleteBrandingAsset(key).catch((error) => {
+    logger.warn("Unable to remove branding object from storage", error);
+  });
+
+  // Clear the key from school record
+  await School.updateOne({ _id: school._id }, { $set: { [`branding.${configAsset.field}`]: "" } });
+
+  return sendSuccessJsonResponse(res, {
+    statusCode: 200,
+    message: "Branding removed",
+    data: { asset: req.params.asset },
+  });
+});
+
+module.exports = { uploadBranding, getBrandingAsset, deleteBrandingAsset, MIME_TO_EXTENSION };

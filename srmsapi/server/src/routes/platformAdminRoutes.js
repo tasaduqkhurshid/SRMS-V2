@@ -31,5 +31,6 @@ router.patch('/schools/:id/admins/:adminId', controller.updateAdministrator);
 router.delete('/schools/:id/admins/:adminId', controller.deleteAdministrator);
 router.patch('/schools/:id/admins/:adminId/password', controller.updateAdministratorPassword);
 router.post('/schools/:schoolId/branding/:asset', uploadBrandingImage, brandingController.uploadBranding);
+router.delete('/schools/:schoolId/branding/:asset', brandingController.deleteBrandingAsset);
 
 module.exports = router;
