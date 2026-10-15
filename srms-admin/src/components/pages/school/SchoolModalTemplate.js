@@ -1,4 +1,4 @@
-export default `<div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
+export default `<div v-if="isOpen" class="modal-overlay">
   <div class="modal-container" role="dialog" aria-modal="true" :aria-labelledby="mode === 'create' ? 'modal-title-create' : 'modal-title-edit'">
     <header class="modal-header">
       <div>

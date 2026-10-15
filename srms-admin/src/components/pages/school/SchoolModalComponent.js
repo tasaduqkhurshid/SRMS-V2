@@ -31,6 +31,7 @@ export default {
     const logoUploadError = ref('');
     const logoUploadProgress = ref(0);
     const logoExistingKey = ref('');
+    const logoUploadAbortController = ref(null);
 
     // Welcome image upload state
     const welcomeFile = ref(null);
@@ -39,6 +40,7 @@ export default {
     const welcomeUploadError = ref('');
     const welcomeUploadProgress = ref(0);
     const welcomeExistingKey = ref('');
+    const welcomeUploadAbortController = ref(null);
 
     // Submission state
     const submitting = ref(false);
@@ -243,16 +245,28 @@ export default {
 
       logoFile.value = file;
       logoUploadError.value = '';
-      logoUploadState.value = 'selected';
-
+      
       // Create object URL for preview
       if (logoPreviewUrl.value && logoUploadState.value !== 'existing') {
         URL.revokeObjectURL(logoPreviewUrl.value);
       }
       logoPreviewUrl.value = URL.createObjectURL(file);
+
+      // In edit mode, auto-upload immediately (has school ID)
+      // In create mode, keep as selected - will upload on submit
+      if (props.mode === 'edit' && props.school?._id) {
+        logoUploadState.value = 'uploading';
+        uploadLogo();
+      } else {
+        logoUploadState.value = 'selected';
+      }
     };
 
     const removeLogoSelection = () => {
+      if (logoUploadAbortController.value) {
+        logoUploadAbortController.value.abort();
+        logoUploadAbortController.value = null;
+      }
       if (logoPreviewUrl.value) {
         URL.revokeObjectURL(logoPreviewUrl.value);
       }
@@ -260,6 +274,7 @@ export default {
       logoPreviewUrl.value = null;
       logoUploadError.value = '';
       logoUploadState.value = logoExistingKey.value ? 'existing' : 'empty';
+      logoUploadProgress.value = 0;
       if (logoInput.value) logoInput.value.value = '';
 
       // Restore existing preview if there was one
@@ -269,7 +284,7 @@ export default {
     };
 
     const replaceLogo = () => {
-      // Keep the existing key but allow new selection
+      // Allow new selection without losing existing logo
       logoUploadState.value = 'empty';
       logoPreviewUrl.value = null;
       if (logoInput.value) logoInput.value.click();
@@ -277,6 +292,9 @@ export default {
 
     const uploadLogo = async () => {
       if (!logoFile.value || !props.school?._id) return;
+
+      // Create new abort controller for this upload
+      logoUploadAbortController.value = new AbortController();
 
       logoUploadState.value = 'uploading';
       logoUploadError.value = '';
@@ -288,6 +306,7 @@ export default {
         const result = await api(`/schools/${props.school._id}/branding/logo`, {
           method: 'POST',
           body: data,
+          signal: logoUploadAbortController.value.signal,
         });
 
         // Refresh school data to get updated branding keys
@@ -302,10 +321,15 @@ export default {
         logoUploadState.value = 'uploaded';
         logoUploadProgress.value = 100;
         logoFile.value = null;
+        logoUploadAbortController.value = null;
       } catch (error) {
+        if (error.name === 'AbortError') {
+          return; // Ignore aborted uploads
+        }
         logoUploadError.value = error.message;
         logoUploadState.value = 'error';
         logoUploadProgress.value = 0;
+        logoUploadAbortController.value = null;
       }
     };
 
@@ -330,16 +354,28 @@ export default {
 
       welcomeFile.value = file;
       welcomeUploadError.value = '';
-      welcomeUploadState.value = 'selected';
 
       // Create object URL for preview
       if (welcomePreviewUrl.value && welcomeUploadState.value !== 'existing') {
         URL.revokeObjectURL(welcomePreviewUrl.value);
       }
       welcomePreviewUrl.value = URL.createObjectURL(file);
+
+      // In edit mode, auto-upload immediately (has school ID)
+      // In create mode, keep as selected - will upload on submit
+      if (props.mode === 'edit' && props.school?._id) {
+        welcomeUploadState.value = 'uploading';
+        uploadWelcome();
+      } else {
+        welcomeUploadState.value = 'selected';
+      }
     };
 
     const removeWelcomeSelection = () => {
+      if (welcomeUploadAbortController.value) {
+        welcomeUploadAbortController.value.abort();
+        welcomeUploadAbortController.value = null;
+      }
       if (welcomePreviewUrl.value) {
         URL.revokeObjectURL(welcomePreviewUrl.value);
       }
@@ -347,6 +383,7 @@ export default {
       welcomePreviewUrl.value = null;
       welcomeUploadError.value = '';
       welcomeUploadState.value = welcomeExistingKey.value ? 'existing' : 'empty';
+      welcomeUploadProgress.value = 0;
       if (welcomeInput.value) welcomeInput.value.value = '';
 
       // Restore existing preview if there was one
@@ -356,6 +393,7 @@ export default {
     };
 
     const replaceWelcome = () => {
+      // Allow new selection without losing existing welcome image
       welcomeUploadState.value = 'empty';
       welcomePreviewUrl.value = null;
       if (welcomeInput.value) welcomeInput.value.click();
@@ -363,6 +401,9 @@ export default {
 
     const uploadWelcome = async () => {
       if (!welcomeFile.value || !props.school?._id) return;
+
+      // Create new abort controller for this upload
+      welcomeUploadAbortController.value = new AbortController();
 
       welcomeUploadState.value = 'uploading';
       welcomeUploadError.value = '';
@@ -374,6 +415,7 @@ export default {
         const result = await api(`/schools/${props.school._id}/branding/welcome-image`, {
           method: 'POST',
           body: data,
+          signal: welcomeUploadAbortController.value.signal,
         });
 
         // Refresh school data to get updated branding keys
@@ -388,10 +430,15 @@ export default {
         welcomeUploadState.value = 'uploaded';
         welcomeUploadProgress.value = 100;
         welcomeFile.value = null;
+        welcomeUploadAbortController.value = null;
       } catch (error) {
+        if (error.name === 'AbortError') {
+          return; // Ignore aborted uploads
+        }
         welcomeUploadError.value = error.message;
         welcomeUploadState.value = 'error';
         welcomeUploadProgress.value = 0;
+        welcomeUploadAbortController.value = null;
       }
     };
 
@@ -410,7 +457,57 @@ export default {
 
       try {
         if (props.mode === 'create') {
-          await emit('submit', { ...form.value });
+          // First create the school
+          const result = await emit('submit', { ...form.value });
+          
+          // If school created and we have pending images, upload them
+          if (result && result._id) {
+            const schoolId = result._id;
+            
+            // Upload logo if selected
+            if (logoUploadState.value === 'selected' && logoFile.value) {
+              logoUploadState.value = 'uploading';
+              logoUploadError.value = '';
+              logoUploadProgress.value = 0;
+              try {
+                const data = new FormData();
+                data.append('file', logoFile.value);
+                await api(`/schools/${schoolId}/branding/logo`, {
+                  method: 'POST',
+                  body: data,
+                });
+                logoUploadState.value = 'uploaded';
+                logoUploadProgress.value = 100;
+                logoFile.value = null;
+              } catch (error) {
+                logoUploadError.value = error.message;
+                logoUploadState.value = 'error';
+                logoUploadProgress.value = 0;
+              }
+            }
+            
+            // Upload welcome image if selected
+            if (welcomeUploadState.value === 'selected' && welcomeFile.value) {
+              welcomeUploadState.value = 'uploading';
+              welcomeUploadError.value = '';
+              welcomeUploadProgress.value = 0;
+              try {
+                const data = new FormData();
+                data.append('file', welcomeFile.value);
+                await api(`/schools/${schoolId}/branding/welcome-image`, {
+                  method: 'POST',
+                  body: data,
+                });
+                welcomeUploadState.value = 'uploaded';
+                welcomeUploadProgress.value = 100;
+                welcomeFile.value = null;
+              } catch (error) {
+                welcomeUploadError.value = error.message;
+                welcomeUploadState.value = 'error';
+                welcomeUploadProgress.value = 0;
+              }
+            }
+          }
         } else {
           await emit('submit', { ...form.value, _id: props.school._id });
         }
@@ -430,6 +527,15 @@ export default {
         // Prevent body scroll
         document.body.style.overflow = 'hidden';
       } else {
+        // Abort any in-progress uploads
+        if (logoUploadAbortController.value) {
+          logoUploadAbortController.value.abort();
+          logoUploadAbortController.value = null;
+        }
+        if (welcomeUploadAbortController.value) {
+          welcomeUploadAbortController.value.abort();
+          welcomeUploadAbortController.value = null;
+        }
         // Restore body scroll
         document.body.style.overflow = '';
         // Clean up object URLs
@@ -476,6 +582,12 @@ export default {
 
     // Cleanup
     const cleanup = () => {
+      if (logoUploadAbortController.value) {
+        logoUploadAbortController.value.abort();
+      }
+      if (welcomeUploadAbortController.value) {
+        welcomeUploadAbortController.value.abort();
+      }
       document.removeEventListener('keydown', handleKeydown);
       document.body.style.overflow = '';
       if (logoPreviewUrl.value) URL.revokeObjectURL(logoPreviewUrl.value);

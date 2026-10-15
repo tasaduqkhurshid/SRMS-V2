@@ -29,8 +29,8 @@ const assetConfig = (asset) => {
 };
 
 const uploadBranding = asyncHandler(async (req, res, next) => {
-  const config = assetConfig(req.params.asset);
-  if (!config) throw new NotFoundError("Branding asset");
+  const configAsset = assetConfig(req.params.asset);
+  if (!configAsset) throw new NotFoundError("Branding asset");
   if (!req.isPlatformHost || String(req.user?.role).toUpperCase() !== "SUPER_ADMIN") {
     throw new AuthorizationError("Super Admin access required");
   }
@@ -49,27 +49,22 @@ const uploadBranding = asyncHandler(async (req, res, next) => {
   const school = await School.findById(req.params.schoolId).lean();
   if (!school) throw new NotFoundError("School");
 
-  const key = storage.createUploadKey({
-    schoolSlug: school.slug,
-    category: "branding",
-    filename: `${config.base}-${randomUUID()}`,
-    extension,
-  });
-
-  await storage.uploadFile({ key, body: req.file.buffer, contentType: req.file.mimetype, cacheControl: "public, max-age=300" });
-
   try {
-    await School.updateOne({ _id: school._id }, { $set: { [`branding.${config.field}`]: key } });
-  } catch (error) {
-    await storage.deleteFile(key).catch(() => {});
-    throw error;
-  }
-
-  const previousKey = school.branding?.[config.field];
-  if (previousKey && previousKey !== key) {
-    await storage.deleteFile(previousKey).catch((error) => {
-      logger.warn("Unable to remove replaced branding object", error);
+    // Upload to public bucket via branding-specific service method
+    const { key } = await storage.uploadBrandingAsset({
+      schoolSlug: school.slug,
+      asset: configAsset.base,
+      body: req.file.buffer,
+      contentType: req.file.mimetype,
+      extension,
     });
+
+    // Update school record with new key
+    await School.updateOne({ _id: school._id }, { $set: { [`branding.${configAsset.field}`]: key } });
+  } catch (error) {
+    // If DB update fails, attempt cleanup of newly uploaded branding asset
+    await storage.deleteBrandingAsset(key).catch(() => {});
+    throw error;
   }
 
   return sendSuccessJsonResponse(res, {
@@ -80,20 +75,22 @@ const uploadBranding = asyncHandler(async (req, res, next) => {
 });
 
 const getBrandingAsset = asyncHandler(async (req, res, next) => {
-  const config = assetConfig(req.params.asset);
-  if (!config || !req.school) throw new NotFoundError("Branding image");
-  const key = req.school.branding?.[config.field];
+  const configAsset = assetConfig(req.params.asset);
+  if (!configAsset || !req.school) throw new NotFoundError("Branding image");
+  const key = req.school.branding?.[configAsset.field];
   if (!key) throw new NotFoundError("Branding image");
   if (!storage.isConfigured()) throw new ValidationError("Cloud storage is not configured");
 
   try {
-    const object = await storage.getFile(key);
+    // Use branding-specific get method which handles public/private fallback
+    const object = await storage.getBrandingAsset(key);
+
     const contentType = MIME_TO_EXTENSION.has(object.contentType) ? object.contentType : "application/octet-stream";
     if (contentType === "application/octet-stream") throw new Error("Invalid branding image content type");
     res.set({
       "Content-Type": contentType,
       "Content-Length": String(object.body.length),
-      "Cache-Control": "public, max-age=300",
+      "Cache-Control": "public, max-age=3600",
       "X-Content-Type-Options": "nosniff",
     });
     return res.status(200).send(object.body);

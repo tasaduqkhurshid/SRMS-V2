@@ -132,31 +132,32 @@ const handleModalSubmit = async (formData) => {
         });
         const rootDomain = window.location.hostname.replace(/^admin\./, '');
         success.value = `${data.school_name} created at ${data.slug}.${rootDomain}`;
+        return data; // Return created school data for modal to use
       } else {
-      await api(`/schools/${modalSchool.value._id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          school_name: formData.school_name,
-          email: formData.email,
-          address: formData.address,
-          status: formData.status,
-          branding: {
-            tagline: formData.tagline,
-            description: formData.description,
-          },
-        }),
-      });
-      success.value = 'School details updated.';
+        await api(`/schools/${modalSchool.value._id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            school_name: formData.school_name,
+            email: formData.email,
+            address: formData.address,
+            status: formData.status,
+            branding: {
+              tagline: formData.tagline,
+              description: formData.description,
+            },
+          }),
+        });
+        success.value = 'School details updated.';
+      }
+      closeModal();
+      await loadSchools();
+    } catch (cause) {
+      error.value = cause.message;
+      throw cause; // Re-throw to let modal handle it
+    } finally {
+      modalSaving.value = false;
     }
-    closeModal();
-    await loadSchools();
-  } catch (cause) {
-    error.value = cause.message;
-    throw cause; // Re-throw to let modal handle it
-  } finally {
-    modalSaving.value = false;
-  }
-};
+  };
 
 const uploadBrandingAsset = async (asset, event) => {
   const file = event.target.files?.[0];
