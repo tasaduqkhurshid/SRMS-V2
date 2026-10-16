@@ -3,7 +3,8 @@
 const { seedGatewayCatalog } = require('../seeders/gateway.seeder');
 
 const up = async (db) => {
-  await db.Gateway.collection.createIndex({ code: 1 }, { unique: true, name: 'unique_gateway_code' });
+  // Gateway.code already declares the unique index in its schema. Recreating
+  // the same key pattern under another name causes MongoDB IndexOptionsConflict.
   await db.Gateway.collection.createIndex({ isEnabled: 1, integrationStatus: 1 }, { name: 'platform_gateway_availability' });
   await db.SchoolGateway.collection.createIndex(
     { school_id: 1, gateway_id: 1 },
