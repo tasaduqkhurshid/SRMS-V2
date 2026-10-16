@@ -10,5 +10,12 @@ module.exports = {
   Image: require('./Image'),
   MarksheetTemplate: require('./MarksheetTemplate'),
   StudentSubject: require('./StudentSubject'),
-  CourseSubject: require('./CourseSubject')
+  CourseSubject: require('./CourseSubject'),
+  FeeType: require('./FeeType'),
+  FeeStructure: require('./FeeStructure'),
+  StudentFeeAccount: require('./StudentFeeAccount'),
+  FeePayment: require('./FeePayment'),
+  FeeAudit: require('./FeeAudit'),
+  Gateway: require('./Gateway'),
+  SchoolGateway: require('./SchoolGateway'),
 };

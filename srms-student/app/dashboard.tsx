@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, Redirect } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenShell } from '../src/components/ScreenShell';
 import { StatCard } from '../src/components/StatCard';
@@ -8,6 +8,8 @@ import { formatCurrency, formatPercent, formatShortDate } from '../src/utils/for
 import { palette } from '../src/theme/theme';
 
 export default function DashboardScreen() {
+  const authMode = useAppStore((state) => state.authMode);
+  if (authMode === 'parent') return <Redirect href="/(tabs)/fees" />;
   const selectedChild = useAppStore((state) => state.selectedChild());
   const setSelectedChild = useAppStore((state) => state.setSelectedChild);
   const parent = useAppStore((state) => state.parent);

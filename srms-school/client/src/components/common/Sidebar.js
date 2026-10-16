@@ -16,24 +16,10 @@ export default {
     // mobileOpen = overlay open state (on mobile toggle)
     const mobileOpen = ref(false)
 
-    // School branding
-    const schoolLogo = ref('')
-
     const handleResize = () => {
       mobile.value = window.innerWidth < 992
       if (!mobile.value) {
         mobileOpen.value = false
-      }
-    }
-
-    // Load school branding from localStorage
-    const loadSchoolBranding = () => {
-      try {
-        const storedUser = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}")
-        const school = storedUser.school || {}
-        schoolLogo.value = school.logo_url || school.logo_path || ''
-      } catch (e) {
-        schoolLogo.value = ''
       }
     }
 
@@ -43,7 +29,7 @@ export default {
       updateResultsOpenState()
       updateTemplatesOpenState()
       updateResultBookOpenState()
-      loadSchoolBranding()
+      updateFeesOpenState()
     })
 
     onUnmounted(() => {
@@ -55,6 +41,7 @@ export default {
       updateResultsOpenState()
       updateTemplatesOpenState()
       updateResultBookOpenState()
+      updateFeesOpenState()
     })
 
     const toggle = () => {
@@ -91,6 +78,17 @@ export default {
       }
     }
 
+    // Fees submenu state
+    const feesOpen = ref(false)
+    const toggleFees = () => {
+      if (!feesOpen.value) {
+        feesOpen.value = true
+        if (!route.path.startsWith('/fees/')) router.push('/fees/overview')
+      } else {
+        feesOpen.value = false
+      }
+    }
+
     // Auto-open Results if current route is a Results sub-route
     const updateResultsOpenState = () => {
       if (route.path.startsWith('/results') && route.path !== '/results') {
@@ -111,6 +109,10 @@ export default {
       } else {
         resultBookOpen.value = false
       }
+    }
+
+    const updateFeesOpenState = () => {
+      feesOpen.value = route.path.startsWith('/fees/')
     }
 
     const closeMobile = () => {
@@ -137,6 +139,12 @@ export default {
         }
         if (path === '/exams') {
           return route.path === '/exams'
+        }
+        if (path === '/fees') {
+          return route.path === '/fees' || route.path.startsWith('/fees/')
+        }
+        if (path === '/fees/overview') {
+          return route.path === '/fees' || route.path === '/fees/overview'
         }
         if (path === '/results/student-wise') {
           return route.path === '/results/student-wise'
@@ -184,7 +192,8 @@ export default {
       toggleResults,
       resultBookOpen,
       toggleResultBook,
-      schoolLogo,
+      feesOpen,
+      toggleFees,
       currentYear: new Date().getFullYear()
     }
   }

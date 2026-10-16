@@ -47,6 +47,14 @@ const login = asyncHandler(async (req, res, next) => {
   return sendSuccessJsonResponse(res, { statusCode: 200, message: "Login successful", data: result.data });
 });
 
+const parentLogin = asyncHandler(async (req, res, next) => {
+  const { username, password } = req.body || {};
+  const result = await AuthService.loginParent({ username, password, school: req.school });
+  if (result.error) return next(result.error);
+  if (!result.data) throw new AuthenticationError("Invalid parent credentials");
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Parent login successful", data: result.data });
+});
+
 const logout = (_req, res) => {
   return sendSuccessJsonResponse(res, { statusCode: 200, message: "Logged out successfully" });
 };
@@ -58,4 +66,4 @@ const me = asyncHandler(async (req, res, next) => {
   return sendSuccessJsonResponse(res, { statusCode: 200, message: "Profile retrieved", data: result.data });
 });
 
-module.exports = { manifest, getSchoolBrand, login, logout, me };
+module.exports = { manifest, getSchoolBrand, login, parentLogin, logout, me };

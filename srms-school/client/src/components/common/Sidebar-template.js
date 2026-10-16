@@ -4,18 +4,6 @@ export default `
   <div v-if="mobile && mobileOpen" class="sidebar-overlay" @click="closeMobile"></div>
 
   <aside :class="['sidebar', { collapsed: collapsed, mobileOpen: mobileOpen && mobile }]" role="navigation" aria-label="Main navigation">
-    <!-- Sidebar Header / Branding -->
-    <div class="sidebar-header">
-      <div class="sidebar-brand-wrapper">
-        <div class="sidebar-logo">
-          <img v-if="schoolLogo" :src="schoolLogo" alt="School Logo" class="sidebar-logo-img" @error="schoolLogo = ''" />
-          <i v-else class="fa-solid fa-school"></i>
-        </div>
-      </div>
-    </div>
-
-    <hr class="sidebar-divider" />
-
     <!-- Navigation -->
     <nav class="nav flex-column">
       <!-- Dashboard (Active) -->
@@ -58,6 +46,44 @@ export default `
         <i class="fa-solid fa-file-circle-check"></i>
         <span v-if="!collapsed">Exams</span>
       </router-link>
+
+      <div class="sidebar-section" v-if="!collapsed"><span class="sidebar-section-title">Finance</span></div>
+      <div class="sidebar-group">
+        <a class="nav-link" href="#" :class="{ 'nav-link-active': isActive('/fees') }" @click.prevent="toggleFees">
+          <i class="fa-solid fa-wallet"></i>
+          <span class="flex-grow-1" v-if="!collapsed">Fees</span>
+          <i :class="['fa-solid fa-chevron-down nav-caret', { open: feesOpen }]" v-if="!collapsed"></i>
+        </a>
+        <div :class="{ 'collapse': !feesOpen && !collapsed }" style="overflow: hidden;">
+          <router-link class="nav-link nav-link-sm" :class="{ 'nav-link-active': isActive('/fees/overview') }" to="/fees/overview">
+            <i class="fa-solid fa-chart-pie"></i><span v-if="!collapsed">Overview</span>
+          </router-link>
+          <router-link class="nav-link nav-link-sm" :class="{ 'nav-link-active': isActive('/fees/types') }" to="/fees/types">
+            <i class="fa-solid fa-tags"></i><span v-if="!collapsed">Fee types</span>
+          </router-link>
+          <router-link class="nav-link nav-link-sm" :class="{ 'nav-link-active': isActive('/fees/structures') }" to="/fees/structures">
+            <i class="fa-solid fa-layer-group"></i><span v-if="!collapsed">Structures</span>
+          </router-link>
+          <router-link class="nav-link nav-link-sm" :class="{ 'nav-link-active': isActive('/fees/assign') }" to="/fees/assign">
+            <i class="fa-solid fa-user-plus"></i><span v-if="!collapsed">Assign fees</span>
+          </router-link>
+          <router-link class="nav-link nav-link-sm" :class="{ 'nav-link-active': isActive('/fees/parents') }" to="/fees/parents">
+            <i class="fa-solid fa-people-roof"></i><span v-if="!collapsed">Parent access</span>
+          </router-link>
+          <router-link class="nav-link nav-link-sm" :class="{ 'nav-link-active': isActive('/fees/accounts') }" to="/fees/accounts">
+            <i class="fa-solid fa-users"></i><span v-if="!collapsed">Student accounts</span>
+          </router-link>
+          <router-link class="nav-link nav-link-sm" :class="{ 'nav-link-active': isActive('/fees/payments') }" to="/fees/payments">
+            <i class="fa-solid fa-receipt"></i><span v-if="!collapsed">Collections</span>
+          </router-link>
+          <router-link class="nav-link nav-link-sm" :class="{ 'nav-link-active': isActive('/fees/reports') }" to="/fees/reports">
+            <i class="fa-solid fa-chart-column"></i><span v-if="!collapsed">Reports</span>
+          </router-link>
+          <router-link class="nav-link nav-link-sm" :class="{ 'nav-link-active': isActive('/fees/audit') }" to="/fees/audit">
+            <i class="fa-solid fa-clipboard-list"></i><span v-if="!collapsed">Audit log</span>
+          </router-link>
+        </div>
+      </div>
 
       <!-- Results Section -->
       <div class="sidebar-section" v-if="!collapsed">

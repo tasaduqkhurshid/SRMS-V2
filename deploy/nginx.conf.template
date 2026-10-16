@@ -74,6 +74,12 @@ server {
     include /etc/nginx/proxy_params;
   }
 
+  location = /api/students {
+    rewrite ^/api/students$ /students/ break;
+    proxy_pass http://sms-api:5000;
+    include /etc/nginx/proxy_params;
+  }
+
   location ^~ /api/students/ {
     rewrite ^/api/students(/.*)$ /students$1 break;
     proxy_pass http://sms-api:5000;
@@ -106,6 +112,12 @@ server {
 
   location ^~ /api/results/ {
     rewrite ^/api/results(/.*)$ /results$1 break;
+    proxy_pass http://sms-api:5000;
+    include /etc/nginx/proxy_params;
+  }
+
+  location ^~ /api/fees/ {
+    rewrite ^/api/fees(/.*)$ /fees$1 break;
     proxy_pass http://sms-api:5000;
     include /etc/nginx/proxy_params;
   }

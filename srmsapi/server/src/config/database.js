@@ -40,7 +40,10 @@ const getDatabaseConfig = () => {
     ? `${encodeURIComponent(username)}:${encodeURIComponent(password)}@`
     : '';
   const safeHost = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
-  const authQuery = username ? `?authSource=${encodeURIComponent(authSource)}` : '';
+  const queryParams = new URLSearchParams();
+  if (username) queryParams.set('authSource', authSource);
+  if (process.env.DB_REPLICA_SET) queryParams.set('replicaSet', String(process.env.DB_REPLICA_SET).trim());
+  const authQuery = queryParams.size ? `?${queryParams.toString()}` : '';
   const uri = `mongodb://${credentials}${safeHost}:${port}/${encodeURIComponent(name)}${authQuery}`;
 
   return Object.freeze({

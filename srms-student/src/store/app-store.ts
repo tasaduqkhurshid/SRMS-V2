@@ -9,7 +9,7 @@ interface AppState {
   selectedChildId: string;
   authMode: 'student' | 'parent';
   token: string | null;
-  login: (mode: 'student' | 'parent', payload?: { studentId?: string; password?: string }) => Promise<boolean>;
+  login: (mode: 'student' | 'parent', payload?: { studentId?: string; username?: string; password?: string }) => Promise<boolean>;
   logout: () => void;
   setSelectedChild: (childId: string) => void;
   selectedChild: () => StudentProfile | undefined;

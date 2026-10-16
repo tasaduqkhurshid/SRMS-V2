@@ -48,6 +48,8 @@ const authenticateJwt = async (req, res, next) => {
       username: user.username,
       role: user.role,
       school_id: user.school_id,
+      student_id: user.student_id || null,
+      linked_student_ids: Array.isArray(user.linked_student_ids) ? user.linked_student_ids : [],
       auth_type: "user",
     };
 
@@ -61,6 +63,14 @@ const requireStudentAuth = (req, res, next) =>
   req.user?.auth_type === "student"
     ? next()
     : res.status(req.user ? 403 : 401).json({ error: "Student authentication required" });
+
+const requireStudentPortalAuth = (req, res, next) => {
+  const isStudent = req.user?.auth_type === "student";
+  const isLinkedParent = req.user?.auth_type === "user" && String(req.user.role).toUpperCase() === "PARENT" && Array.isArray(req.user.linked_student_ids);
+  return isStudent || isLinkedParent
+    ? next()
+    : res.status(req.user ? 403 : 401).json({ error: "Student or linked parent authentication required" });
+};
 
 const requireSchoolAdmin = (req, res, next) =>
   req.user?.auth_type === "user" && ["ADMIN", "SCHOOL_ADMIN"].includes(String(req.user.role).toUpperCase()) &&
@@ -84,4 +94,4 @@ const authorizeRoles = (...roles) => (req, res, next) =>
     ? next()
     : res.status(403).json({ error: "Forbidden" });
 
-module.exports = { authenticateJwt, requireAuth, authorizeRoles, requireStudentAuth, requireSchoolAdmin, requireSuperAdmin };
+module.exports = { authenticateJwt, requireAuth, authorizeRoles, requireStudentAuth, requireStudentPortalAuth, requireSchoolAdmin, requireSuperAdmin };

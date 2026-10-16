@@ -15,6 +15,8 @@ const currentYear = new Date().getFullYear();
 const token = ref(localStorage.getItem('srms_platform_token') || sessionStorage.getItem('srms_platform_token') || '');
 const schools = ref([]);
 const selectedSchool = ref(null);
+const paymentSettings = ref(null);
+const paymentSettingsSaving = ref(false);
 const administrators = ref([]);
 const passwordResetAdmin = ref(null);
 const adminNewPassword = ref('');
@@ -69,9 +71,11 @@ const loadSchools = async () => {
     if (route.params.id) {
       selectedSchool.value = await api(`/schools/${route.params.id}`);
       administrators.value = await api(`/schools/${route.params.id}/admins`);
+      paymentSettings.value = await api(`/schools/${route.params.id}/payment-settings`);
     } else {
       selectedSchool.value = null;
       administrators.value = [];
+      paymentSettings.value = null;
     }
   } catch (cause) {
     error.value = cause.message;
@@ -216,6 +220,21 @@ const createAdministrator = async () => {
   finally { saving.value = false; }
 };
 
+const toggleOnlinePayments = async () => {
+  if (!selectedSchool.value || !paymentSettings.value) return;
+  paymentSettingsSaving.value = true;
+  error.value = '';
+  success.value = '';
+  try {
+    const enabled = !paymentSettings.value.enabled;
+    paymentSettings.value = await api(`/schools/${selectedSchool.value._id}/payment-settings`, {
+      method: 'PATCH', body: JSON.stringify({ enabled, provider: enabled ? 'razorpay' : '' }),
+    });
+    success.value = `Online payments ${enabled ? 'enabled' : 'disabled'} for ${selectedSchool.value.school_name}.`;
+  } catch (cause) { error.value = cause.message; }
+  finally { paymentSettingsSaving.value = false; }
+};
+
 const toggleSchool = async (school) => {
   const status = school.status === 'inactive' ? 'active' : 'inactive';
   if (!window.confirm(`${status === 'active' ? 'Activate' : 'Deactivate'} ${school.school_name}?`)) return;
@@ -288,6 +307,8 @@ onMounted(() => { if (token.value) loadSchools(); });
         :current-page="currentSchoolPage"
         :page-count="schoolPageCount"
         :school-portal-url="schoolPortalUrl"
+        :payment-settings="paymentSettings"
+        :payment-settings-saving="paymentSettingsSaving"
         :student-portal-url="studentPortalUrl"
         @refresh="loadSchools"
         @view="viewSchool"
@@ -308,6 +329,8 @@ onMounted(() => { if (token.value) loadSchools(); });
         :admin-new-password="adminNewPassword"
         :admin-form="adminForm"
         :saving="saving"
+        :payment-settings="paymentSettings"
+        :payment-settings-saving="paymentSettingsSaving"
         :school-portal-url="schoolPortalUrl"
         @back="router.push('/dashboard')"
         @edit="openEditModal"
@@ -317,6 +340,7 @@ onMounted(() => { if (token.value) loadSchools(); });
         @update-password="updateAdministratorPassword"
         @update-admin-password="adminNewPassword = $event"
         @create-administrator="createAdministrator"
+        @toggle-online-payments="toggleOnlinePayments"
       />
       <SchoolModalComponent
         :is-open="modalOpen"

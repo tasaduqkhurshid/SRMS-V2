@@ -25,6 +25,8 @@ router.get('/schools', controller.listSchools);
 router.post('/schools', controller.createSchool);
 router.get('/schools/:id', controller.getSchool);
 router.patch('/schools/:id', controller.updateSchool);
+router.get('/schools/:id/payment-settings', require('../controllers/FeeController').onlineSettings);
+router.patch('/schools/:id/payment-settings', require('../controllers/FeeController').updateOnlineSettings);
 router.get('/schools/:id/admins', controller.listAdministrators);
 router.post('/schools/:id/admins', controller.createAdministrator);
 router.patch('/schools/:id/admins/:adminId', controller.updateAdministrator);

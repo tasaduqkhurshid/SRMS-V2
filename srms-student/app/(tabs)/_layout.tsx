@@ -35,11 +35,15 @@ export default function TabLayout() {
   const segments = useSegments();
   const school = useAppStore((state) => state.school);
   const selectedChild = useAppStore((state) => state.selectedChild());
+  const parent = useAppStore((state) => state.parent);
+  const authMode = useAppStore((state) => state.authMode);
+  const setSelectedChild = useAppStore((state) => state.setSelectedChild);
   const logout = useAppStore((state) => state.logout);
 
   const currentRouteKey = segments.at(-1) ?? 'dashboard';
   const normalizedCurrentRouteKey = currentRouteKey === 'index' || currentRouteKey === '(tabs)' ? 'dashboard' : currentRouteKey;
   const studentName = selectedChild?.name ?? 'Student';
+  const visibleNavItems = authMode === 'parent' ? navItems.filter((item) => item.key === 'fees') : navItems;
 
   const navigate = (href: string) => {
     router.push(href as never);
@@ -74,7 +78,7 @@ export default function TabLayout() {
           </View>
 
           <View style={styles.navList}>
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = normalizedCurrentRouteKey === item.key;
 
               if (item.key === 'more') {
@@ -142,6 +146,7 @@ export default function TabLayout() {
               <Text style={styles.headerBanner}>{school.name}</Text>
               <Text style={styles.headerEyebrow}>Welcome back</Text>
               <Text style={styles.headerTitle}>{studentName}</Text>
+              {authMode === 'parent' && parent.children.length > 1 ? <View style={styles.parentChildSwitch}>{parent.children.map((child) => <Pressable key={child.id} onPress={() => setSelectedChild(child.id)} style={[styles.parentChildOption, child.id === selectedChild?.id && styles.parentChildOptionActive]}><Text style={[styles.parentChildText, child.id === selectedChild?.id && styles.parentChildTextActive]}>{child.name}</Text></Pressable>)}</View> : null}
             </View>
 
             <View style={styles.headerActions}>
@@ -342,6 +347,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 4,
   },
+  parentChildSwitch: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  parentChildOption: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 99, borderWidth: 1, borderColor: palette.border, backgroundColor: '#fff' },
+  parentChildOptionActive: { borderColor: palette.primary, backgroundColor: `${palette.primary}12` },
+  parentChildText: { color: palette.muted, fontSize: 10, fontWeight: '700' },
+  parentChildTextActive: { color: palette.primary },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',

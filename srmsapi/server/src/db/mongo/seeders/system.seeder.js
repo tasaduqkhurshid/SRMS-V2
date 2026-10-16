@@ -1,8 +1,10 @@
 "use strict";
 
 const bcrypt = require('bcryptjs');
+const { seedGatewayCatalog } = require('./gateway.seeder');
 
 async function seedSystem(db) {
+  await seedGatewayCatalog(db);
   const password = process.env.SUPER_ADMIN_PASSWORD ||
     (process.env.NODE_ENV === 'production' ? '' : 'platform-admin-local-only');
   if (!password) throw new Error('Set SUPER_ADMIN_PASSWORD before running system seeding in production');

@@ -4,9 +4,11 @@
   "scripts": {
     "dev": "nodemon --legacy-watch server.js",
     "start": "node server.js",
+    "test": "node --test",
     "migrate": "node src/db/mongo/migrate.js",
     "seed": "node src/db/mongo/seedAll.js",
     "seed:system": "node src/db/mongo/seedSystem.js",
+    "seed:gateways": "node src/db/mongo/seedGateways.js",
     "seed:demo": "node src/db/mongo/seedDemo.js",
     "db:reset": "node src/db/mongo/resetDatabase.js",
     "db:setup": "npm run migrate && npm run seed"

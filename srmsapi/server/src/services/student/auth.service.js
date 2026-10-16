@@ -1,6 +1,7 @@
 "use strict";
 
 const { Student } = require("../../db/models");
+const { User } = require("../../db/models");
 const bcrypt = require("bcryptjs");
 const AuthService = require("../../services/AuthService");
 const StudentPortalService = require("../StudentPortalService");
@@ -105,8 +106,37 @@ const login = async ({ studentId, password, school }) => {
   }
 };
 
+const loginParent = async ({ username, password, school }) => {
+  try {
+    const identifier = String(username || "").trim();
+    if (!identifier || !password || !school?._id || school.status === "inactive") return success(null);
+    const parent = await User.findOne({
+      school_id: school._id,
+      role: "PARENT",
+      $or: [{ username: identifier }, { email: identifier.toLowerCase() }],
+    }).lean();
+    if (!parent || !(await bcrypt.compare(String(password), parent.password || ""))) return success(null);
+    const linkedIds = (parent.linked_student_ids || []).map(String);
+    if (!linkedIds.length) return success(null);
+    const linkedStudents = await Student.find({ school_id: school._id, _id: { $in: linkedIds } }).lean();
+    if (linkedStudents.length !== linkedIds.length) return success(null);
+    const profiles = await Promise.all(linkedStudents.map(async (student) => {
+      const profile = await StudentPortalService.getStudentProfile({ student_id: student._id, school_id: school._id });
+      return profile.error ? null : profile.data?.student || null;
+    }));
+    if (profiles.some((profile) => !profile)) return success(null);
+    const schoolProfile = await StudentPortalService.getStudentProfile({ student_id: linkedStudents[0]._id, school_id: school._id });
+    return success({
+      token: AuthService.signJwt({ id: parent._id, role: "PARENT", school_id: school._id, token_type: "parent" }),
+      user: { id: String(parent._id), username: parent.username, email: parent.email || "", role: "parent", school_id: String(school._id) },
+      school: schoolProfile.data?.school || null,
+      children: profiles,
+    });
+  } catch (error) { return failure(error); }
+};
+
 const me = async (user) => {
   return await StudentPortalService.getStudentProfile(user);
 };
 
-module.exports = { getSchoolBrand, login, me };
+module.exports = { getSchoolBrand, login, loginParent, me };

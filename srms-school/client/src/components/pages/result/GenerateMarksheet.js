@@ -67,6 +67,14 @@ export default {
       return selectedExams.value.includes(examId)
     }
 
+    const selectAllExams = () => {
+      selectedExams.value = exams.value.map(exam => exam._id)
+    }
+
+    const clearSelectedExams = () => {
+      selectedExams.value = []
+    }
+
     // Fetch templates
     const fetchTemplates = async () => {
       try {
@@ -321,7 +329,9 @@ export default {
       upgradeStudent,
       canGenerate,
       toggleExam,
-      isExamSelected
+      isExamSelected,
+      selectAllExams,
+      clearSelectedExams
     }
   }
 }

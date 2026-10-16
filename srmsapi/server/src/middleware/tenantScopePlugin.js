@@ -21,7 +21,12 @@ const tenantScopePlugin = (schema) => {
 
   schema.pre('aggregate', function applyAggregateTenantScope(next) {
     const tenant = getTenantContext();
-    if (tenant?.schoolId) this.pipeline().unshift({ $match: { school_id: tenant.schoolId } });
+    if (tenant?.schoolId) {
+      // Mongoose does not cast aggregation pipelines. Use the schema path to
+      // preserve the stored school_id type (ObjectId in tenant scoped models).
+      const scopedSchoolId = schema.path('school_id').cast(tenant.schoolId);
+      this.pipeline().unshift({ $match: { school_id: scopedSchoolId } });
+    }
     next();
   });
 

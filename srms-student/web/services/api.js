@@ -23,19 +23,21 @@ export const portalApi = {
     return payload?.data ?? payload;
   },
   async getSchoolBrand() { return this.request('/api/student/school/brand'); },
-  async login(studentId, password, rememberMe) {
-    const data = await this.request('/api/student/auth/login', {
+  async login(identifier, password, rememberMe, mode = 'student') {
+    const data = await this.request(mode === 'parent' ? '/api/student/auth/parent-login' : '/api/student/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ studentId, password }),
+      body: JSON.stringify(mode === 'parent' ? { username: identifier, password } : { studentId: identifier, password }),
     });
     const storage = rememberMe ? localStorage : sessionStorage;
     const otherStorage = rememberMe ? sessionStorage : localStorage;
     storage.setItem(TOKEN_KEY, data.token);
-    storage.setItem(SESSION_KEY, JSON.stringify({ user: data.user, student: data.student, school: data.school }));
+    storage.setItem(SESSION_KEY, JSON.stringify({ user: data.user, student: data.student, children: data.children || (data.student ? [data.student] : []), school: data.school }));
     otherStorage.removeItem(TOKEN_KEY);
     otherStorage.removeItem(SESSION_KEY);
-    if (rememberMe) localStorage.setItem('srms_remembered_student_id', studentId);
-    else localStorage.removeItem('srms_remembered_student_id');
+    if (mode === 'student') {
+      if (rememberMe) localStorage.setItem('srms_remembered_student_id', identifier);
+      else localStorage.removeItem('srms_remembered_student_id');
+    }
     return data;
   },
   logout() {

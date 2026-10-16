@@ -4,6 +4,7 @@ const { authenticateJwt, requireStudentAuth } = require('../../middleware/AuthSe
 const controller = require('../../controllers/student/auth.controller');
 
 router.post('/login', controller.login);
+router.post('/parent-login', controller.parentLogin);
 router.post('/logout', controller.logout);
 router.get('/me', authenticateJwt, requireStudentAuth, controller.me);
 

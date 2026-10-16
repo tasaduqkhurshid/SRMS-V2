@@ -60,7 +60,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "10mb", verify: (req, _res, buffer) => { req.rawBody = Buffer.from(buffer); } }));
 app.use(resolveTenant);
 
 const AuthRoutes = require("./routes/authRoutes");
@@ -72,6 +72,7 @@ const ExamRoutes = require("./routes/examRoutes");
 const AcademicYearRoutes = require("./routes/academicYearRoutes");
 const ResultRoutes = require("./routes/resultRoutes");
 const MarksheetTemplateRoutes = require("./routes/marksheetTemplateRoutes");
+const FeeRoutes = require("./routes/feeRoutes");
 const DynamicOptionRoutes = require("./routes/DynamicOptionRoutes");
 const StudentPortalRoutes = require("./routes/studentPortalRoutes");
 
@@ -88,6 +89,7 @@ const mountAdminApi = (prefix) => {
   app.use(`${prefix}/exams`, authenticateJwt, requireSchoolAdmin, ExamRoutes);
   app.use(`${prefix}/academic-years`, authenticateJwt, requireSchoolAdmin, AcademicYearRoutes);
   app.use(`${prefix}/results`, authenticateJwt, requireSchoolAdmin, ResultRoutes);
+  app.use(`${prefix}/fees`, authenticateJwt, requireSchoolAdmin, FeeRoutes);
   app.use(`${prefix}/marksheet-templates`, authenticateJwt, requireSchoolAdmin, MarksheetTemplateRoutes);
   app.use(`${prefix}/school`, authenticateJwt, requireSchoolAdmin, SchoolRoutes);
 };

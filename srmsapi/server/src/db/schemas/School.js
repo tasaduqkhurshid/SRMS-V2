@@ -48,6 +48,12 @@ const SchoolSchema = new mongoose.Schema(
     settings: {
       timezone: { type: String, default: 'Asia/Kolkata' },
       notificationsEnabled: { type: Boolean, default: true },
+      onlinePayments: {
+        enabled: { type: Boolean, default: false },
+        provider: { type: String, enum: ['razorpay', ''], default: '' },
+        updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        updatedAt: Date,
+      },
     },
     website: String,
     principal_name: String,

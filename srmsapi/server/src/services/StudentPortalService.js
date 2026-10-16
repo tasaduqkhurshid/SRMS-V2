@@ -2,6 +2,7 @@
 
 const { Student, School, AcademicYear, Result, Exam } = require("../db/models");
 const { success, failure } = require("../utils/serviceResult");
+const FeeService = require("./FeeService");
 
 const getSchoolById = async (schoolId) => {
   try {
@@ -84,6 +85,8 @@ const toStudentProfile = async (student, school) => {
     const nextExam = nextExamResult.data;
 
     const academicYearName = rawAcademicYear?.data?.name || "Current Year";
+    const feeResult = await FeeService.getStudentFees(student._id, student.school_id);
+    if (feeResult.error) return failure(feeResult.error);
 
     return success({
       id: student._id.toString(),
@@ -95,7 +98,7 @@ const toStudentProfile = async (student, school) => {
       rollNumber: student.roll_number || "",
       attendance: Math.min(99, Math.max(60, Math.round((averageMarks * 0.96) + 6))),
       performance: Math.min(99, Math.max(60, Math.round(averageMarks * 1.1))),
-      pendingFee: 0,
+      pendingFee: Number(feeResult.data?.summary?.outstanding_minor || 0) / 100,
       nextExam: nextExam?.exam_name || "Final Examination",
       nextExamDate: nextExam?.createdAt ? new Date(nextExam.createdAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
       avatar: (student.name || "ST")
@@ -285,18 +288,8 @@ const getStudentFees = async (user) => {
   try {
     const profileResult = await getStudentProfile(user);
     if (profileResult.error) return failure(profileResult.error);
-    if (!profileResult.data) return success({ summary: { total: 0, paid: 0, pending: 0 }, transactions: [] });
-
-    const profileData = profileResult.data;
-
-    return success({
-      summary: {
-        total: 15000,
-        paid: 15000 - profileData.student.pendingFee,
-        pending: profileData.student.pendingFee,
-      },
-      transactions: [],
-    });
+    if (!profileResult.data) return success({ summary: { gross_minor: 0, concessions_minor: 0, paid_minor: 0, outstanding_minor: 0, currency: "INR" }, accounts: [], transactions: [], online_payments: { enabled: false, eligible: false, status: "UNAVAILABLE" } });
+    return await FeeService.getStudentFees(profileResult.data.student.id, profileResult.data.student.schoolId);
   } catch (error) {
     return failure(error);
   }

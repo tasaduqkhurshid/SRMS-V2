@@ -16,6 +16,7 @@ const UserSchema = new mongoose.Schema(
       ref: 'Student',
       default: null
     },
+    linked_student_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }],
     school_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School'

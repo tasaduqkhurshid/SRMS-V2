@@ -15,7 +15,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { SchoolBrand } from '../../src/models';
+import type { Role, SchoolBrand } from '../../src/models';
 import { authService } from '../../src/services/authService';
 import { useAppStore } from '../../src/store/app-store';
 import { palette } from '../../src/theme/theme';
@@ -50,6 +50,7 @@ export function StudentLoginScreen() {
 
   const [brand, setBrand] = useState<SchoolBrand | null>(null);
   const [studentId, setStudentId] = useState(getRememberedStudentId);
+  const [loginMode, setLoginMode] = useState<Role>('student');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(Boolean(getRememberedStudentId()));
   const [loadingBrand, setLoadingBrand] = useState(false);
@@ -82,13 +83,13 @@ export function StudentLoginScreen() {
   const handleLogin = async () => {
     setMessage('');
     if (!studentId.trim() || !password) {
-      setMessage('Enter your student ID and password to continue.');
+      setMessage(`Enter your ${loginMode === 'student' ? 'student ID' : 'parent username or email'} and password to continue.`);
       return;
     }
 
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       try {
-        if (rememberMe) window.localStorage.setItem(rememberedStudentKey, studentId.trim());
+        if (loginMode === 'student' && rememberMe) window.localStorage.setItem(rememberedStudentKey, studentId.trim());
         else window.localStorage.removeItem(rememberedStudentKey);
       } catch {
         // Continue login if browser storage is unavailable.
@@ -96,10 +97,9 @@ export function StudentLoginScreen() {
     }
 
     setSubmitting(true);
-    const success = await login('student', {
-      studentId: studentId.trim(),
-      password,
-    });
+    const success = await login(loginMode, loginMode === 'student'
+      ? { studentId: studentId.trim(), password }
+      : { username: studentId.trim(), password });
     setSubmitting(false);
 
     if (success) {
@@ -192,20 +192,27 @@ export function StudentLoginScreen() {
                   <Ionicons name="school" size={35} color="#fff" />
                 </View>
                 <Text style={styles.loginTitle}>SRMS Student Portal</Text>
-                <Text style={styles.loginSubtitle}>Secure access for students</Text>
+                <Text style={styles.loginSubtitle}>Secure access for students and linked parents</Text>
+                <View style={styles.portalModeSwitch}>
+                  {(['student', 'parent'] as Role[]).map((mode) => (
+                    <Pressable key={mode} accessibilityRole="button" accessibilityState={{ selected: loginMode === mode }} onPress={() => setLoginMode(mode)} style={[styles.portalModeButton, loginMode === mode && styles.portalModeButtonActive]}>
+                      <Text style={[styles.portalModeText, loginMode === mode && styles.portalModeTextActive]}>{mode === 'student' ? 'Student' : 'Parent'}</Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
 
               <View style={styles.formCard}>
-                <Text style={styles.label}>Student ID</Text>
+                <Text style={styles.label}>{loginMode === 'student' ? 'Student ID' : 'Parent username or email'}</Text>
                 <View style={styles.inputWrap}>
                   <Ionicons name="person-outline" size={19} color="#71829c" />
                   <TextInput
-                    accessibilityLabel="Student ID or roll number"
+                    accessibilityLabel={loginMode === 'student' ? 'Student ID or roll number' : 'Parent username or email'}
                     autoCapitalize="none"
                     autoCorrect={false}
                     onChangeText={setStudentId}
                     onSubmitEditing={handleLogin}
-                    placeholder="Enter your student ID"
+                    placeholder={loginMode === 'student' ? 'Enter your student ID' : 'Enter your parent username or email'}
                     placeholderTextColor="#8a98ad"
                     returnKeyType="next"
                     style={styles.input}
@@ -217,7 +224,7 @@ export function StudentLoginScreen() {
                 <View style={styles.inputWrap}>
                   <Ionicons name="lock-closed-outline" size={19} color="#71829c" />
                   <TextInput
-                    accessibilityLabel="Student password"
+                    accessibilityLabel={loginMode === 'student' ? 'Student password' : 'Parent password'}
                     autoCapitalize="none"
                     onChangeText={setPassword}
                     onSubmitEditing={handleLogin}
@@ -230,7 +237,7 @@ export function StudentLoginScreen() {
                   />
                 </View>
 
-                <Pressable
+                {loginMode === 'student' ? <Pressable
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: rememberMe }}
                   disabled={submitting}
@@ -241,7 +248,7 @@ export function StudentLoginScreen() {
                     {rememberMe ? <Ionicons name="checkmark" size={13} color="#fff" /> : null}
                   </View>
                   <Text style={styles.rememberLabel}>Remember me</Text>
-                </Pressable>
+                </Pressable> : null}
 
                 {message ? <Text accessibilityRole="alert" style={styles.errorMessage}>{message}</Text> : null}
                 <Pressable
@@ -258,7 +265,7 @@ export function StudentLoginScreen() {
                   <Text style={styles.buttonText}>{submitting ? 'Signing in…' : 'Login'}</Text>
                 </Pressable>
 
-                <Text style={styles.formHelper}>Use the student details recorded by your school.</Text>
+                <Text style={styles.formHelper}>{loginMode === 'student' ? 'Use the student details recorded by your school.' : 'Ask your school administrator for your parent portal login.'}</Text>
               </View>
 
               <View style={styles.orDivider}>
@@ -545,6 +552,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
   },
+  portalModeSwitch: {
+    width: 220,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    marginTop: 14,
+    marginBottom: 18,
+    padding: 4,
+    borderRadius: 11,
+    backgroundColor: '#f2f5fa',
+  },
+  portalModeButton: {
+    flex: 1,
+    minHeight: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+  },
+  portalModeButtonActive: { backgroundColor: '#fff', shadowColor: '#193963', shadowOpacity: 0.08, shadowRadius: 6, elevation: 1 },
+  portalModeText: { color: '#72819a', fontSize: 12, fontWeight: '700' },
+  portalModeTextActive: { color: palette.primary },
   formCard: {
     width: '100%',
     maxWidth: 500,
