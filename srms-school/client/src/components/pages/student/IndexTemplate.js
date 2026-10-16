@@ -1,12 +1,20 @@
 export default `
-<section class="container py-3">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="m-0">Students</h2>
-    <button class="btn btn-success" @click="addStudent">Add Student</button>
+<section class="students-layout">
+  <div class="dashboard-hero mb-3">
+    <div class="dashboard-hero-left">
+      <span class="dashboard-hero-label">School Admin</span>
+      <h1 class="dashboard-hero-title">Students</h1>
+      <p class="dashboard-hero-subtitle">Manage student records and admissions</p>
+    </div>
+    <div class="dashboard-hero-right">
+      <button class="btn btn-success dashboard-hero-btn" @click="addStudent">
+        <i class="fa-solid fa-plus me-1"></i> Add Student
+      </button>
+    </div>
   </div>
 
   <!-- Student list component -->
-  <StudentList ref="studentList" @edit="handleEdit" @view="handleView" @assign="handleAssign" />
+  <StudentList ref="studentList" @edit="handleEdit" @view="handleView" @assign="handleAssign" @add="addStudent" />
 
   <!-- Add/Edit Modal -->
   <AddEditStudent v-if="isEdit"

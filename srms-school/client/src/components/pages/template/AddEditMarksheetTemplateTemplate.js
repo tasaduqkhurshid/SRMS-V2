@@ -1,77 +1,16 @@
 export default `
-<div class="container-fluid p-22">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">
-      <i class="fa-solid fa-file-lines me-2"></i>
-      {{ isEdit ? 'Edit' : 'Add' }} Marksheet Template
-    </h3>
-    <button @click="router.back()" class="btn btn-sm btn-secondary">
-      <i class="fa-solid fa-arrow-left me-2"></i>Back
-    </button>
-  </div>
-
-  <div v-if="loading" class="text-center py-5">
-    <span class="spinner-border"></span>
-  </div>
-
-  <div v-else class="row g-4">
-    <!-- Editor Panel -->
-    <div class="col-lg-12">
-      <div class="card">
-        <div class="d-flex justify-content-between card-header bg-light">
-          <h5 class="mb-0">Template Details</h5>
-          <button 
-              @click="saveTemplate" 
-              :disabled="saving"
-              class="btn btn-sm btn-primary"
-            >
-              <i class="fa-solid fa-save me-2"></i>
-              <span v-if="saving">Saving...</span>
-              <span v-else>Save Template</span>
-            </button>
-        </div>
-        <div class="card-body">
-          <div class="row mb-3">
-            <div class="col-4">
-              <label class="form-label">Template Name *</label>
-              <input class="form-control"
-                v-model="form.name" 
-                type="text" 
-                placeholder="e.g., Professional Classic"
-              />
-              
-            </div>
-            <div class="col-2">
-             <label class="form-label">Active *</label>
-              <input class="form-check-input"
-              v-model="form.is_active" 
-              type="checkbox" 
-              class="form-check-input" 
-              id="isActive"
-            />
-            </div>
-            <div class="col-4" v-if="isEdit">
-              <label class="form-label">Template ID *</label>
-              <input class="form-control"
-                v-model="form._id"
-                type="text" 
-                placeholder="e.g., 12345"
-              />
-              
-            </div>  
-          </div>
-
-          <div class="mb-3">
-            <textarea v-model="form.html_content"
-              id="html_editor"
-              style="height: 400px; border: 1px solid #ddd; border-radius: 4px;">
-            </textarea>
-          </div>
-
-        </div>
-      </div>
+<section class="catalog-page results-report-page marksheet-template-editor-page">
+  <header class="catalog-page-heading"><div><h1>{{ isEdit ? 'Edit' : 'Add' }} Marksheet Template</h1><p>Build a reusable marksheet with student and result fields</p></div><button type="button" class="results-clear-button" @click="router.back()"><i class="fa-solid fa-arrow-left me-2"></i>Back to templates</button></header>
+  <div v-if="loading" class="catalog-card catalog-editor-loading"><span class="spinner-border"></span><span>Loading template…</span></div>
+  <section v-else class="catalog-card marksheet-template-editor-card">
+    <header class="marksheet-template-card-header"><div><h2>Template Details</h2><p>Choose a name, status and HTML content for this template.</p></div><button type="button" class="catalog-editor-save" :disabled="saving" @click="saveTemplate"><span v-if="saving" class="spinner-border spinner-border-sm me-2"></span><i v-else class="fa-regular fa-floppy-disk me-2"></i>{{ saving ? 'Saving…' : 'Save Template' }}</button></header>
+    <div class="marksheet-template-fields">
+      <div class="catalog-editor-field"><label for="templateName">Template Name *</label><input id="templateName" v-model="form.name" type="text" class="form-control" placeholder="e.g. Professional Classic" /></div>
+      <label class="template-active-control"><input v-model="form.is_active" type="checkbox" /><span><strong>Active template</strong><small>Available in marksheet generation</small></span></label>
+      <div v-if="isEdit" class="catalog-editor-field template-id-field"><label>Template ID</label><input :value="form._id" type="text" class="form-control" readonly /></div>
     </div>
-  </div>
-</div>
-
-`
+    <div class="marksheet-placeholder-toolbar"><div><strong>Insert supported fields</strong><small>Click a field to append its placeholder to the template.</small></div><div><button v-for="placeholder in placeholders" :key="placeholder.value" type="button" @click="insertPlaceholder(placeholder.value)">{{ placeholder.text }}</button><button type="button" class="marksheet-sample-button" @click="insertSampleMarksheet"><i class="fa-solid fa-wand-magic-sparkles"></i>Insert Sample</button></div></div>
+    <div class="marksheet-editor-canvas"><textarea v-model="form.html_content" id="html_editor" aria-label="Template HTML"></textarea></div>
+  </section>
+</section>
+`;

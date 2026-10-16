@@ -26,6 +26,15 @@ export default {
     const selectedCourse = ref(null)
     const selectedAcademicYear = ref(null)
     const selectedSubjectForClass = ref(null)
+    const studentResultForm = reactive({
+      result_id: null,
+      student_id: null,
+      subject_id: null,
+      theory_marks: null,
+      lab_marks: null,
+      attendance_marks: null,
+      activity_marks: null,
+    })
 
     const importMode = ref('manual')
     const file = ref(null)
@@ -65,6 +74,8 @@ export default {
       if (!selectedAcademicYear.value) return null
       return academicYears.value.find(ay => String(ay._id) === String(selectedAcademicYear.value))
     })
+
+    const studentFormSubject = computed(() => subjectsForCourse.value.find(s => String(s._id) === String(studentResultForm.subject_id)) || null)
 
     const notifyOrAlert = (msg, level = 'info') => {
       if (level === 'success') {
@@ -159,9 +170,13 @@ export default {
         
         // Fetch existing results for this exam and subject
         try {
-          const res = await api.get(
-            `/results?exam_id=${selectedExam.value}&subject_id=${selectedSubjectForClass.value}`
-          )
+          const res = await api.get('/results', { params: {
+            exam_id: selectedExam.value,
+            subject_id: selectedSubjectForClass.value,
+            academic_year_id: selectedAcademicYear.value || undefined,
+            course_id: selectedCourse.value || undefined,
+            limit: 1000
+          } })
           
           const data = res.data
           let existingResults = []
@@ -218,7 +233,7 @@ export default {
       // For file import mode, fetch students who have results for the selected subject and exam
       try {
         const res = await api.get(
-          `/results?exam_id=${selectedExam.value}&subject_id=${selectedSubjectForClass.value}`
+          `/results?exam_id=${selectedExam.value}&subject_id=${selectedSubjectForClass.value}&academic_year_id=${selectedAcademicYear.value || ''}&course_id=${selectedCourse.value || ''}&limit=1000`
         )
         // Handle various response formats
         const data = res.data
@@ -250,6 +265,71 @@ export default {
       } catch (error) {
         console.error(error)
         studentsForSubject.value = []
+      }
+    }
+
+    const loadExistingStudentResult = async () => {
+      Object.assign(studentResultForm, { result_id: null, theory_marks: null, lab_marks: null, attendance_marks: null, activity_marks: null })
+      if (!studentResultForm.student_id || !studentResultForm.subject_id || !selectedExam.value || !selectedAcademicYear.value) return
+      try {
+        const response = await api.get('/results', { params: {
+          student_id: studentResultForm.student_id,
+          subject_id: studentResultForm.subject_id,
+          exam_id: selectedExam.value,
+          academic_year_id: selectedAcademicYear.value,
+          limit: 2,
+        } })
+        const existing = response.data?.data?.results?.[0]
+        if (existing) Object.assign(studentResultForm, {
+          result_id: existing._id,
+          theory_marks: existing.theory_marks ?? null,
+          lab_marks: existing.lab_marks ?? null,
+          attendance_marks: existing.attendance_marks ?? null,
+          activity_marks: existing.activity_marks ?? null,
+        })
+      } catch (error) {
+        notifyOrAlert(error.response?.data?.message || 'Could not load the existing result', 'error')
+      }
+    }
+
+    const saveStudentResult = async () => {
+      if (!selectedAcademicYear.value || !selectedExam.value || !selectedCourse.value || !studentResultForm.student_id || !studentResultForm.subject_id) {
+        notifyOrAlert('Select an academic year, exam, course, student and subject', 'error')
+        return
+      }
+      const subject = studentFormSubject.value
+      const selectedMarks = [
+        subject?.has_theory !== false ? studentResultForm.theory_marks : null,
+        subject?.has_lab ? studentResultForm.lab_marks : null,
+        subject?.has_attendance ? studentResultForm.attendance_marks : null,
+        subject?.has_activity ? studentResultForm.activity_marks : null,
+      ]
+      const enteredMarks = selectedMarks.filter(value => value !== null && value !== '' && value !== undefined).map(Number)
+      if (!enteredMarks.length) { notifyOrAlert('Enter at least one mark before saving', 'error'); return }
+      const maxMarks = selectedMaxMarks.value
+      if (enteredMarks.some(mark => !Number.isFinite(mark) || mark < 0 || mark > maxMarks)) {
+        notifyOrAlert(`Each mark must be between 0 and ${maxMarks}`, 'error')
+        return
+      }
+      const total = enteredMarks.reduce((sum, mark) => sum + mark, 0)
+      if (total > maxMarks) { notifyOrAlert(`Total marks cannot exceed ${maxMarks}`, 'error'); return }
+      try {
+        const response = await api.post('/results/save', {
+          _id: studentResultForm.result_id,
+          student_id: studentResultForm.student_id,
+          subject_id: studentResultForm.subject_id,
+          exam_id: selectedExam.value,
+          academic_year_id: selectedAcademicYear.value,
+          theory_marks: subject?.has_theory !== false ? (studentResultForm.theory_marks ?? null) : null,
+          lab_marks: subject?.has_lab ? (studentResultForm.lab_marks ?? null) : null,
+          attendance_marks: subject?.has_attendance ? (studentResultForm.attendance_marks ?? null) : null,
+          activity_marks: subject?.has_activity ? (studentResultForm.activity_marks ?? null) : null,
+          total_marks: total,
+        })
+        studentResultForm.result_id = response.data?.data?._id || studentResultForm.result_id
+        notifyOrAlert('Result saved successfully', 'success')
+      } catch (error) {
+        notifyOrAlert(error.response?.data?.message || 'Could not save result', 'error')
       }
     }
 
@@ -303,11 +383,11 @@ export default {
           exam_id: updatedRow.exam_id,
           subject_id: updatedRow.subject_id,
           academic_year_id: ayId,
-          theory_marks: parseFloat(updatedRow.marks?.theory) || 0,
-          lab_marks: parseFloat(updatedRow.marks?.lab) || 0,
-          attendance_marks: parseFloat(updatedRow.marks?.attendance) || 0,
-          activity_marks: parseFloat(updatedRow.marks?.activity) || 0,
-          total_marks: parseFloat(updatedRow.total) || 0
+          theory_marks: updatedRow.marks?.theory === '' || updatedRow.marks?.theory == null ? null : Number(updatedRow.marks.theory),
+          lab_marks: updatedRow.marks?.lab === '' || updatedRow.marks?.lab == null ? null : Number(updatedRow.marks.lab),
+          attendance_marks: updatedRow.marks?.attendance === '' || updatedRow.marks?.attendance == null ? null : Number(updatedRow.marks.attendance),
+          activity_marks: updatedRow.marks?.activity === '' || updatedRow.marks?.activity == null ? null : Number(updatedRow.marks.activity),
+          total_marks: updatedRow.total === '' || updatedRow.total == null ? null : Number(updatedRow.total)
         }
 
         if (updatedRow.result_id) {
@@ -322,18 +402,18 @@ export default {
         notifyOrAlert('Marks updated successfully', 'success')
         
         // Update local state with nested marks format
-        const index = studentsForSubject.value.findIndex(s => s._id === updatedRow.student_id)
+        const index = studentsForSubject.value.findIndex(s => String(s.student_id || s._id || s.id) === String(updatedRow.student_id))
         if (index !== -1) {
           studentsForSubject.value[index] = {
             ...studentsForSubject.value[index],
             result_id: savedId,
             marks: {
-              theory: parseFloat(updatedRow.marks?.theory) || 0,
-              lab: parseFloat(updatedRow.marks?.lab) || 0,
-              attendance: parseFloat(updatedRow.marks?.attendance) || 0,
-              activity: parseFloat(updatedRow.marks?.activity) || 0
+              theory: updatedRow.marks?.theory === '' || updatedRow.marks?.theory == null ? null : Number(updatedRow.marks.theory),
+              lab: updatedRow.marks?.lab === '' || updatedRow.marks?.lab == null ? null : Number(updatedRow.marks.lab),
+              attendance: updatedRow.marks?.attendance === '' || updatedRow.marks?.attendance == null ? null : Number(updatedRow.marks.attendance),
+              activity: updatedRow.marks?.activity === '' || updatedRow.marks?.activity == null ? null : Number(updatedRow.marks.activity)
             },
-            total_marks: parseFloat(updatedRow.total) || 0
+            total_marks: updatedRow.total === '' || updatedRow.total == null ? null : Number(updatedRow.total)
           }
         }
       } catch (error) {
@@ -387,13 +467,14 @@ export default {
 
             rows.forEach(row => {
 
-              const studentId = Number(row['Student ID'] || row['student_id'])
-              if (!studentId) return
+              const studentId = String(row['Student ID'] || row['student_id'] || '').trim()
+              if (!studentId || !students.value.some(student => String(student._id || student.id) === studentId)) return
 
-              const theory = row['Theory'] !== undefined ? Number(row['Theory']) : null
-              const lab = row['Lab'] !== undefined ? Number(row['Lab']) : null
-              const attendance = row['Attendance'] !== undefined ? Number(row['Attendance']) : null
-              const activity = row['Activity'] !== undefined ? Number(row['Activity']) : null
+              const parseMark = value => value === undefined || value === null || String(value).trim() === '' ? null : Number(value)
+              const theory = parseMark(row['Theory'])
+              const lab = parseMark(row['Lab'])
+              const attendance = parseMark(row['Attendance'])
+              const activity = parseMark(row['Activity'])
 
               const subject = subjectsForCourse.value.find(
                 s =>
@@ -402,6 +483,8 @@ export default {
               )
 
               if (!subject) return
+
+              if ([theory, lab, attendance, activity].every(value => value === null)) return
 
               resultRows.push({
                 student_id: studentId,
@@ -412,7 +495,9 @@ export default {
                 lab_marks: lab,
                 attendance_marks: attendance,
                 activity_marks: activity,
-                total_marks: (theory || 0) + (lab || 0) + (attendance || 0) + (activity || 0)
+                total_marks: [theory, lab, attendance, activity].some(value => value !== null)
+                  ? (theory || 0) + (lab || 0) + (attendance || 0) + (activity || 0)
+                  : null
               })
 
             })
@@ -425,7 +510,7 @@ export default {
             return
           }
 
-          await api.post('/results/save-class-result', { 
+          await api.post('/results/save-class-result', {
             rows: resultRows,
             academic_year_id: selectedAcademicYearObj.value._id
           })
@@ -521,34 +606,35 @@ export default {
 
     /* ---------------- MOUNT ---------------- */
 
-    onMounted(() => {
+    onMounted(async () => {
+      await fetchData()
 
-      fetchData()
-      
-      // Auto-select current academic year
       const now = new Date()
       const currentYear = now.getFullYear()
-      // Academic years typically run April-March, so check current or previous year
       let currentAcademicYear = `${currentYear}-${currentYear + 1}`
-      if (now.getMonth() < 3) { // January, February, March
+      if (now.getMonth() < 3) {
         currentAcademicYear = `${currentYear - 1}-${currentYear}`
       }
-      
-      // Try to find and auto-select the current academic year
-      const autoSelectYear = () => {
-        if (academicYears.value.length > 0) {
-          const found = academicYears.value.find(ay => ay.name === currentAcademicYear)
-          if (found) {
-            selectedAcademicYear.value = found._id
-          } else if (academicYears.value.length > 0) {
-            // If exact match not found, select the first one (most recent)
-            selectedAcademicYear.value = academicYears.value[0]._id
-          }
-        }
+
+      const query = route.query || {}
+      const requestedYear = query.academic_year_id && academicYears.value.some(year => String(year._id) === String(query.academic_year_id))
+        ? String(query.academic_year_id)
+        : academicYears.value.find(year => year.name === currentAcademicYear)?._id || academicYears.value[0]?._id || null
+      selectedAcademicYear.value = requestedYear
+      if (query.exam_id && exams.value.some(exam => String(exam._id) === String(query.exam_id))) selectedExam.value = String(query.exam_id)
+      if (query.course_id && courses.value.some(course => String(course._id) === String(query.course_id))) {
+        selectedCourse.value = String(query.course_id)
+        await fetchStudentsByClass()
       }
-      
-      // Delay auto-select to ensure data is loaded
-      setTimeout(autoSelectYear, 500)
+      if (query.subject_id && subjectsForCourse.value.some(subject => String(subject._id) === String(query.subject_id))) {
+        selectedSubjectForClass.value = String(query.subject_id)
+        studentResultForm.subject_id = String(query.subject_id)
+        await loadStudentsForSubject()
+      }
+      if (query.student_id && students.value.some(student => String(student._id) === String(query.student_id))) {
+        studentResultForm.student_id = String(query.student_id)
+        await loadExistingStudentResult()
+      }
 
       if (route.path.includes('class-wise'))
         viewMode.value = 'class'
@@ -577,6 +663,8 @@ export default {
       selectedCourseObj,
       selectedMaxMarks,
       selectedAcademicYearObj,
+      studentResultForm,
+      studentFormSubject,
 
       importMode,
       file,
@@ -591,6 +679,8 @@ export default {
       loadStudentsForSubject,
       handleClasswiseSave,
       handleRowUpdate,
+      loadExistingStudentResult,
+      saveStudentResult,
 
       notifyOrAlert
     }

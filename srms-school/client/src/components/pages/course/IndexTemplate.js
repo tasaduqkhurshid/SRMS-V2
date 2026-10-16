@@ -1,26 +1,8 @@
 export default `
-<section class="container py-3">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="m-0">Courses</h2>
-    <button class="btn btn-success" @click="addCourse">Add Course</button>
-  </div>
-
+<section class="catalog-page">
+  <header class="catalog-page-heading"><div><h1>Courses</h1><p>Manage classes, course details and assigned subjects</p></div><button class="catalog-add-button" @click="addCourse"><i class="fa-solid fa-plus"></i>Add Course</button></header>
   <CourseList ref="courseList" @edit="handleEdit" @openAssignModal="openAssignModal" />
-
-  <AddEditCourse v-if="isEdit"
-    :open="isEdit"
-    :mode="mode"
-    :courseId="selectedCourseId"
-    @close="closeCourse"
-    @saved="onSaved"
-  />
-
-  <AssignSubjectModal v-if="showAssignModal"
-    :open="showAssignModal"
-    :entityType="selectedEntityType"
-    :entityId="selectedEntityId"
-    @close="showAssignModal = false"
-    @saved="onAssignModalSaved"
-  />
+  <AddEditCourse v-if="isEdit" :open="isEdit" :mode="mode" :courseId="selectedCourseId" @close="closeCourse" @saved="onSaved" />
+  <AssignSubjectModal v-if="showAssignModal" :open="showAssignModal" :entityType="selectedEntityType" :entityId="selectedEntityId" @close="showAssignModal = false" @saved="onAssignModalSaved" />
 </section>
-`
+`;

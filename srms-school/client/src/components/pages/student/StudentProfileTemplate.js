@@ -1,138 +1,46 @@
 export default `
-<div 
-  class="modal fade show d-block" 
-  tabindex="-1"
-  style="background: rgba(0,0,0,0.5);" 
-  role="dialog"
-  aria-modal="true"
-  v-if="isFetched"
->
-  <div class="modal-dialog modal-xl modal-dialog-centered">
-    <div class="modal-content shadow-lg">
+<div v-if="isFetched" class="student-profile-overlay" role="dialog" aria-modal="true" aria-labelledby="studentProfileTitle">
+  <section class="student-profile-modal">
+    <header class="student-profile-header">
+      <span class="student-profile-title-icon"><i class="fa-regular fa-user"></i></span>
+      <div><h2 id="studentProfileTitle">Student Profile</h2><p>View student details and academic information</p></div>
+      <button type="button" class="student-profile-close" @click="$emit('close')" aria-label="Close profile"><i class="fa-solid fa-xmark"></i></button>
+    </header>
 
-      <!-- Modal Header -->
-      <div class="modal-header">
-        <h5 class="modal-title">Student Profile</h5>
-        <button type="button" class="btn-close" @click="$emit('close')"></button>
-      </div>
-
-      <!-- Modal Body -->
-      <div class="modal-body p-0">
-        <div class="student-profile py-3 px-3">
-
-          <div class="container-fluid">
-            <div class="row">
-
-              <!-- Left: Photo + quick info -->
-              <div class="col-lg-4 mb-3">
-                <div class="card shadow-sm">
-                  <div class="card-header bg-transparent text-center">
-                    <img 
-                      class="profile_img img-fluid rounded border"
-                      :src="photoUrl || placeholderImg"
-                      alt="student photo"
-                      style="width: 100%; max-width: 260px; object-fit: cover;"
-                    >
-                    <h3 class="mt-2">{{ student?.name || '—' }}</h3>
-                  </div>
-                  <div class="card-body">
-                    <p class="mb-2"><strong class="me-1">Student #:</strong>{{ student?._id ?? '—' }}</p>
-                    <p class="mb-2">
-                      <strong class="me-1">Class:</strong>{{ student?.class || '—' }}
-                      <strong class="ms-3 me-1">Section:</strong>{{ student?.section || '—' }}
-                    </p>
-                    <p class="mb-2"><strong class="me-1">Admission #:</strong>{{ student?.admission_number || '—' }}</p>
-                    <p class="mb-2"><strong class="me-1">Student ID:</strong>{{ student?.student_code || '—' }}</p>
-                    <p class="mb-0"><strong class="me-1">Class Roll No:</strong>{{ student?.roll_number || '—' }}</p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Right: Details -->
-              <div class="col-lg-8">
-                <div class="card shadow-sm mb-3">
-                  <div class="card-header bg-transparent border-0">
-                    <h3 class="mb-0">
-                      <i class="far fa-clone me-1"></i> General Information
-                    </h3>
-                  </div>
-                  <div class="card-body pt-0">
-                    <table class="table table-bordered mb-0">
-                      <tbody>
-                        <tr>
-                          <th width="30%">Class Roll No</th>
-                          <td width="2%">:</td>
-                          <td>{{ student?.roll_number || '—' }}</td>
-                        </tr>
-
-                        <tr>
-                          <th>Gender</th>
-                          <td>:</td>
-                          <td>{{ student?.gender || '—' }}</td>
-                        </tr>
-                        <tr>
-                          <th>Religion</th>
-                          <td>:</td>
-                          <td>{{ student?.religion || '—' }}</td>
-                        </tr>
-                        <tr>
-                          <th>Blood Group</th>
-                          <td>:</td>
-                          <td>{{ student?.blood_group || '—' }}</td>
-                        </tr>
-                        <tr>
-                          <th>Date of Birth</th>
-                          <td>:</td>
-                          <td>{{ student?.dob ? student.dob.slice(0,10) : '—' }}</td>
-                        </tr>
-                        <tr>
-                          <th>Contact</th>
-                          <td>:</td>
-                          <td>{{ student?.contact || '—' }}</td>
-                        </tr>
-                        <tr>
-                          <th>Address</th>
-                          <td>:</td>
-                          <td>{{ student?.address || '—' }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div class="card shadow-sm">
-                  <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between">
-                    <h3 class="mb-0">
-                      <i class="far fa-clone me-1"></i> Other Information
-                    </h3>
-                    <div class="d-flex gap-2">
-                      <button class="btn btn-outline-secondary btn-sm" @click="$emit('close')">Back to list</button>
-                      <button class="btn btn-primary btn-sm" @click="editStudent(student._id)">Edit</button>
-                    </div>
-                  </div>
-                  <div class="card-body pt-0">
-                    <div class="mb-2">
-                      <h6>Subjects</h6>
-                      <div v-if="assignedSubjects && assignedSubjects.length">
-                        <span class="badge bg-secondary me-1" v-for="s in assignedSubjects" :key="s._id">{{ s.subject_name }}</span>
-                      </div>
-                      <div v-else class="text-muted">No subjects assigned</div>
-                    </div>
-
-                    <p class="mb-0" v-if="student?.notes">{{ student.notes }}</p>
-                    <p class="mb-0 text-muted" v-else>No additional notes.</p>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          </div>
-
+    <div class="student-profile-content">
+      <aside class="student-profile-summary">
+        <img v-if="photoUrl" class="student-profile-photo" :src="photoUrl" alt="Student photo" />
+        <div v-else class="student-profile-avatar">{{ (student?.name || 'S').split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase() }}</div>
+        <h3>{{ student?.name || '—' }}</h3>
+        <span class="student-profile-class"><i class="fa-solid fa-graduation-cap"></i> Class {{ student?.class || '—' }}<span v-if="student?.section"> · Section {{ student.section }}</span></span>
+        <div class="student-profile-quick-info">
+          <div><span class="quick-info-icon quick-blue"><i class="fa-regular fa-user"></i></span><p><small>Student #</small><strong>{{ student?._id || '—' }}</strong></p></div>
+          <div><span class="quick-info-icon quick-green"><i class="fa-regular fa-file-lines"></i></span><p><small>Admission #</small><strong>{{ student?.admission_number || '—' }}</strong></p></div>
+          <div><span class="quick-info-icon quick-orange"><i class="fa-regular fa-id-card"></i></span><p><small>Student ID</small><strong>{{ student?.student_code || '—' }}</strong></p></div>
+          <div><span class="quick-info-icon quick-purple"><i class="fa-solid fa-people-group"></i></span><p><small>Class Roll No</small><strong>{{ student?.roll_number || '—' }}</strong></p></div>
         </div>
-      </div>
+      </aside>
 
+      <div class="student-profile-details">
+        <section class="profile-detail-panel">
+          <h3><i class="fa-regular fa-file-lines"></i> General Information</h3>
+          <dl class="student-profile-data">
+            <div><dt>Class Roll No</dt><span>:</span><dd>{{ student?.roll_number || '—' }}</dd></div>
+            <div><dt>Gender</dt><span>:</span><dd>{{ student?.gender || '—' }}</dd></div>
+            <div><dt>Father's Name</dt><span>:</span><dd>{{ student?.father_name || '—' }}</dd></div>
+            <div><dt>Mother's Name</dt><span>:</span><dd>{{ student?.mother_name || '—' }}</dd></div>
+            <div><dt>Date of Birth</dt><span>:</span><dd>{{ student?.dob ? student.dob.slice(0,10) : '—' }}</dd></div>
+            <div><dt>Address</dt><span>:</span><dd>{{ student?.address || '—' }}<template v-if="student?.pincode">, {{ student.pincode }}</template></dd></div>
+          </dl>
+        </section>
+
+        <section class="profile-detail-panel profile-other-panel">
+          <div class="profile-other-heading"><h3><i class="fa-solid fa-book-open"></i> Other Information</h3><div class="profile-actions"><button type="button" class="profile-back-button" @click="$emit('close')"><i class="fa-solid fa-arrow-left"></i> Back to list</button><button type="button" class="profile-edit-button" @click="editStudent(student._id)"><i class="fa-solid fa-pen"></i> Edit Student</button></div></div>
+          <div class="profile-extra-row"><h4><i class="fa-solid fa-book-open"></i> Subjects</h4><div v-if="assignedSubjects && assignedSubjects.length" class="profile-subjects"><span v-for="s in assignedSubjects" :key="s._id">{{ s.subject_name }}</span></div><p v-else>No subjects assigned</p></div>
+          <div class="profile-extra-row profile-notes-row"><h4><i class="fa-regular fa-file-lines"></i> Notes</h4><p v-if="student?.notes">{{ student.notes }}</p><p v-else>No additional notes.</p></div>
+        </section>
+      </div>
     </div>
-  </div>
+  </section>
 </div>
 `;

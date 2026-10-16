@@ -5,14 +5,12 @@ export default {
     subjects: { type: Array, default: () => [] },
     resultForm: { type: Object, default: () => ({}) },
     selectedExam: { type: [Number, String], default: null },
-    selectedCourse: { type: [Number, String], default: null }
+    selectedCourse: { type: [Number, String], default: null },
+    subject: { type: Object, default: null },
+    maxMarks: { type: Number, default: 100 }
   },
   template: `
-    <div class="card mb-4">
-      <div class="card-header bg-light">
-        <h5 class="mb-0"><i class="fa-solid fa-edit me-2"></i>Add / Edit Student Result</h5>
-      </div>
-      <div class="card-body">
+    <div class="student-result-form">
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Student *</label>
@@ -38,26 +36,25 @@ export default {
         <div class="row g-3 mt-3">
           <div class="col-md-3">
             <label class="form-label">Theory Marks</label>
-            <input v-model.number="resultForm.theory_marks" type="number" class="form-control" min="0" />
+            <input v-model.number="resultForm.theory_marks" type="number" class="form-control" min="0" :max="maxMarks" :disabled="!subject || subject.has_theory === false" />
           </div>
           <div class="col-md-3">
             <label class="form-label">Lab Marks</label>
-            <input v-model.number="resultForm.lab_marks" type="number" class="form-control" min="0" />
+            <input v-model.number="resultForm.lab_marks" type="number" class="form-control" min="0" :max="maxMarks" :disabled="!subject || !subject.has_lab" />
           </div>
           <div class="col-md-3">
             <label class="form-label">Attendance</label>
-            <input v-model.number="resultForm.attendance_marks" type="number" class="form-control" min="0" />
+            <input v-model.number="resultForm.attendance_marks" type="number" class="form-control" min="0" :max="maxMarks" :disabled="!subject || !subject.has_attendance" />
           </div>
           <div class="col-md-3">
             <label class="form-label">Activity</label>
-            <input v-model.number="resultForm.activity_marks" type="number" class="form-control" min="0" />
+            <input v-model.number="resultForm.activity_marks" type="number" class="form-control" min="0" :max="maxMarks" :disabled="!subject || !subject.has_activity" />
           </div>
         </div>
 
         <div class="mt-4 d-flex justify-content-end">
           <button @click="onSave" class="btn btn-primary px-4" :disabled="!selectedExam || !selectedCourse">Save Result</button>
         </div>
-      </div>
     </div>
   `,
   methods: {

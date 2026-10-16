@@ -1,11 +1,6 @@
 export default `
-<div class="container-fluid p-4">
-
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">
-      <i class="fa-solid fa-book me-2"></i>Result Book
-    </h2>
-  </div>
+<section class="catalog-page results-report-page result-book-page">
+  <header class="catalog-page-heading"><div><h1>Result Book</h1><p>Enter and update marks for each course, subject and exam</p></div></header>
 
   <div v-if="loading" class="text-center py-5">
     <span class="spinner-border"></span>
@@ -14,7 +9,7 @@ export default `
   <div v-else>
 
     <!-- Selection Card -->
-    <div class="card mb-4">
+    <div class="card catalog-card mb-4">
       <div class="card-header bg-light">
         <h5 class="mb-0">Select Exam & Class</h5>
       </div>
@@ -71,7 +66,7 @@ export default `
 
       <div v-if="viewMode === 'class'" class="col-12">
 
-        <div class="card mb-4">
+        <div class="card catalog-card mb-4">
 
           <div class="card-header bg-light">
             <h5 class="mb-0">Class-wise Entry</h5>
@@ -114,10 +109,31 @@ export default `
 
       </div>
 
+      <div v-else class="col-12">
+        <div class="card catalog-card mb-4">
+          <div class="card-header bg-light"><h5 class="mb-0">Student-wise Entry</h5></div>
+          <div class="card-body">
+            <div v-if="!selectedAcademicYear || !selectedExam || !selectedCourse" class="catalog-empty mb-3">Select an academic year, exam and course to enter an individual student's result.</div>
+            <StudentForm
+              v-else
+              :students="students"
+              :subjects="subjectsForCourse"
+              :result-form="studentResultForm"
+              :selected-exam="selectedExam"
+              :selected-course="selectedCourse"
+              :subject="studentFormSubject"
+              :max-marks="selectedMaxMarks"
+              @load-existing="loadExistingStudentResult"
+              @save="saveStudentResult"
+            />
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- FILE IMPORT MODE -->
-    <div v-if="importMode === 'file'" class="card">
+    <div v-if="importMode === 'file'" class="card catalog-card">
 
       <div class="card-header bg-light">
         <h5 class="mb-0">
@@ -200,5 +216,5 @@ export default `
 
   </div>
 
-</div>
+</section>
 `

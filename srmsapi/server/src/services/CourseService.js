@@ -10,7 +10,7 @@ const { success, failure } = require("../utils/serviceResult");
 const CACHE_KEYS = {
   COURSES_LIST: "courses:list",
   COURSE: (id) => `course:${id}`,
-  COURSE_SUBJECTS: (id) => `course:${id}:subjects`,
+  COURSE_SUBJECTS: (id) => `course:${id}:subjects:v2`,
 };
 
 const listCourses = async ({ page = 1, limit = 50, query = "" } = {}) => {
@@ -123,8 +123,11 @@ const getCourseSubjects = async (courseId) => {
     const subjects = await RedisCacheService.getOrSet(
       CACHE_KEYS.COURSE_SUBJECTS(courseId),
       async () => {
-        const rows = await ModelUtils.findAll(CourseSubject, { course_id: courseId }, { populate: "subject", sort: { "subject.subject_name": 1 } });
-        return rows || [];
+        const rows = await ModelUtils.findAll(CourseSubject, { course_id: courseId }, {
+          populate: { path: "subject_id", select: "subject_name subject_code has_theory has_lab has_attendance has_activity" },
+          sort: { createdAt: 1 },
+        });
+        return (rows || []).map((row) => ({ ...row, subject: row.subject_id }));
       },
       3600
     );

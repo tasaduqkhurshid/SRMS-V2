@@ -1,5 +1,5 @@
 import template from "./HeaderTemplate.js"
-const { onMounted, ref, computed } = Vue
+const { onMounted, onUnmounted, ref, computed } = Vue
 const { useRouter } = VueRouter
 
 export default {
@@ -21,6 +21,7 @@ export default {
     const schoolName = ref("School Portal")
     const localUser = ref({})
     const searchQuery = ref("")
+    const searchInput = ref(null)
     const notificationCount = ref(0)
     const userInitials = ref("HA")
 
@@ -56,7 +57,11 @@ export default {
         .join("")
         .slice(0, 2)
         .toUpperCase() || "SC"
+
+      window.addEventListener("keydown", handleSearchShortcut)
     })
+
+    onUnmounted(() => window.removeEventListener("keydown", handleSearchShortcut))
 
     // Use prop user or fallback to localStorage user
     const currentUser = computed(() => {
@@ -85,6 +90,13 @@ export default {
       router.push({ path: "/students", query: q ? { q } : {} })
     }
 
+    const handleSearchShortcut = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault()
+        searchInput.value?.focus()
+      }
+    }
+
     const handleNotifications = () => {
       console.log('Notifications clicked')
     }
@@ -109,6 +121,7 @@ export default {
       userImage,
       userName,
       searchQuery,
+      searchInput,
       notificationCount,
       handleSearch,
       handleNotifications,

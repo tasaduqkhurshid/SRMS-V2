@@ -34,6 +34,7 @@ export default {
       image: "" // single image field (url)
     });
     const studentPortalPassword = ref("");
+    const showPortalPassword = ref(false);
 
     // ---------- file preview ----------
     const selectedFile = ref(null);
@@ -57,6 +58,7 @@ export default {
     // ---------- Reset form ----------
     const resetAll = () => {
       studentPortalPassword.value = "";
+      showPortalPassword.value = false;
       student.value = {
         roll_number: "",
         name: "",
@@ -161,6 +163,12 @@ export default {
       const file = event.target.files?.[0];
       if (!file) return;
 
+      if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 2 * 1024 * 1024) {
+        toast?.error?.('Choose a JPG or PNG photo up to 2 MB');
+        event.target.value = '';
+        return;
+      }
+
       selectedFile.value = file;
 
       const reader = new FileReader();
@@ -175,6 +183,10 @@ export default {
       selectedFile.value = null;
       previewUrl.value = student.value.image || "";
       if (fileInputRef.value) fileInputRef.value.value = "";
+    };
+
+    const togglePortalPassword = () => {
+      showPortalPassword.value = !showPortalPassword.value;
     };
 
     // ---------- Upload Photo Now ----------
@@ -255,6 +267,7 @@ const saveStudentDetails = async () => {
       saving,
       student,
       studentPortalPassword,
+      showPortalPassword,
       courses,
       academicYears,
       currentYearName,
@@ -268,6 +281,7 @@ const saveStudentDetails = async () => {
       getStudentDetails,
       onFileChange,
       clearFile,
+      togglePortalPassword,
       uploadPhotoNow,
       saveStudentDetails,
       close

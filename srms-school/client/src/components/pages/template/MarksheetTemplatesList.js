@@ -33,7 +33,9 @@ export default {
           }
         }
       } catch (error) {
-        console.error('Error fetching templates:', error)
+        templates.value = []
+        totalRecords.value = 0
+        toast?.error?.(error.response?.data?.message || 'Could not load marksheet templates')
       } finally {
         loading.value = false
       }
@@ -48,8 +50,7 @@ export default {
         toast?.success?.('Template deleted successfully')
         fetchTemplates()
       } catch (error) {
-        console.error('Error deleting template:', error)
-        toast?.error?.('Error deleting template')
+        toast?.error?.(error.response?.data?.message || 'Error deleting template')
       }
     }
 
@@ -86,8 +87,7 @@ export default {
         toast?.success?.('Template updated successfully')
         fetchTemplates()
       } catch (error) {
-        console.error('Error updating template:', error)
-        toast?.error?.('Error updating template')
+        toast?.error?.(error.response?.data?.message || 'Error updating template')
       }
     }
 

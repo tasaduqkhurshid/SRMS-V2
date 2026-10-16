@@ -1,169 +1,129 @@
 export default `
-<div v-if="open" class="position-fixed top-0 start-0 w-100 h-100" style="background: rgba(0,0,0,.35);">
-  <div class="d-flex h-100 align-items-center justify-content-center">
-    <div class="card shadow col-8">
-
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <strong>{{ mode === 'edit' ? 'Edit Student' : 'Add Student' }}</strong>
-        <button type="button" class="btn-close" @click="close"></button>
+<div v-if="open" class="student-editor-overlay" role="dialog" aria-modal="true" aria-labelledby="studentEditorTitle">
+  <section class="student-editor-modal">
+    <header class="student-editor-header">
+      <span class="student-editor-title-icon"><i class="fa-solid fa-user-plus"></i></span>
+      <div>
+        <h2 id="studentEditorTitle">{{ mode === 'edit' ? 'Edit Student' : 'Add Student' }}</h2>
+        <p>{{ mode === 'edit' ? 'Update student profile and portal account' : 'Create a student profile and portal account' }}</p>
       </div>
+      <button type="button" class="student-editor-close" @click="close" aria-label="Close dialog"><i class="fa-solid fa-xmark"></i></button>
+    </header>
 
-      <form id="studentForm" data-vform @validated-submit="saveStudentDetails">
+    <form id="studentForm" class="student-editor-form" data-vform @validated-submit="saveStudentDetails">
+      <div class="student-editor-body">
+        <aside class="student-photo-panel">
+          <div class="student-photo-heading">
+            <h3>Student Photo</h3>
+            <p>Upload a student photo (optional)</p>
+          </div>
+          <div class="student-photo-preview">
+            <img v-if="previewUrl || student.image" :src="previewUrl || student.image" alt="Student photo preview" />
+            <div v-else class="student-photo-placeholder"><i class="fa-solid fa-user"></i></div>
+            <span v-if="!previewUrl && !student.image">No photo selected</span>
+          </div>
+          <p class="student-photo-help">JPG or PNG · Max 2 MB</p>
+          <input id="studentPhotoInput" ref="fileInputRef" class="visually-hidden" type="file" accept="image/jpeg,image/png" @change="onFileChange" />
+          <label for="studentPhotoInput" class="btn student-photo-choose"><i class="fa-solid fa-upload"></i>Choose Photo</label>
+          <button type="button" class="btn student-photo-remove" @click="clearFile" :disabled="!hasFile"><i class="fa-solid fa-trash-can"></i>Remove Photo</button>
+        </aside>
 
-        <div class="card-body">
-          <div class="row g-3">
+        <div class="student-editor-fields">
+          <section class="student-form-section">
+            <header class="student-form-section-heading">
+              <span class="student-form-section-icon student-info-icon"><i class="fa-solid fa-circle-info"></i></span>
+              <div><h3>Student Information</h3><p>Enter the student's personal and academic details</p></div>
+            </header>
 
-            <!-- LEFT: PHOTO -->
-            <div class="col-md-4">
-              <div class="card h-100">
-                <div class="card-body d-flex flex-column align-items-center justify-content-center">
-
-                  <!-- Student Photo -->
-                  <div class="ratio ratio-1x1" style="width:100%; max-width:220px;">
-                    <img
-                      :src="previewUrl || student.image || placeholderImg"
-                      class="img-fluid rounded border"
-                      style="object-fit: cover;"
-                    />
-                  </div>
-
-                  <!-- File Input -->
-                  <div class="mt-3 w-100">
-                    <input
-                      ref="fileInputRef"
-                      class="form-control"
-                      type="file"
-                      accept="image/*"
-                      @change="onFileChange"
-                      />
-                  </div>
-
-                  <!-- Clear Button -->
-                  <div class="d-flex gap-2 mt-2">
-                    <button
-                      class="btn btn-sm btn-outline-secondary"
-                      type="button"
-                      @click="clearFile"
-                      :disabled="!hasFile"
-                    >
-                      Remove Photo
-                    </button>
-                  </div>
-
-                </div>
+            <div class="student-form-grid">
+              <div class="student-form-field">
+                <label for="studentRoll">Class Roll No</label>
+                <input id="studentRoll" class="form-control" v-model="student.roll_number" data-vtype="number" placeholder="Enter class roll number" />
+              </div>
+              <div class="student-form-field">
+                <label for="studentName">Student Name <span>*</span></label>
+                <input id="studentName" class="form-control" v-model="student.name" data-vtype="text" data-vmin="2" required placeholder="Enter student name" />
+              </div>
+              <div class="student-form-field">
+                <label for="studentFather">Father's Name</label>
+                <input id="studentFather" class="form-control" v-model="student.father_name" data-vtype="text" placeholder="Enter father's name" />
+              </div>
+              <div class="student-form-field">
+                <label for="studentMother">Mother's Name</label>
+                <input id="studentMother" class="form-control" v-model="student.mother_name" data-vtype="text" placeholder="Enter mother's name" />
+              </div>
+              <div class="student-form-field student-address-field">
+                <label for="studentAddress">Address</label>
+                <textarea id="studentAddress" class="form-control" rows="2" v-model="student.address" data-vtype="text" placeholder="Enter full address"></textarea>
+              </div>
+              <div class="student-form-field">
+                <label for="studentPincode">Pincode</label>
+                <input id="studentPincode" class="form-control" v-model="student.pincode" data-vtype="number" placeholder="Enter pincode" />
+              </div>
+              <div class="student-form-field">
+                <label for="studentClass">Class <span>*</span></label>
+                <select id="studentClass" class="form-select" v-model="student.class" data-vtype="select" required>
+                  <option value="">Select class</option>
+                  <option v-for="course in courses" :key="course._id" :value="course._id">{{ course.course_name }} ({{ course.course_code }})</option>
+                </select>
+              </div>
+              <div class="student-form-field">
+                <label for="studentSection">Section</label>
+                <input id="studentSection" class="form-control" v-model="student.section" data-vtype="text" placeholder="Enter section" />
+              </div>
+              <div class="student-form-field">
+                <label for="studentGender">Gender</label>
+                <select id="studentGender" class="form-select" v-model="student.gender" data-vtype="select">
+                  <option value="">Select gender</option><option>Male</option><option>Female</option><option>Other</option>
+                </select>
+              </div>
+              <div class="student-form-field">
+                <label for="studentDob">Date of Birth</label>
+                <input id="studentDob" type="date" class="form-control" v-model="student.dob" data-vtype="date" />
+              </div>
+              <div class="student-form-field">
+                <label for="studentAdmission">Admission Number</label>
+                <input id="studentAdmission" class="form-control" v-model="student.admission_number" data-vtype="text" placeholder="Enter admission number" />
               </div>
             </div>
+          </section>
 
-            <!-- RIGHT: FORM -->
-            <div class="col-md-8">
-              <div class="row g-2">
-
-                <div class="col-md-4">
-                  <label class="form-label">Class Roll No</label>
-                  <input class="form-control" v-model="student.roll_number" data-vtype="number" />
-                  </div>
-
-                <div class="col-md-8">
-                  <label class="form-label">Name</label>
-                  <input class="form-control" v-model="student.name" data-vtype="text" data-vmin="2" />
-                  </div>
-
-                <div class="col-md-6">
-                  <label class="form-label">Father's Name</label>
-                  <input class="form-control" v-model="student.father_name" data-vtype="text" />
-                  </div>
-
-                <div class="col-md-6">
-                  <label class="form-label">Mother's Name</label>
-                  <input class="form-control" v-model="student.mother_name" data-vtype="text" />
+          <section class="student-form-section student-portal-section">
+            <header class="student-form-section-heading">
+              <span class="student-form-section-icon student-portal-icon"><i class="fa-solid fa-lock"></i></span>
+              <div><h3>Student Portal Access</h3><p>Set a password for the student's portal account</p></div>
+            </header>
+            <div class="student-form-grid student-portal-grid">
+              <div class="student-form-field">
+                <label for="studentPortalPassword">Student Portal Password <span v-if="mode === 'create'">*</span></label>
+                <div class="student-password-control">
+                  <input id="studentPortalPassword" class="form-control" v-model="studentPortalPassword" :type="showPortalPassword ? 'text' : 'password'" minlength="8" autocomplete="new-password" :required="mode === 'create'" placeholder="At least 8 characters" />
+                  <button type="button" @click="togglePortalPassword" :aria-label="showPortalPassword ? 'Hide password' : 'Show password'"><i :class="showPortalPassword ? 'fa-solid fa-eye-slash' : 'fa-regular fa-eye'"></i></button>
                 </div>
-
-                <div class="col-md-8">
-                  <label class="form-label">Address</label>
-                  <textarea class="form-control" rows="1" v-model="student.address" data-vtype="text"></textarea>
-                </div>
-
-                <div class="col-md-4">
-                  <label class="form-label">Pincode</label>
-                  <input class="form-control" v-model="student.pincode" data-vtype="number" />
-                </div>
-
-                <div class="col-md-4">
-                  <label class="form-label">Class</label>
-                  <select class="form-control" v-model="student.class" data-vtype="select">
-                    <option value="">Select course</option>
-                    <option v-for="c in courses" :key="c._id" :value="c._id">{{ c.course_name }} ({{ c.course_code }})</option>
-                  </select>
-                </div>
-
-                <div class="col-md-4">
-                  <label class="form-label">Section</label>
-                  <input class="form-control" v-model="student.section" data-vtype="text" />
-                </div>
-
-                <div class="col-md-4">
-                  <label class="form-label">Gender</label>
-                  <select class="form-control" v-model="student.gender" data-vtype="select">
-                    <option value="">Select</option>
-                    <option>Male</option>
-                    <option>Female</option>
-                    <option>Other</option>
-                  </select>
-                </div>
-
-                <div class="col-md-6">
-                  <label class="form-label">DOB</label>
-                  <input type="date" class="form-control" v-model="student.dob" data-vtype="date" />
-                </div>
-
-                <div class="col-md-6">
-                  <label class="form-label">Admission No</label>
-                  <input class="form-control" v-model="student.admission_number" data-vtype="text" />
-                </div>
-
-                <div class="col-md-12">
-                  <label class="form-label">{{ mode === 'edit' ? 'Reset Student Portal Password (optional)' : 'Student Portal Password' }}</label>
-                  <input class="form-control" v-model="studentPortalPassword" type="password" minlength="8" autocomplete="new-password" :required="mode === 'create'" placeholder="At least 8 characters" />
-                  <small class="text-muted">Students sign in with their admission number or roll number and this password.</small>
-                </div>
-
-                <div class="col-md-6">
-                  <label class="form-label">
-                    {{ mode === 'edit' ? 'Academic Year (Upgrade)' : 'Academic Year' }}
-                  </label>
-                  <select 
-                    v-model="student.academic_year_id" 
-                    class="form-control"
-                    :disabled="mode === 'create'"
-                  >
-                    <option v-if="mode === 'create'" :value="null" selected>
-                      {{ currentYearName || 'Loading...' }}
-                    </option>
-                    <option v-else :value="null">Select Year</option>
-                    <option v-for="year in academicYears" :key="year._id" :value="year._id">
-                      {{ year.name }}
-                    </option>
-                  </select>
-                  <small v-if="mode === 'create'" class="text-muted">Auto-assigned based on current year</small>
-                  <small v-else class="text-muted">Select to upgrade to new academic year</small>
-                </div>
-                </div>
+                <small>Students sign in using their admission number or roll number and this password.</small>
               </div>
-
-          </div>
+              <div class="student-form-field">
+                <label for="studentAcademicYear">Academic Year</label>
+                <input v-if="mode === 'create'" id="studentAcademicYear" class="form-control student-academic-year" :value="currentYearName" disabled />
+                <select v-else id="studentAcademicYear" v-model="student.academic_year_id" class="form-select">
+                  <option :value="null">Select Year</option>
+                  <option v-for="year in academicYears" :key="year._id" :value="year._id">{{ year.name }}</option>
+                </select>
+                <small>{{ mode === 'create' ? 'Automatically assigned based on the current academic year.' : 'Select to upgrade to a new academic year.' }}</small>
+              </div>
+            </div>
+          </section>
         </div>
+      </div>
 
-        <div class="card-footer d-flex justify-content-end gap-2">
-          <button type="button" class="btn btn-light" @click="close">Close</button>
-
-          <button type="submit" class="btn btn-primary">
-            <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
-            {{ mode === 'edit' ? 'Update' : 'Save' }}
-          </button>
-        </div>
-
-      </form>
-    </div>
-  </div>
+      <footer class="student-editor-footer">
+        <button type="button" class="btn student-editor-cancel" @click="close">Cancel</button>
+        <button type="submit" class="btn student-editor-save" :disabled="saving">
+          <span v-if="saving" class="spinner-border spinner-border-sm me-2"></span><i v-else class="fa-solid fa-floppy-disk me-2"></i>
+          {{ mode === 'edit' ? 'Update Student' : 'Save Student' }}
+        </button>
+      </footer>
+    </form>
+  </section>
 </div>
 `;

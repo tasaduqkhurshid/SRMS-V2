@@ -11,14 +11,7 @@ export default `
           <img v-if="schoolLogo" :src="schoolLogo" alt="School Logo" class="sidebar-logo-img" @error="schoolLogo = ''" />
           <i v-else class="fa-solid fa-school"></i>
         </div>
-        <div class="sidebar-brand-text" v-if="!collapsed">
-          <div class="sidebar-brand-title">School Portal</div>
-          <div class="sidebar-brand-subtitle">{{ schoolName }}</div>
-        </div>
       </div>
-      <button class="sidebar-toggle" type="button" :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'" @click="toggle">
-        <i :class="collapsed ? 'fa-solid fa-chevron-right' : 'fa-solid fa-chevron-left'"></i>
-      </button>
     </div>
 
     <hr class="sidebar-divider" />

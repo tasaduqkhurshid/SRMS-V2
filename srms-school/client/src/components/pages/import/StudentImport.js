@@ -43,6 +43,11 @@ export default {
     // Handle file selection
     const onFileChange = (e) => {
       file.value = e.target.files && e.target.files[0] ? e.target.files[0] : null
+      e.target.value = ''
+    }
+
+    const onFileDrop = (e) => {
+      file.value = e.dataTransfer?.files && e.dataTransfer.files[0] ? e.dataTransfer.files[0] : null
     }
 
     // Import students from file
@@ -118,6 +123,7 @@ Bob Johnson,STU003,Mr. Johnson,Mrs. Johnson,789 Pine Rd,110003,Class 10,B,Male,2
       importProgress,
       importResults,
       onFileChange,
+      onFileDrop,
       importStudents,
       downloadTemplate
     }

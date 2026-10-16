@@ -1,136 +1,23 @@
 export default `
-<div class="container-fluid p-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">
-      <i class="fa-solid fa-book-open me-2"></i>
-      Subject-wise Results
-    </h2>
-  </div>
-
-  <!-- Filters -->
-  <div class="card mb-4">
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-3">
-          <label class="form-label">Subject</label>
-          <select v-model="filters.subject_id" class="form-select">
-            <option :value="null">All Subjects</option>
-            <option v-for="subject in subjects" :key="subject._id" :value="subject._id">
-              {{ subject.subject_name || subject.name }}
-            </option>
-          </select>
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label">Exam</label>
-          <select v-model="filters.exam_id" class="form-select">
-            <option :value="null">All Exams</option>
-            <option v-for="exam in exams" :key="exam._id" :value="exam._id">
-              {{ exam.exam_name || exam.name }}
-            </option>
-          </select>
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label">Academic Year</label>
-          <select v-model="filters.academic_year_id" class="form-select">
-            <option :value="null">All Years</option>
-            <option v-for="year in academicYears" :key="year._id" :value="year._id">
-              {{ year.name }}
-            </option>
-          </select>
-        </div>
-
-        <div class="col-md-3 d-flex align-items-end gap-2">
-          <button @click="applyFilters" class="btn btn-primary">
-            <i class="fa-solid fa-search me-2"></i>Filter
-          </button>
-          <button @click="resetFilters" class="btn btn-secondary">
-            <i class="fa-solid fa-redo me-2"></i>Reset
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Results Table -->
-  <div class="card">
-    <div class="card-header bg-light">
-      <h5 class="mb-0">Results ({{ totalRecords }})</h5>
-    </div>
-    <div class="table-responsive">
-      <table class="table table-hover mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>Student Name</th>
-            <th>Roll Number</th>
-            <th>Exam</th>
-            <th>Subject</th>
-            <th>Theory Marks</th>
-            <th>Lab Marks</th>
-            <th>Attendance</th>
-            <th>Activity</th>
-            <th>Total Marks</th>
-            <th>Academic Year</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading" class="text-center">
-            <td colspan="10">
-              <span class="spinner-border spinner-border-sm me-2"></span>Loading...
-            </td>
-          </tr>
-          <tr v-else-if="results.length === 0" class="text-center">
-            <td colspan="10" class="text-muted">No results found</td>
-          </tr>
-          <tr v-for="result in results" :key="result._id">
-            <td>{{ result.student_id?.name || result.Student?.name || '-' }}</td>
-            <td>{{ result.student_id?.roll_number || result.Student?.roll_number || '-' }}</td>
-            <td>{{ result.exam_id?.exam_name || result.Exam?.name || '-' }}</td>
-            <td>{{ result.subject_id?.subject_name || result.Subject?.name || '-' }}</td>
-            <td>{{ result.theory_marks || 0 }}</td>
-            <td>{{ result.lab_marks || 0 }}</td>
-            <td>{{ result.attendance_marks || 0 }}</td>
-            <td>{{ result.activity_marks || 0 }}</td>
-            <td><strong>{{ result.total_marks || 0 }}</strong></td>
-            <td>{{ result.academic_year_id?.name || result.AcademicYear?.name || '-' }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination -->
-    <div v-if="totalPages() > 1" class="card-footer bg-light">
-      <nav aria-label="pagination">
-        <ul class="pagination justify-content-center mb-0">
-          <li class="page-item" :class="{ disabled: filters.page === 1 }">
-            <button class="page-link" @click="goToPage(1)" :disabled="filters.page === 1">
-              First
-            </button>
-          </li>
-          <li class="page-item" :class="{ disabled: filters.page === 1 }">
-            <button class="page-link" @click="goToPage(filters.page - 1)" :disabled="filters.page === 1">
-              Previous
-            </button>
-          </li>
-
-          <li v-for="page in 5" :key="page" :class="{ active: filters.page === page }" class="page-item" v-if="page <= totalPages()">
-            <button class="page-link" @click="goToPage(page)">{{ page }}</button>
-          </li>
-
-          <li class="page-item" :class="{ disabled: filters.page === totalPages() }">
-            <button class="page-link" @click="goToPage(filters.page + 1)" :disabled="filters.page === totalPages()">
-              Next
-            </button>
-          </li>
-          <li class="page-item" :class="{ disabled: filters.page === totalPages() }">
-            <button class="page-link" @click="goToPage(totalPages())" :disabled="filters.page === totalPages()">
-              Last
-            </button>
-          </li>
-        </ul>
-      </nav>
-    </div>
-  </div>
-</div>
-`
+<section class="catalog-page results-report-page">
+  <header class="catalog-page-heading"><div><h1>Subject-wise Results</h1><p>Review student marks for a selected class, subject and exam</p></div><button class="catalog-add-button results-entry-button" :disabled="!loaded" @click="openResultBook"><i class="fa-solid fa-pen-to-square"></i>Enter / Edit Marks</button></header>
+  <section class="catalog-card results-report-card">
+    <form class="results-filter-grid results-subject-filter-grid" @submit.prevent="applyFilters">
+      <div class="results-filter-field"><label for="subjectYear">Academic Year</label><select id="subjectYear" v-model="filters.academic_year_id" :disabled="filtersLoading"><option value="">Select academic year</option><option v-for="year in academicYears" :key="year._id" :value="year._id">{{ year.name }}</option></select></div>
+      <div class="results-filter-field"><label for="subjectCourse">Course / Class</label><select id="subjectCourse" v-model="filters.course_id" :disabled="filtersLoading"><option value="">Select course</option><option v-for="course in courses" :key="course._id" :value="course._id">{{ course.course_name || course.name }}</option></select></div>
+      <div class="results-filter-field"><label for="subjectSelect">Subject</label><select id="subjectSelect" v-model="filters.subject_id" :disabled="!filters.course_id || subjectsLoading"><option value="">{{ subjectsLoading ? 'Loading subjects…' : 'Select subject' }}</option><option v-for="subject in subjects" :key="subject._id" :value="subject._id">{{ subject.subject_name || subject.name }}</option></select></div>
+      <div class="results-filter-field"><label for="subjectExam">Exam</label><select id="subjectExam" v-model="filters.exam_id" :disabled="filtersLoading || !filters.academic_year_id"><option value="">Select exam</option><option v-for="exam in availableExams" :key="exam._id" :value="exam._id">{{ exam.exam_name || exam.name }}</option></select></div>
+      <div class="results-filter-actions"><button class="catalog-search-button" type="submit" :disabled="loading"><i class="fa-solid fa-magnifying-glass"></i>{{ loading ? 'Loading…' : 'Show Results' }}</button><button type="button" class="results-clear-button" @click="clearFilters">Clear</button></div>
+    </form>
+    <div class="results-table-toolbar"><div><h2>Subject Results</h2><p v-if="loaded">{{ selectedCourse?.course_name }} · {{ selectedSubject?.subject_name }} · {{ selectedExam?.exam_name }} · Max {{ selectedExam?.max_marks ?? 100 }}</p><p v-else>Select filters to view eligible students and marks</p></div><label class="results-inline-search"><i class="fa-solid fa-magnifying-glass"></i><input v-model="search" placeholder="Search student or roll number" aria-label="Search subject results" /></label></div>
+    <div class="catalog-table-wrap results-table-wrap"><table class="catalog-table results-table subject-results-table"><thead><tr><th>#</th><th>Student</th><th>Roll No.</th><th>Theory</th><th>Lab</th><th>Attendance</th><th>Activity</th><th>Total / Max</th><th>Actions</th></tr></thead><tbody>
+      <tr v-if="loading"><td colspan="9" class="results-state"><span class="spinner-border spinner-border-sm me-2"></span>Loading subject results…</td></tr>
+      <tr v-else-if="!loaded"><td colspan="9" class="results-state">Choose filters to load subject results.</td></tr>
+      <tr v-else-if="students.length === 0"><td colspan="9" class="results-state">No students are enrolled in this course for the selected academic year.</td></tr>
+      <tr v-else-if="!pageRows.length"><td colspan="9" class="results-state">No students match this search.</td></tr>
+      <tr v-for="(row,index) in pageRows" :key="row.id"><td>{{ (page - 1) * pageSize + index + 1 }}</td><td><strong>{{ row.student.name || '—' }}</strong></td><td>{{ row.student.roll_number || '—' }}</td><td>{{ row.result?.theory_marks ?? '—' }}</td><td>{{ row.result?.lab_marks ?? '—' }}</td><td>{{ row.result?.attendance_marks ?? '—' }}</td><td>{{ row.result?.activity_marks ?? '—' }}</td><td><span v-if="row.result && row.result.total_marks !== null && row.result.total_marks !== undefined" class="result-summary-chip">{{ row.result.total_marks }} / {{ selectedExam?.max_marks ?? 100 }}</span><span v-else class="result-missing-chip">No marks</span></td><td><button class="catalog-icon-button" type="button" title="Enter or edit marks" aria-label="Enter or edit marks" @click="openResultBook"><i class="fa-solid fa-pen"></i></button></td></tr>
+    </tbody></table></div>
+    <footer class="catalog-footer results-pagination"><span>Showing {{ pageRows.length ? ((page - 1) * pageSize + 1) : 0 }}–{{ Math.min(page * pageSize, rows.length) }} of {{ rows.length }} students</span><div><button type="button" :disabled="page <= 1" @click="changePage(page - 1)">Previous</button><span>Page {{ page }} of {{ Math.max(totalPages, 1) }}</span><button type="button" :disabled="page >= totalPages" @click="changePage(page + 1)">Next</button><select v-model.number="pageSize" @change="changePage(1)" aria-label="Rows per page"><option :value="10">10</option><option :value="20">20</option><option :value="50">50</option></select></div></footer>
+  </section>
+</section>
+`;

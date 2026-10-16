@@ -1,13 +1,12 @@
 import { api } from '../../../Services/api.js'
 import template from './StudentWiseResultsTemplate.js'
-const { ref, onMounted } = Vue
-const { useRouter,useRoute } = VueRouter
+const { ref, computed, onMounted } = Vue
+const { useRouter } = VueRouter
 
 export default {
   name: 'StudentWiseResults',
   template,
   setup() {
-    const route = useRoute()
     const router = useRouter()
 
     const results = ref([])
@@ -25,6 +24,7 @@ export default {
 
     const loading = ref(false)
     const totalRecords = ref(0)
+    const search = ref('')
 
     // Fetch students dropdown
     const fetchStudents = async () => {
@@ -34,7 +34,7 @@ export default {
           students.value = response.data.data.students
         }
       } catch (error) {
-        console.error('Error fetching students:', error)
+        toast?.error?.(error.response?.data?.message || 'Could not load students')
       }
     }
 
@@ -46,7 +46,7 @@ export default {
           academicYears.value = response.data.data
         }
       } catch (error) {
-        console.error('Error fetching academic years:', error)
+        toast?.error?.(error.response?.data?.message || 'Could not load academic years')
       }
     }
 
@@ -58,7 +58,7 @@ export default {
           exams.value = response.data.data.exams
         }
       } catch (error) {
-        console.error('Error fetching exams:', error)
+        toast?.error?.(error.response?.data?.message || 'Could not load exams')
       }
     }
 
@@ -81,7 +81,9 @@ export default {
           }
         }
       } catch (error) {
-        console.error('Error fetching results:', error)
+        results.value = []
+        totalRecords.value = 0
+        toast?.error?.(error.response?.data?.message || 'Could not load student results')
       } finally {
         loading.value = false
       }
@@ -90,6 +92,7 @@ export default {
     // Apply filters
     const applyFilters = () => {
       filters.value.page = 1
+      search.value = ''
       fetchResults()
     }
 
@@ -111,9 +114,23 @@ export default {
       fetchResults()
     }
 
-    const totalPages = () => {
-      return Math.ceil(totalRecords.value / filters.value.limit)
+    const filteredResults = computed(() => {
+      const query = search.value.trim().toLowerCase()
+      return results.value.filter(result => !query || [result.student_id?.name, result.student_id?.roll_number, result.subject_id?.subject_name, result.exam_id?.exam_name].some(value => String(value || '').toLowerCase().includes(query)))
+    })
+    const totalPages = computed(() => Math.ceil(totalRecords.value / filters.value.limit))
+    const pageResults = computed(() => filteredResults.value)
+    const changePage = next => {
+      filters.value.page = Math.min(Math.max(1, next), Math.max(1, totalPages.value))
+      fetchResults()
     }
+    const openResultBook = result => router.push({ path: '/results/result-book/student-wise', query: {
+      course_id: result.student_id?.class || '',
+      exam_id: result.exam_id?._id || result.exam_id || '',
+      academic_year_id: result.academic_year_id?._id || result.academic_year_id || '',
+      subject_id: result.subject_id?._id || result.subject_id || '',
+      student_id: result.student_id?._id || result.student_id || ''
+    } })
 
     onMounted(() => {
       fetchStudents()
@@ -130,11 +147,16 @@ export default {
       filters,
       loading,
       totalRecords,
+      search,
+      totalPages,
+      filteredResults,
+      pageResults,
+      changePage,
+      openResultBook,
       fetchResults,
       applyFilters,
       resetFilters,
       goToPage,
-      totalPages
     }
   }
 }

@@ -1,8 +1,13 @@
 export default `
-<section class="container py-3">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="m-0">Subjects</h2>
-    <button class="btn btn-success" @click="addSubject">Add Subject</button>
+<section class="subjects-layout">
+  <div class="subjects-page-heading">
+    <div>
+      <h1>Subjects</h1>
+      <p>Manage subjects, theory and lab settings</p>
+    </div>
+    <button class="btn subjects-add-button" @click="addSubject">
+      <i class="fa-solid fa-plus"></i> Add Subject
+    </button>
   </div>
 
   <SubjectList ref="subjectList" @edit="handleEdit" />

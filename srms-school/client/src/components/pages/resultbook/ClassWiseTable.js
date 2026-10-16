@@ -22,13 +22,13 @@ export default {
     <div v-else>
 
       <!-- Exam Info Card -->
-      <div class="card mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div class="card-body text-white">
+      <div class="card result-entry-summary mb-3">
+        <div class="card-body">
           <div class="row g-3">
             <div class="col-6 col-md-3">
               <div class="d-flex align-items-center">
                 <div class="me-3">
-                  <i class="fa-solid fa-file-text fa-2x opacity-75"></i>
+                  <i class="fa-solid fa-file-lines fa-lg"></i>
                 </div>
                 <div>
                   <div class="small text-white-50">Exam</div>
@@ -39,7 +39,7 @@ export default {
             <div class="col-6 col-md-3">
               <div class="d-flex align-items-center">
                 <div class="me-3">
-                  <i class="fa-solid fa-school fa-2x opacity-75"></i>
+                  <i class="fa-solid fa-school fa-lg"></i>
                 </div>
                 <div>
                   <div class="small text-white-50">Class/Course</div>
@@ -50,7 +50,7 @@ export default {
             <div class="col-6 col-md-3">
               <div class="d-flex align-items-center">
                 <div class="me-3">
-                  <i class="fa-solid fa-calendar fa-2x opacity-75"></i>
+                  <i class="fa-regular fa-calendar fa-lg"></i>
                 </div>
                 <div>
                   <div class="small text-white-50">Academic Year</div>
@@ -61,7 +61,7 @@ export default {
             <div class="col-6 col-md-3">
               <div class="d-flex align-items-center">
                 <div class="me-3">
-                  <i class="fa-solid fa-book fa-2x opacity-75"></i>
+                  <i class="fa-solid fa-book fa-lg"></i>
                 </div>
                 <div>
                   <div class="small text-white-50">Subject</div>
@@ -70,7 +70,7 @@ export default {
               </div>
             </div>
           </div>
-          <div class="mt-3 pt-3 border-top border-white-25" v-if="maxMarks">
+          <div class="mt-3 pt-3 border-top" v-if="maxMarks">
             <div class="d-flex align-items-center justify-content-center">
               <i class="fa-solid fa-star fa-lg me-2"></i>
               <span class="fw-bold">Max Marks: {{ maxMarks }}</span>
@@ -83,9 +83,9 @@ export default {
         No students found
       </div>
 
-      <div v-else class="table-responsive">
+      <div v-else class="table-responsive catalog-table-wrap results-table-wrap">
 
-        <table class="table table-sm table-bordered">
+        <table class="table table-sm results-entry-table">
 
           <thead class="table-light">
             <tr>
@@ -125,7 +125,7 @@ export default {
                   :max="maxMarks"
                 />
                 <div v-if="hasFieldError(studentRow.id, 'theory')" class="invalid-feedback d-block">
-                  Max: {{ maxMarks }}
+                  Enter a value from 0 to {{ maxMarks }}
                 </div>
               </td>
 
@@ -141,7 +141,7 @@ export default {
                   :max="maxMarks"
                 />
                 <div v-if="hasFieldError(studentRow.id, 'lab')" class="invalid-feedback d-block">
-                  Max: {{ maxMarks }}
+                  Enter a value from 0 to {{ maxMarks }}
                 </div>
               </td>
 
@@ -157,7 +157,7 @@ export default {
                   :max="maxMarks"
                 />
                 <div v-if="hasFieldError(studentRow.id, 'attendance')" class="invalid-feedback d-block">
-                  Max: {{ maxMarks }}
+                  Enter a value from 0 to {{ maxMarks }}
                 </div>
               </td>
 
@@ -173,12 +173,12 @@ export default {
                   :max="maxMarks"
                 />
                 <div v-if="hasFieldError(studentRow.id, 'activity')" class="invalid-feedback d-block">
-                  Max: {{ maxMarks }}
+                  Enter a value from 0 to {{ maxMarks }}
                 </div>
               </td>
 
               <td class="align-middle" :class="{ 'text-danger fw-bold': isTotalExceeding(studentRow) }">
-                {{ calculateRowTotal(studentRow) }}
+                {{ hasAnyMark(studentRow) ? calculateRowTotal(studentRow) : '—' }}
                 <div v-if="isTotalExceeding(studentRow)" class="small text-danger">
                   Exceeds max ({{ maxMarks }})
                 </div>
@@ -188,6 +188,7 @@ export default {
                 <button
                   class="btn btn-sm btn-outline-primary"
                   @click="updateSingleStudent(studentRow)"
+                  :disabled="hasAnyErrors(studentRow.id) || isTotalExceeding(studentRow)"
                 >
                   Update
                 </button>
@@ -202,7 +203,7 @@ export default {
       </div>
 
       <div class="d-flex justify-content-end mt-2">
-        <button class="btn btn-primary" @click="saveClassResults">
+        <button class="btn btn-primary" @click="saveClassResults" :disabled="!examId || !subjectId || !academicYear || rows.length === 0">
           Save Class Results
         </button>
       </div>
@@ -257,14 +258,16 @@ export default {
       immediate: true,
       handler(studentList) {
 
+        this.errors = {}
+
         this.rows = (studentList || []).map(student => ({
           ...student,
 
           marks: {
-            theory: student.marks?.theory ?? 0,
-            lab: student.marks?.lab ?? 0,
-            attendance: student.marks?.attendance ?? 0,
-            activity: student.marks?.activity ?? 0
+            theory: student.marks?.theory ?? null,
+            lab: student.marks?.lab ?? null,
+            attendance: student.marks?.attendance ?? null,
+            activity: student.marks?.activity ?? null
           }
 
         }))
@@ -290,7 +293,7 @@ export default {
         this.errors[studentId] = {}
       }
       
-      if (value > this.maxMarks) {
+      if (value < 0 || value > this.maxMarks) {
         this.errors[studentId][field] = true
       } else {
         delete this.errors[studentId][field]
@@ -324,6 +327,19 @@ export default {
       return theoryMarks + labMarks + attendanceMarks + activityMarks
     },
 
+    hasAnyMark(studentRow) {
+      return ['theory', 'lab', 'attendance', 'activity'].some(field => {
+        const enabled = field === 'theory' ? this.hasTheory : field === 'lab' ? this.hasLab : field === 'attendance' ? this.hasAttendance : this.hasActivity
+        return enabled && studentRow.marks[field] !== null && studentRow.marks[field] !== '' && studentRow.marks[field] !== undefined
+      })
+    },
+
+    optionalMark(value) {
+      if (value === null || value === '' || value === undefined) return null
+      const number = Number(value)
+      return Number.isFinite(number) ? number : null
+    },
+
     saveClassResults() {
 
       // Validate all rows first
@@ -333,9 +349,10 @@ export default {
         
         // Check each field
         ;['theory', 'lab', 'attendance', 'activity'].forEach(field => {
-          if (studentRow.marks[field] && Number(studentRow.marks[field]) > this.maxMarks) {
+          const enabled = field === 'theory' ? this.hasTheory : field === 'lab' ? this.hasLab : field === 'attendance' ? this.hasAttendance : this.hasActivity
+          if (enabled && studentRow.marks[field] !== null && studentRow.marks[field] !== '') {
             this.validateField(studentRow, field)
-            hasErrors = true
+            if (this.hasFieldError(studentRow.id, field)) hasErrors = true
           }
         })
         
@@ -363,15 +380,15 @@ export default {
 
         subject_id: this.subjectId,
 
-        theory_marks: parseFloat(studentRow.marks.theory) || 0,
+        theory_marks: this.optionalMark(studentRow.marks.theory),
 
-        lab_marks: parseFloat(studentRow.marks.lab) || 0,
+        lab_marks: this.optionalMark(studentRow.marks.lab),
 
-        attendance_marks: parseFloat(studentRow.marks.attendance) || 0,
+        attendance_marks: this.optionalMark(studentRow.marks.attendance),
 
-        activity_marks: parseFloat(studentRow.marks.activity) || 0,
+        activity_marks: this.optionalMark(studentRow.marks.activity),
 
-        total_marks: this.calculateRowTotal(studentRow)
+        total_marks: this.hasAnyMark(studentRow) ? this.calculateRowTotal(studentRow) : null
 
       }))
 
@@ -385,10 +402,13 @@ export default {
       
       // Check each field
       ;['theory', 'lab', 'attendance', 'activity'].forEach(field => {
-        if (studentRow.marks[field] && Number(studentRow.marks[field]) > this.maxMarks) {
-          this.validateField(studentRow, field)
-        }
+        const enabled = field === 'theory' ? this.hasTheory : field === 'lab' ? this.hasLab : field === 'attendance' ? this.hasAttendance : this.hasActivity
+        if (enabled && studentRow.marks[field] !== null && studentRow.marks[field] !== '') this.validateField(studentRow, field)
       })
+
+      if (this.hasAnyErrors(studentRow.id)) {
+        return this.$emit('error', `Marks must be between 0 and ${this.maxMarks}`)
+      }
       
       // Check total
       if (total > this.maxMarks) {
@@ -401,9 +421,9 @@ export default {
 
         student_id: studentRow.student_id,
 
-        exam_id: Number(this.examId),
+        exam_id: this.examId,
 
-        subject_id: Number(this.subjectId),
+        subject_id: this.subjectId,
 
         marks: {
           ...studentRow.marks

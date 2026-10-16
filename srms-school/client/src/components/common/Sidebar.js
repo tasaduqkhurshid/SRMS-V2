@@ -18,8 +18,6 @@ export default {
 
     // School branding
     const schoolLogo = ref('')
-    const schoolName = ref('School Portal')
-    const schoolInitials = ref('SP')
 
     const handleResize = () => {
       mobile.value = window.innerWidth < 992
@@ -33,16 +31,7 @@ export default {
       try {
         const storedUser = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}")
         const school = storedUser.school || {}
-        const name = storedUser.schoolName || school.name || school.school_name || "School Portal"
-        schoolName.value = name
         schoolLogo.value = school.logo_url || school.logo_path || ''
-        schoolInitials.value = String(school.abbreviation || name)
-          .split(/\s+/)
-          .filter(Boolean)
-          .map((part) => part[0])
-          .join("")
-          .slice(0, 2)
-          .toUpperCase() || "SP"
       } catch (e) {
         schoolLogo.value = ''
       }
@@ -196,8 +185,6 @@ export default {
       resultBookOpen,
       toggleResultBook,
       schoolLogo,
-      schoolName,
-      schoolInitials,
       currentYear: new Date().getFullYear()
     }
   }

@@ -1,6 +1,6 @@
 import { api } from '../../../Services/api.js'
 import template from './GenerateMarksheetTemplate.js'
-const { ref, onMounted, computed } = Vue
+const { ref, onMounted, computed, watch } = Vue
 const { useRoute, useRouter } = VueRouter
 
 export default {
@@ -34,9 +34,23 @@ export default {
 
     const selectedStudentIds = computed(() => {
       if (isAllStudentsSelected.value) {
-        return students.value.map(s => s._id)
+        return visibleStudents.value.map(s => s._id)
       }
       return selectedStudent.value ? [selectedStudent.value] : []
+    })
+
+    const visibleStudents = computed(() => students.value.filter(student => {
+      const studentCourse = student.class?._id || student.class
+      const studentYear = student.academic_year_id?._id || student.academic_year_id
+      const matchesCourse = !selectedCourse.value || String(studentCourse || '') === String(selectedCourse.value)
+      const matchesYear = !selectedAcademicYear.value || !studentYear || String(studentYear) === String(selectedAcademicYear.value)
+      return matchesCourse && matchesYear
+    }))
+
+    watch([selectedCourse, selectedAcademicYear], () => {
+      if (selectedStudent.value && selectedStudent.value !== '__ALL__' && !visibleStudents.value.some(student => String(student._id) === String(selectedStudent.value))) {
+        selectedStudent.value = null
+      }
     })
 
     // Track which exams are selected
@@ -130,18 +144,10 @@ export default {
 
       loading.value = true
       try {
-        console.log('=== Marksheet Generation Start ===')
-        console.log('Template ID:', selectedTemplate.value)
-        console.log('Selected template object:', templates.value.find(t => t._id === selectedTemplate.value))
-        console.log('Student(s):', selectedStudentIds.value)
-        console.log('Exam IDs:', selectedExams.value)
-        console.log('Exams detail:', exams.value.filter(e => selectedExams.value.includes(e._id)))
-        console.log('Academic Year ID:', selectedAcademicYear.value)
         const studentIds = selectedStudentIds.value
 
         // If generating for all students, generate for each one
         if (isAllStudentsSelected.value) {
-          console.log(`Generating marksheets for all ${studentIds.length} students`)
           const marksheets = []
           let successCount = 0
           let failCount = 0
@@ -154,10 +160,7 @@ export default {
                 template_id: selectedTemplate.value,
                 academic_year_id: selectedAcademicYear.value || null
               }
-              console.log(`[${studentId}] Posting payload:`, JSON.stringify(payload))
               const response = await api.post('/results/generate-marksheet', payload)
-              
-              console.log(`[${studentId}] Response:`, response.data)
               if (response.data.success && response.data.data?.html) {
                 marksheets.push({
                   studentId,
@@ -165,30 +168,24 @@ export default {
                   studentName: students.value.find(s => s._id === studentId)?.name || `Student ${studentId}`
                 })
                 successCount++
-                console.log(`[${studentId}] ✓ Success`)
               } else {
                 failCount++
                 const errorMsg = response.data.error || 'Unknown error'
-                console.warn(`[${studentId}] ✗ Failed: ${errorMsg}`)
                 toast?.error?.(`Failed for student ${studentId}: ${errorMsg}`)
               }
             } catch (err) {
               failCount++
-              console.error(`[${studentId}] ✗ Exception:`, err)
-              console.error(`[${studentId}] Response data:`, err.response?.data)
               toast?.error?.(`Error for student ${studentId}: ${err.response?.data?.error || err.message}`)
             }
           }
 
           if (marksheets.length === 0) {
-            console.error('No marksheets generated:', { successCount, failCount })
             toast?.error?.(`Failed to generate any marksheets (${failCount} failed)`)
             loading.value = false
             return
           }
 
           // Store all marksheets and show them
-          console.log(`Generated ${successCount} marksheets, ${failCount} failed`)
           previewHTML.value = marksheets
           showPreview.value = true
           toast?.success?.(`Generated ${marksheets.length} marksheet(s)`)
@@ -201,13 +198,9 @@ export default {
             academic_year_id: selectedAcademicYear.value || null
           }
 
-          console.log('Generating single marksheet with payload:', JSON.stringify(payload))
           const response = await api.post('/results/generate-marksheet', payload)
-          
-          console.log('Response:', response.data)
           if (!response.data.success) {
             const errorMsg = response.data.error || 'Unknown error'
-            console.error('Marksheet generation failed:', errorMsg)
             toast?.error?.(`Error: ${errorMsg}`)
             loading.value = false
             return
@@ -225,9 +218,6 @@ export default {
           toast?.success?.('Marksheet generated successfully')
         }
       } catch (error) {
-        console.error('=== Marksheet Generation Exception ===')
-        console.error('Error:', error)
-        console.error('Response:', error.response?.data)
         const errorMsg = error.response?.data?.error || error.message || 'Error generating preview'
         toast?.error?.(errorMsg)
       } finally {
@@ -235,61 +225,62 @@ export default {
       }
     }
 
-    // Issue marksheet (save to results)
-    const issueMarksheet = async () => {
-      if (!selectedStudent.value || selectedExams.value.length === 0) {
-        toast?.error?.('Please select student and at least one exam')
+    const printMarksheet = () => {
+      const sheets = Array.isArray(previewHTML.value) ? previewHTML.value : [{ html: previewHTML.value }]
+      const printWindow = window.open('', '_blank')
+      if (!printWindow) {
+        toast?.error?.('Allow pop-ups to print the marksheet')
         return
       }
-
-      saving.value = true
-      try {
-        // Mark results as issued for all selected exams
-        for (const examId of selectedExams.value) {
-          const params = new URLSearchParams()
-          params.append('student_id', selectedStudent.value)
-          params.append('exam_id', examId)
-
-          const response = await api.get(`/results?${params.toString()}`)
-          const results = response.data?.data?.results || []
-
-          // Here you might update results with is_issued flag if needed
-        }
-        toast?.success?.(`Marksheet issued for ${selectedExams.value.length} exam(s)`)
-        showPreview.value = false
-      } catch (error) {
-        console.error('Error issuing marksheet:', error)
-        toast?.error?.('Error issuing marksheet')
-      } finally {
-        saving.value = false
-      }
+      printWindow.opener = null
+      printWindow.document.write(`<!doctype html><html><head><title>Student Marksheet</title><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;margin:20px}.sheet{page-break-after:always}.sheet:last-child{page-break-after:auto}@media print{body{margin:0}}</style></head><body>${sheets.map(sheet => `<section class="sheet">${sheet.html || ''}</section>`).join('')}</body></html>`)
+      printWindow.document.close()
+      printWindow.focus()
+      printWindow.print()
     }
 
     // Upgrade student to next year
     const upgradeStudent = async () => {
-      if (!selectedStudent.value || !selectedAcademicYear.value) {
-        toast?.error?.('Please select student and current academic year')
+      if (!selectedStudent.value || selectedStudent.value === '__ALL__' || !selectedAcademicYear.value) {
+        toast?.error?.('Select one student and the current academic year to upgrade')
         return
       }
 
       saving.value = true
       try {
-        // Find next academic year
-        const currentYearIndex = academicYears.value.findIndex(y => y._id === selectedAcademicYear.value)
-        if (currentYearIndex === -1 || currentYearIndex === academicYears.value.length - 1) {
+        const sortedYears = [...academicYears.value].sort((a, b) => {
+          const yearStart = year => year.start_date ? new Date(year.start_date).getTime() : Number(String(year.name || '').match(/\d{4}/)?.[0] || 0)
+          return yearStart(a) - yearStart(b)
+        })
+        const currentYearIndex = sortedYears.findIndex(y => String(y._id) === String(selectedAcademicYear.value))
+        if (currentYearIndex === -1 || currentYearIndex === sortedYears.length - 1) {
           toast?.error?.('Next academic year not found')
           return
         }
-
-        const nextYear = academicYears.value[currentYearIndex + 1]
-
-        // Update student's academic year (would need a dedicated endpoint in backend)
-        // For now, just show a success message
-        toast?.success?.(`Student upgraded from ${academicYears.value[currentYearIndex].name} to ${nextYear.name}`)
+        const currentYear = sortedYears[currentYearIndex]
+        const nextYear = sortedYears[currentYearIndex + 1]
+        const student = visibleStudents.value.find(item => String(item._id) === String(selectedStudent.value))
+        if (!student) throw new Error('Selected student is no longer available for this course and year')
+        const response = await api.post('/students/save', {
+          studentId: student._id,
+          name: student.name,
+          roll_number: student.roll_number,
+          admission_number: student.admission_number,
+          class: student.class?._id || student.class,
+          section: student.section,
+          gender: student.gender,
+          dob: student.dob,
+          father_name: student.father_name,
+          mother_name: student.mother_name,
+          address: student.address,
+          pincode: student.pincode,
+          academic_year_id: nextYear._id
+        })
+        if (response.data?.status !== 'success') throw new Error(response.data?.message || 'Could not upgrade student')
+        toast?.success?.(`${student.name} upgraded from ${currentYear.name} to ${nextYear.name}`)
         showPreview.value = false
       } catch (error) {
-        console.error('Error upgrading student:', error)
-        toast?.error?.('Error upgrading student')
+        toast?.error?.(error.response?.data?.message || error.message || 'Could not upgrade student')
       } finally {
         saving.value = false
       }
@@ -310,6 +301,7 @@ export default {
     return {
       templates,
       students,
+      visibleStudents,
       exams,
       courses,
       academicYears,
@@ -325,7 +317,7 @@ export default {
       isAllStudentsSelected,
       selectedStudentIds,
       generatePreview,
-      issueMarksheet,
+      printMarksheet,
       upgradeStudent,
       canGenerate,
       toggleExam,

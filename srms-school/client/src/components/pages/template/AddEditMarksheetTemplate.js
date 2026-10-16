@@ -1,6 +1,6 @@
 import template from './AddEditMarksheetTemplateTemplate.js'
 import { api } from '../../../Services/api.js';
-const { ref, onMounted, computed } = Vue
+const { ref, onMounted, onUnmounted, computed } = Vue
 const { useRoute, useRouter } = VueRouter
 
 export default {
@@ -23,6 +23,7 @@ export default {
     const saving = ref(false)
     const showPreview = ref(false)
     const editorMode = ref('code') // 'code' or 'preview'
+    let htmlEditor = null
 
     // Fetch template if editing
     const fetchTemplate = async () => {
@@ -38,8 +39,7 @@ export default {
           }
         }
       } catch (error) {
-        console.error('Error fetching template:', error)
-        toast?.error?.('Error loading template')
+        toast?.error?.(error.response?.data?.message || 'Error loading template')
       } finally {
         loading.value = false
       }
@@ -65,11 +65,11 @@ export default {
         }
 
         const response = await api.post('/marksheet-templates/save', payload)
+        if (response.data?.status !== 'success' && !response.data?.success) throw new Error(response.data?.message || 'Could not save template')
         toast?.success?.(isEdit.value ? 'Template updated successfully' : 'Template created successfully')
         router.push('/templates/marksheets')
       } catch (error) {
-        console.error('Error saving template:', error)
-        toast?.error?.('Error saving template')
+        toast?.error?.(error.response?.data?.message || error.message || 'Error saving template')
       } finally {
         saving.value = false
       }
@@ -77,8 +77,8 @@ export default {
 
     // Insert placeholder
     const insertPlaceholder = (placeholder) => {
-      // Insert at cursor position or end of content
       form.value.html_content += placeholder
+      if (htmlEditor) htmlEditor.html.set(form.value.html_content)
     }
 
     // Common placeholders
@@ -90,20 +90,19 @@ export default {
       { text: 'Academic Year', value: '{{session}}' },
       { text: 'School Name', value: '{{school_name}}' },
       { text: 'Current Date', value: '{{current_date}}' },
-      { text: 'Marks Rows', value: '{{marks_rows}}' },
-      { text: 'Overall Total', value: '{{overall_total}}' },
-      { text: 'Overall Grade', value: '{{overall_grade}}' },
-      { text: 'Total Theory', value: '{{total_theory}}' },
-      { text: 'Total Lab', value: '{{total_lab}}' },
-      { text: 'Total Attendance', value: '{{total_attendance}}' },
-      { text: 'Total Activity', value: '{{total_activity}}' },
-      { text: 'Remarks', value: '{{remarks}}' }
+      { text: 'School Logo', value: '{{school_logo}}' },
+      { text: 'Marks Matrix', value: '{{marks_matrix}}' },
+      { text: 'Remarks Matrix', value: '{{remarks_matrix}}' },
+      { text: 'Total Marks', value: '{{total_marks}}' },
+      { text: 'Maximum Marks', value: '{{max_marks}}' },
+      { text: 'Date', value: '{{date}}' }
     ]
 
     const insertSampleMarksheet = () => {
       form.value.html_content = `
 <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
   <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #000; padding-bottom: 15px;">
+    <img src="{{school_logo}}" alt="School logo" style="max-height: 80px; max-width: 160px; object-fit: contain;" />
     <h2 style="margin: 0;">{{school_name}}</h2>
     <h3 style="margin: 5px 0 0 0; color: #666;">MARKSHEET</h3>
   </div>
@@ -117,26 +116,11 @@ export default {
     <div><strong>Date:</strong> {{current_date}}</div>
   </div>
 
-  <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
-    <thead>
-      <tr style="background-color: #f0f0f0; border: 1px solid #ddd;">
-        <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Subject</th>
-        <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Theory</th>
-        <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Lab</th>
-        <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Attendance</th>
-        <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Activity</th>
-        <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Total</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{marks_rows}}
-    </tbody>
-  </table>
+  <div style="margin: 20px 0;">{{marks_matrix}}</div>
 
   <div style="margin: 20px 0; padding: 15px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 14px;">
-    <div><strong>Overall Total Marks:</strong> {{overall_total}}</div>
-    <div><strong>Overall Grade:</strong> {{overall_grade}}</div>
-    <div style="margin-top: 10px;">Remarks: {{remarks}}</div>
+    <div><strong>Overall Total Marks:</strong> {{total_marks}} / {{max_marks}}</div>
+    <div style="margin-top: 10px;">{{remarks_matrix}}</div>
   </div>
 
   <div style="margin-top: 30px; display: flex; justify-content: space-between; font-size: 12px;">
@@ -145,18 +129,15 @@ export default {
   </div>
 </div>
       `
+      if (htmlEditor) htmlEditor.html.set(form.value.html_content)
     }
 
-    onMounted(() => {
-      if (isEdit.value) {
-        fetchTemplate()
-      }
-      
-      // Initialize Froala Editor
-      setTimeout(() => {
-        const editor = new FroalaEditor('#html_editor', {
-          heightMin: 350,
-          heightMax: 350,
+    onMounted(async () => {
+      if (isEdit.value) await fetchTemplate()
+      await Vue.nextTick()
+      htmlEditor = new FroalaEditor('#html_editor', {
+          heightMin: 420,
+          heightMax: 560,
           toolbarButtons: [
             'bold', 'italic', 'underline', 'strikethrough', '|',
             'formatOL', 'formatUL', '|',
@@ -172,18 +153,13 @@ export default {
             tabSize: 2
           }
         })
-        
-        // Set initial content if editing
-        if (isEdit.value && form.value.html_content) {
-          editor.html.set(form.value.html_content)
-        }
-        
-        // Update form.html_content when editor changes
-        editor.events.on('contentChanged', function() {
+        if (form.value.html_content) htmlEditor.html.set(form.value.html_content)
+        htmlEditor.events.on('contentChanged', function() {
           form.value.html_content = this.html.get()
         })
-      }, 100)
     })
+
+    onUnmounted(() => { if (htmlEditor) { htmlEditor.destroy(); htmlEditor = null } })
 
     return {
       form,

@@ -108,7 +108,7 @@ export const generateResultsTemplate = async (
     students.forEach((student) => {
 
       const row = [
-        student.id,
+        student._id || student.id,
         student.name,
         className || courseCode || ''
       ]

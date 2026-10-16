@@ -70,7 +70,7 @@ const listCourseSubjects = asyncHandler(async (req, res, next) => {
   if (result.error) return next(result.error);
 
   if (req.query && (req.query.flat === "1" || req.query.flat === "true")) {
-    const subjects = (Array.isArray(result.data) ? result.data.map((r) => (r && r.subject) ? r.subject : r) : []);
+    const subjects = (Array.isArray(result.data) ? result.data.map((r) => (r && (r.subject || r.subject_id)) ? (r.subject || r.subject_id) : r) : []);
     return sendSuccessJsonResponse(res, { statusCode: STATUS.OK, message: "Course subjects retrieved", data: subjects });
   }
   return sendSuccessJsonResponse(res, { statusCode: STATUS.OK, message: "Course subjects retrieved", data: result.data });
