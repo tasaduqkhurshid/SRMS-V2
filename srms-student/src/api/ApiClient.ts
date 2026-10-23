@@ -11,6 +11,13 @@ export class ApiClient {
   private static readonly baseUrl =
     process.env.EXPO_PUBLIC_API_URL ?? process.env.API_BASE_URL ?? '';
 
+  static resolveAssetUri(uri: string | null | undefined): string {
+    if (!uri || /^(data:|https?:\/\/)/i.test(uri)) return uri || '';
+    const base = this.baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+    if (!base) return uri;
+    try { return new URL(uri, base).toString(); } catch { return uri; }
+  }
+
   static getToken(): string | null {
     if (typeof window !== 'undefined' && 'localStorage' in window) {
       return window.localStorage.getItem('srms_student_token');

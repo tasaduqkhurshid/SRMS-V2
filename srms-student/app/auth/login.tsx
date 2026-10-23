@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Role, SchoolBrand } from '../../src/models';
 import { authService } from '../../src/services/authService';
+import { ApiClient } from '../../src/api/ApiClient';
 import { useAppStore } from '../../src/store/app-store';
 import { palette } from '../../src/theme/theme';
 
@@ -124,7 +125,7 @@ export function StudentLoginScreen() {
             <View style={[styles.welcomePanel, isWide ? styles.wideWelcomePanel : styles.narrowWelcomePanel]}>
               {brand?.campusImageUrl ? (
                 <ImageBackground
-                  source={{ uri: brand.campusImageUrl }}
+                  source={{ uri: ApiClient.resolveAssetUri(brand.campusImageUrl) }}
                   resizeMode="cover"
                   style={StyleSheet.absoluteFill}
                 >
@@ -142,7 +143,7 @@ export function StudentLoginScreen() {
               <View style={styles.welcomeContent}>
                 <View style={styles.brandRow}>
                   {brand?.logoUrl ? (
-                    <Image source={{ uri: brand.logoUrl }} resizeMode="contain" style={styles.brandImage} />
+                    <Image source={{ uri: ApiClient.resolveAssetUri(brand.logoUrl) }} resizeMode="contain" style={styles.brandImage} />
                   ) : (
                     <View style={styles.brandIcon}>
                       <Ionicons name="school" size={27} color="#fff" />

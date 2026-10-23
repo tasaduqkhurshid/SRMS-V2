@@ -69,7 +69,7 @@ export default `
               </div>
               <div class="student-form-field">
                 <label for="studentSection">Section</label>
-                <input id="studentSection" class="form-control" v-model="student.section" data-vtype="text" placeholder="Enter section" />
+                <input id="studentSection" class="form-control" v-model="student.section" data-vtype="text" data-vmin="1" placeholder="Enter section (e.g., A, B, General)" />
               </div>
               <div class="student-form-field">
                 <label for="studentGender">Gender</label>

@@ -22,6 +22,14 @@ export const portalApi = {
     if (!response.ok) throw new Error(payload.message || payload.error || `Request failed (${response.status})`);
     return payload?.data ?? payload;
   },
+  async requestBlob(path) {
+    const response = await fetch(path, {
+      headers: this.getToken() ? { Authorization: `Bearer ${this.getToken()}` } : {},
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error(`Image request failed (${response.status})`);
+    return response.blob();
+  },
   async getSchoolBrand() { return this.request('/api/student/school/brand'); },
   async login(identifier, password, rememberMe, mode = 'student') {
     const data = await this.request(mode === 'parent' ? '/api/student/auth/parent-login' : '/api/student/auth/login', {

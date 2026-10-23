@@ -29,7 +29,11 @@ const StudentSchema = new mongoose.Schema(
     academic_year_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'AcademicYear'
-    }
+    },
+    profile_image_key: { type: String, default: '' },
+    profile_image_mime_type: { type: String, default: '' },
+    profile_image_name: { type: String, default: '' },
+    profile_image_updated_at: { type: Date, default: null }
   },
   {
     timestamps: true,

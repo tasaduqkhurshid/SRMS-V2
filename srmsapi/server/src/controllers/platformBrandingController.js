@@ -49,18 +49,23 @@ const uploadBranding = asyncHandler(async (req, res, next) => {
   const school = await School.findById(req.params.schoolId).lean();
   if (!school) throw new NotFoundError("School");
 
+  let key;
   try {
     // Upload to public bucket via branding-specific service method
-    const { key } = await storage.uploadBrandingAsset({
+    ({ key } = await storage.uploadBrandingAsset({
       schoolSlug: school.slug,
       asset: configAsset.base,
       body: req.file.buffer,
       contentType: req.file.mimetype,
       extension,
-    });
+    }));
 
     // Update school record with new key
-    await School.updateOne({ _id: school._id }, { $set: { [`branding.${configAsset.field}`]: key } });
+    const url = `/api/student/school/branding/${req.params.asset}?v=${encodeURIComponent(key)}`;
+    const set = { [`branding.${configAsset.field}`]: key };
+    if (req.params.asset === "logo") set.logo_url = url;
+    if (req.params.asset === "welcome-image") set.campus_image_url = url;
+    await School.updateOne({ _id: school._id }, { $set: set });
   } catch (error) {
     // If DB update fails, attempt cleanup of newly uploaded branding asset
     await storage.deleteBrandingAsset(key).catch(() => {});
@@ -70,7 +75,7 @@ const uploadBranding = asyncHandler(async (req, res, next) => {
   return sendSuccessJsonResponse(res, {
     statusCode: 200,
     message: "Branding uploaded",
-    data: { asset: req.params.asset, url: `/api/student/school/branding/${req.params.asset}` },
+    data: { asset: req.params.asset, url: `/api/student/school/branding/${req.params.asset}?v=${encodeURIComponent(key)}` },
   });
 });
 
@@ -131,7 +136,10 @@ const deleteBrandingAsset = asyncHandler(async (req, res, next) => {
   });
 
   // Clear the key from school record
-  await School.updateOne({ _id: school._id }, { $set: { [`branding.${configAsset.field}`]: "" } });
+  const set = { [`branding.${configAsset.field}`]: "" };
+  const legacyField = req.params.asset === "logo" ? "logo_url" : "campus_image_url";
+  if (String(school[legacyField] || "").startsWith(`/api/student/school/branding/${req.params.asset}`)) set[legacyField] = "";
+  await School.updateOne({ _id: school._id }, { $set: set });
 
   return sendSuccessJsonResponse(res, {
     statusCode: 200,

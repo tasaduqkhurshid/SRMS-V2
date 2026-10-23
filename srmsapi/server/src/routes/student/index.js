@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateJwt, requireStudentAuth, requireStudentPortalAuth } = require('../../middleware/AuthService');
 const authController = require('../../controllers/student/auth.controller');
+const profileController = require('../../controllers/student/profile.controller');
 const brandingController = require('../../controllers/platformBrandingController');
 const FeeController = require('../../controllers/FeeController');
 
@@ -11,6 +12,7 @@ router.get('/manifest', authController.manifest);
 router.use('/auth', require('./auth.routes'));
 router.post('/payments/webhook', FeeController.paymentWebhook);
 router.use('/fees', authenticateJwt, requireStudentPortalAuth, require('./fees.routes'));
+router.get('/profile/photo', authenticateJwt, requireStudentPortalAuth, profileController.getPhoto);
 router.use(authenticateJwt, requireStudentAuth);
 router.use('/dashboard', require('./dashboard.routes'));
 router.use('/profile', require('./profile.routes'));

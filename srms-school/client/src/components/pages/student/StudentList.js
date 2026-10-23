@@ -1,6 +1,6 @@
 import template from "./StudentListTemplate.js";
 import { api } from "../../../Services/api.js";
-const { ref, onMounted, watch, computed } = Vue;
+const { ref, onMounted, onUnmounted, watch, computed } = Vue;
 const { useRoute } = VueRouter;
 
 export default {
@@ -16,6 +16,26 @@ export default {
     const total = ref(0);
     const meta = ref({ page: 1, limit: 20, total: 0, pages: 1 });
     const courses = ref([]);
+    const photoObjectUrls = new Map();
+
+    const clearPhotoUrls = () => {
+      photoObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+      photoObjectUrls.clear();
+    };
+
+    const loadStudentPhotos = async (rows) => {
+      clearPhotoUrls();
+      await Promise.all((rows || []).filter((student) => student.has_profile_image).map(async (student) => {
+        try {
+          const response = await api.get(`/students/${student._id}/image`, { responseType: "blob" });
+          const url = URL.createObjectURL(response.data);
+          photoObjectUrls.set(String(student._id), url);
+          student.avatarUrl = url;
+        } catch (_) {
+          student.avatarUrl = "";
+        }
+      }));
+    };
 
     // clearer variable names
     const searchTerm = ref("");
@@ -68,6 +88,7 @@ export default {
         const { studentsList, totalCount, pages } = parseResponse(response);
 
         students.value = Array.isArray(studentsList) ? studentsList : [];
+        await loadStudentPhotos(students.value);
         total.value = Number(totalCount) || 0;
         meta.value = {
           page: page.value,
@@ -252,6 +273,8 @@ export default {
       }
       getStudentList();
     });
+
+    onUnmounted(clearPhotoUrls);
 
     // keep the list in sync when the header search updates the query
     watch(() => route.query.q, (q) => {

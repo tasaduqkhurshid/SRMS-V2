@@ -219,6 +219,9 @@ const saveStudentDetails = async () => {
     
     // Build payload
     const payload = { ...student.value };
+    // Keep the existing preview out of the update request; only a newly chosen
+    // file should replace the private stored photo.
+    delete payload.image;
     if (props.studentId) {
       payload.studentId = props.studentId;
     }
@@ -226,6 +229,7 @@ const saveStudentDetails = async () => {
     // If user selected an image → convert to base64
     if (selectedFile.value) {
       payload.image = await fileToBase64(selectedFile.value);
+      payload.image_name = selectedFile.value.name;
     }
 
     // Make request

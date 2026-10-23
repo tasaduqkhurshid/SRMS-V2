@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { portalApi } from '../services/api.js';
 
@@ -10,8 +10,10 @@ const loading = ref(true);
 const error = ref('');
 const actionMessage = ref('');
 const actionBusy = ref(false);
+const photoUrl = ref('');
+let photoObjectUrl = '';
 const session = portalApi.getSession() || {};
-const school = computed(() => session?.school || {});
+const school = ref(session?.school || {});
 const children = computed(() => session?.children?.length ? session.children : session?.student ? [session.student] : []);
 const parentMode = computed(() => String(session?.user?.role || '').toLowerCase() === 'parent');
 const selectedStudentId = ref(children.value[0]?.id || children.value[0]?._id || '');
@@ -42,6 +44,18 @@ async function loadSection(preserveActionMessage = false) {
 }
 
 function logout() { portalApi.logout(); router.replace('/login'); }
+
+async function loadStudentPhoto() {
+  if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl);
+  photoObjectUrl = '';
+  photoUrl.value = '';
+  const query = parentMode.value && selectedStudentId.value
+    ? `?student_id=${encodeURIComponent(selectedStudentId.value)}` : '';
+  try {
+    photoObjectUrl = URL.createObjectURL(await portalApi.requestBlob(`/api/student/profile/photo${query}`));
+    photoUrl.value = photoObjectUrl;
+  } catch { /* Students without an uploaded photo use their initials. */ }
+}
 
 async function printReceipt(payment, childId = selectedStudentId.value) {
   try {
@@ -105,15 +119,20 @@ async function payNow(account) {
   finally { actionBusy.value = false; }
 }
 
-onMounted(loadSection);
+onMounted(async () => {
+  try { school.value = await portalApi.getSchoolBrand(); } catch { /* Use the branding saved at login. */ }
+  await loadStudentPhoto();
+  await loadSection();
+});
+onUnmounted(() => { if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl); });
 watch(() => props.section, loadSection);
-watch(selectedStudentId, () => { if (props.section === 'fees' && parentMode.value) loadSection(); });
+watch(selectedStudentId, () => { if (parentMode.value) { void loadStudentPhoto(); if (props.section === 'fees') loadSection(); } });
 </script>
 
 <template>
   <div class="portal-layout">
-    <aside class="portal-sidebar"><a class="portal-brand" href="/dashboard"><span>{{ school.abbreviation || 'SR' }}</span><b>{{ school.name || 'Student Portal' }}<small>{{ parentMode ? 'Parent access' : 'Student Portal' }}</small></b></a><nav><RouterLink v-for="item in navigation" :key="item[0]" :to="`/${item[0]}`" :class="{ active: item[0] === section }">{{ item[1] }}</RouterLink></nav><button class="logout-button" @click="logout">Sign out</button></aside>
-    <main class="portal-main"><header class="portal-topbar"><div><small>{{ parentMode ? 'FAMILY FEE PORTAL' : 'STUDENT PORTAL' }}</small><h1>{{ title }}</h1></div><label v-if="section === 'fees' && parentMode && children.length > 1" class="child-selector">Student<select v-model="selectedStudentId"><option v-for="child in children" :key="child.id || child._id" :value="child.id || child._id">{{ child.name }} · {{ child.className || child.class }}</option></select></label><div class="student-chip"><span>{{ (student.name || 'Student').slice(0,1) }}</span>{{ student.name || 'Student' }}</div></header>
+    <aside class="portal-sidebar"><a class="portal-brand" href="/dashboard"><img v-if="school.logoUrl || school.logo_url" :src="school.logoUrl || school.logo_url" alt="School logo" @error="$event.target.hidden = true" /><span v-else>{{ school.abbreviation || 'SR' }}</span><b>{{ school.name || school.school_name || 'Student Portal' }}<small>{{ parentMode ? 'Parent access' : 'Student Portal' }}</small></b></a><nav><RouterLink v-for="item in navigation" :key="item[0]" :to="`/${item[0]}`" :class="{ active: item[0] === section }">{{ item[1] }}</RouterLink></nav><button class="logout-button" @click="logout">Sign out</button></aside>
+    <main class="portal-main"><header class="portal-topbar"><div><small>{{ parentMode ? 'FAMILY FEE PORTAL' : 'STUDENT PORTAL' }}</small><h1>{{ title }}</h1></div><label v-if="section === 'fees' && parentMode && children.length > 1" class="child-selector">Student<select v-model="selectedStudentId"><option v-for="child in children" :key="child.id || child._id" :value="child.id || child._id">{{ child.name }} · {{ child.className || child.class }}</option></select></label><div class="student-chip"><img v-if="photoUrl" :src="photoUrl" alt="Student profile" /><span v-else>{{ (student.name || 'Student').slice(0,1) }}</span>{{ student.name || 'Student' }}</div></header>
       <div v-if="error" class="portal-error" role="alert"><span>{{ error }}</span><button class="portal-retry" @click="loadSection">Retry</button></div>
       <p v-if="actionMessage" class="portal-message" role="status">{{ actionMessage }}</p>
       <div v-if="loading" class="portal-card portal-loading">Loading {{ title.toLowerCase() }}…</div>
@@ -130,7 +149,7 @@ watch(selectedStudentId, () => { if (props.section === 'fees' && parentMode.valu
           <section class="portal-card"><h2>Payment history</h2><div v-if="!data?.transactions?.length" class="portal-empty">No payments have been recorded yet.</div><div v-else class="fee-transaction-list"><article v-for="payment in data.transactions" :key="payment._id"><div><b>{{ payment.receipt_number || payment.reference || 'Payment' }}</b><small>{{ shortDate(payment.createdAt) }} · {{ payment.method.replace('_', ' ') }}</small><small v-if="payment.status_message">{{ payment.status_message }}</small></div><div class="fee-transaction-end"><span :class="['portal-status', payment.status.toLowerCase()]">{{ payment.status }}</span><b>{{ payment.kind === 'REFUND' && payment.status === 'CONFIRMED' ? '−' : '' }}{{ money(payment.amount_minor) }}</b><button v-if="payment.kind === 'COLLECTION' && payment.status === 'CONFIRMED'" class="fee-receipt-button" @click="printReceipt(payment)">Receipt</button><button v-else-if="payment.method === 'ONLINE' && payment.status === 'PENDING'" class="fee-receipt-button" @click="checkOnlinePayment(payment._id)">Check status</button></div></article></div></section>
           <div v-if="!data?.accounts?.length" class="portal-card portal-empty">Your school has not assigned any fee accounts yet.</div>
         </section>
-        <section v-else-if="section === 'profile'" class="portal-card"><h2>Profile details</h2><p><b>Name</b>{{ displayValue(data?.student?.name || student.name) }}</p><p><b>Student ID</b>{{ displayValue(data?.student?.admissionNumber || student.admissionNumber) }}</p><p><b>Class / section</b>{{ displayValue(data?.student?.className || student.className) }} / {{ displayValue(data?.student?.section || student.section) }}</p><p><b>Academic year</b>{{ displayValue(data?.academicYear?.name || student.academicYear) }}</p></section>
+        <section v-else-if="section === 'profile'" class="portal-card"><div class="profile-photo-heading"><img v-if="photoUrl" :src="photoUrl" alt="Student profile" /><span v-else>{{ (student.name || 'Student').slice(0,1) }}</span><h2>Profile details</h2></div><p><b>Name</b>{{ displayValue(data?.student?.name || student.name) }}</p><p><b>Student ID</b>{{ displayValue(data?.student?.admissionNumber || student.admissionNumber) }}</p><p><b>Class / section</b>{{ displayValue(data?.student?.className || student.className) }} / {{ displayValue(data?.student?.section || student.section) }}</p><p><b>Academic year</b>{{ displayValue(data?.academicYear?.name || student.academicYear) }}</p></section>
         <section v-else-if="section !== 'dashboard'" class="portal-card"><h2>{{ title }} details</h2><div v-if="Array.isArray(data) && data.length" class="data-list"><pre v-for="(item,index) in data" :key="item.id || item._id || index">{{ JSON.stringify(item, null, 2) }}</pre></div><div v-else-if="Array.isArray(data?.results) && data.results.length" class="data-list"><pre v-for="(item,index) in data.results" :key="item.id || item._id || index">{{ JSON.stringify(item, null, 2) }}</pre></div><div v-else class="empty-state">No {{ title.toLowerCase() }} information is available yet.</div></section>
       </template>
     </main>

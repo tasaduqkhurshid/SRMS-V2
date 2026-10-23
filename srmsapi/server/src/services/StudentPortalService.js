@@ -3,6 +3,7 @@
 const { Student, School, AcademicYear, Result, Exam } = require("../db/models");
 const { success, failure } = require("../utils/serviceResult");
 const FeeService = require("./FeeService");
+const { brandingAssetUrl } = require("../utils/brandingUrls");
 
 const getSchoolById = async (schoolId) => {
   try {
@@ -150,8 +151,8 @@ const getStudentProfile = async (user) => {
         address: school?.address || "",
         website: school?.website || "",
         school_code: school?.school_code || "",
-        logo_url: school?.logo_url || school?.logo_path || "",
-        campus_image_url: school?.campus_image_url || "",
+        logo_url: brandingAssetUrl(school, "logo") || school?.logo_url || school?.logo_path || "",
+        campus_image_url: brandingAssetUrl(school, "welcome-image") || school?.campus_image_url || "",
         logo: (school?.abbreviation || (school?.name || "School").slice(0, 3)).slice(0, 2).toUpperCase(),
       },
       academicYear: academicYear?.data || null,

@@ -101,7 +101,8 @@ export default `
             <td class="text-muted fw-medium students-row-number">{{ (meta.page - 1) * meta.limit + index + 1 }}</td>
             <td class="students-name-cell">
               <div class="students-identity">
-                <div class="student-avatar" :style="{ backgroundColor: getAvatarColor(student._id) }">{{ getInitials(student.name) }}</div>
+                <img v-if="student.avatarUrl" class="student-avatar" :src="student.avatarUrl" :alt="student.name + ' profile photo'" @error="student.avatarUrl = ''" />
+                <div v-else class="student-avatar" :style="{ backgroundColor: getAvatarColor(student._id) }">{{ getInitials(student.name) }}</div>
                 <div class="d-flex flex-column min-width-0">
                   <span class="student-name-cell">{{ student.name || '—' }}</span>
                   <span class="student-sub-cell">{{ student.roll_number || '—' }}</span>

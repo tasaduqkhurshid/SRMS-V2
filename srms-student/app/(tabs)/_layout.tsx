@@ -1,10 +1,12 @@
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '../../src/store/app-store';
 import { palette } from '../../src/theme/theme';
+import { ApiClient } from '../../src/api/ApiClient';
+import { authService } from '../../src/services/authService';
 
 const navItems = [
   { key: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: 'home-outline' },
@@ -38,12 +40,19 @@ export default function TabLayout() {
   const parent = useAppStore((state) => state.parent);
   const authMode = useAppStore((state) => state.authMode);
   const setSelectedChild = useAppStore((state) => state.setSelectedChild);
+  const setSchool = useAppStore((state) => state.setSchool);
   const logout = useAppStore((state) => state.logout);
 
   const currentRouteKey = segments.at(-1) ?? 'dashboard';
   const normalizedCurrentRouteKey = currentRouteKey === 'index' || currentRouteKey === '(tabs)' ? 'dashboard' : currentRouteKey;
   const studentName = selectedChild?.name ?? 'Student';
   const visibleNavItems = authMode === 'parent' ? navItems.filter((item) => item.key === 'fees') : navItems;
+
+  useEffect(() => {
+    let active = true;
+    authService.getSchoolBrand().then((brand) => { if (active) setSchool(brand); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [setSchool]);
 
   const navigate = (href: string) => {
     router.push(href as never);
@@ -60,7 +69,7 @@ export default function TabLayout() {
         <View style={[styles.sidebar, !isSidebarOpen && styles.sidebarCollapsed]}>
           <View style={styles.sidebarHeader}>
             <View style={styles.brandBadge}>
-              <Text style={styles.brandBadgeText}>{school.logo}</Text>
+              {school.logoUrl ? <Image source={{ uri: ApiClient.resolveAssetUri(school.logoUrl) }} resizeMode="contain" style={styles.brandImage} /> : <Text style={styles.brandBadgeText}>{school.logo}</Text>}
             </View>
             {isSidebarOpen && (
               <View style={styles.brandTextWrap}>
@@ -212,6 +221,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
   },
+  brandImage: { width: '100%', height: '100%', borderRadius: 14, backgroundColor: '#fff' },
   brandTextWrap: {
     flex: 1,
   },

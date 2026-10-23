@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const ModelUtils = require("../utils/ModelUtils");
 const { ValidationError, AuthenticationError, NotFoundError } = require("../utils/applicationErrors");
 const { success, failure } = require("../utils/serviceResult");
+const { brandingAssetUrl } = require("../utils/brandingUrls");
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 const JWT_EXPIRES_IN = "12h";
@@ -28,7 +29,8 @@ const buildSchoolData = (school) => {
     state: school.state,
     pincode: school.pincode,
     logo_path: school.logo_path,
-    logo_url: school.logo_url,
+    logo_url: brandingAssetUrl(school, "logo") || school.logo_url,
+    campus_image_url: brandingAssetUrl(school, "welcome-image") || school.campus_image_url,
     website: school.website,
     principal_name: school.principal_name,
     principal_email: school.principal_email,

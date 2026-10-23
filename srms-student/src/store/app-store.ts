@@ -12,6 +12,7 @@ interface AppState {
   login: (mode: 'student' | 'parent', payload?: { studentId?: string; username?: string; password?: string }) => Promise<boolean>;
   logout: () => void;
   setSelectedChild: (childId: string) => void;
+  setSchool: (school: SchoolBrand) => void;
   selectedChild: () => StudentProfile | undefined;
 }
 
@@ -47,6 +48,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   logout: () => set({ isAuthenticated: false, authMode: 'student', token: null, parent: parentSession, selectedChildId: parentSession.children[0]?.id ?? '' }),
   setSelectedChild: (childId) => set({ selectedChildId: childId }),
+  setSchool: (school) => set({ school }),
   selectedChild: () => {
     const selected = get().parent.children.find((child) => child.id === get().selectedChildId);
     return selected ?? get().parent.children[0];

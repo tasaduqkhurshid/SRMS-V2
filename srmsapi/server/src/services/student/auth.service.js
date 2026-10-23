@@ -5,6 +5,7 @@ const { User } = require("../../db/models");
 const bcrypt = require("bcryptjs");
 const AuthService = require("../../services/AuthService");
 const StudentPortalService = require("../StudentPortalService");
+const { brandingAssetUrl } = require("../../utils/brandingUrls");
 const { success, failure } = require("../../utils/serviceResult");
 
 const matchesDateOfBirth = (input, value) => {
@@ -37,12 +38,8 @@ const getSchoolBrand = async (school) => {
       phone: school.phone || school.contact_number || "",
       email: school.email || "",
       website: school.website || "",
-      logoUrl: school.branding?.logoKey
-        ? "/api/student/school/branding/logo"
-        : school.logo_url || school.logo_path || "",
-      campusImageUrl: school.branding?.welcomeImageKey
-        ? "/api/student/school/branding/welcome-image"
-        : school.campus_image_url || "",
+      logoUrl: brandingAssetUrl(school, "logo") || school.logo_url || school.logo_path || "",
+      campusImageUrl: brandingAssetUrl(school, "welcome-image") || school.campus_image_url || "",
       tagline: school.branding?.tagline || "A place to learn, grow, and succeed.",
       description: school.branding?.description || "A welcoming place to support learning, academic progress, and student success.",
     });

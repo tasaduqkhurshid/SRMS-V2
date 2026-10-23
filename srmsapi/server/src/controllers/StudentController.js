@@ -90,7 +90,7 @@ const saveStudentDetails = asyncHandler(async (req, res, next) => {
       });
       if (fileObjResult.error) return next(fileObjResult.error);
 
-      const savedImageResult = await StudentService.saveStudentImage(idToUse, fileObjResult.data);
+      const savedImageResult = await StudentService.saveStudentImage(idToUse, fileObjResult.data, requestParams.school_id);
       if (savedImageResult.error) return next(savedImageResult.error);
 
       if (savedImageResult.data) {
@@ -194,7 +194,7 @@ const getStudentDetails = asyncHandler(async (req, res, next) => {
     throw new ValidationError("student id is required");
   }
 
-  const result = await StudentService.getStudentDetails(id);
+  const result = await StudentService.getStudentDetails(id, req.user?.school_id || req.user?.SchoolId || req.user?.schoolId || null);
   if (result.error) return next(result.error);
 
   if (!result.data || !result.data.studentData) {
@@ -364,7 +364,7 @@ const uploadStudentImage = asyncHandler(async (req, res, next) => {
     throw new ValidationError("Image file is required (multipart/form-data)");
   }
 
-  const result = await StudentService.saveStudentImage(id, file);
+  const result = await StudentService.saveStudentImage(id, file, req.user?.school_id || req.user?.SchoolId || req.user?.schoolId || null);
   if (result.error) return next(result.error);
 
   if (!result.data) {
@@ -376,6 +376,21 @@ const uploadStudentImage = asyncHandler(async (req, res, next) => {
     message: "Student image uploaded",
     data: result.data,
   });
+});
+
+const getStudentImage = asyncHandler(async (req, res, next) => {
+  const schoolId = req.user?.school_id || req.user?.SchoolId || req.user?.schoolId || null;
+  const result = await StudentService.getStudentImage(req.params.id, schoolId);
+  if (result.error) return next(result.error);
+  if (!result.data?.buffer) return res.status(404).json({ status: "error", message: "Student photo not found" });
+
+  res.set({
+    "Content-Type": result.data.mimeType || "image/jpeg",
+    "Content-Length": String(result.data.buffer.length),
+    "Cache-Control": "private, no-store",
+    "X-Content-Type-Options": "nosniff",
+  });
+  return res.status(STATUS.OK).send(result.data.buffer);
 });
 
 const bulkImportStudents = asyncHandler(async (req, res, next) => {
@@ -437,4 +452,5 @@ module.exports = {
   setStudentPassword,
   setStudentCourse,
   bulkImportStudents,
+  getStudentImage,
 };

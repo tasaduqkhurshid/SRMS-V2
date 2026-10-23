@@ -38,6 +38,17 @@ export default {
       localUser.value = { ...storedUser }
       logoUrl.value = school.logo_url || school.logo_path || ""
 
+      // Refresh tenant branding so a logo uploaded after this session began is shown.
+      fetch('/api/student/school/brand', { cache: 'no-store', headers: { Accept: 'application/json' } })
+        .then((response) => response.ok ? response.json() : null)
+        .then((result) => {
+          const currentBrand = result?.data
+          if (!currentBrand) return
+          logoUrl.value = currentBrand.logoUrl || logoUrl.value
+          schoolName.value = currentBrand.name || schoolName.value
+        })
+        .catch(() => {})
+
       // Set user initials from username
       const name = storedUser.username || "HA"
       userInitials.value = String(name)

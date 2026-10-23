@@ -14,7 +14,7 @@ export default `
         <h3>{{ student?.name || '—' }}</h3>
         <span class="student-profile-class"><i class="fa-solid fa-graduation-cap"></i> Class {{ student?.class || '—' }}<span v-if="student?.section"> · Section {{ student.section }}</span></span>
         <div class="student-profile-quick-info">
-          <div><span class="quick-info-icon quick-blue"><i class="fa-regular fa-user"></i></span><p><small>Student #</small><strong>{{ student?._id || '—' }}</strong></p></div>
+          <div><span class="quick-info-icon quick-blue"><i class="fa-regular fa-user"></i></span><p><small>Roll Number</small><strong>{{ student?.roll_number || '—' }}</strong></p></div>
           <div><span class="quick-info-icon quick-green"><i class="fa-regular fa-file-lines"></i></span><p><small>Admission #</small><strong>{{ student?.admission_number || '—' }}</strong></p></div>
           <div><span class="quick-info-icon quick-orange"><i class="fa-regular fa-id-card"></i></span><p><small>Student ID</small><strong>{{ student?.student_code || '—' }}</strong></p></div>
           <div><span class="quick-info-icon quick-purple"><i class="fa-solid fa-people-group"></i></span><p><small>Class Roll No</small><strong>{{ student?.roll_number || '—' }}</strong></p></div>

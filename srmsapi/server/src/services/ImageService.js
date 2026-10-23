@@ -1,9 +1,11 @@
 "use strict";
 
 const path = require("path");
+const { randomUUID } = require("node:crypto");
 const PwpConstants = require("../constants/PwpConstants");
 const { ValidationError } = require("../utils/applicationErrors");
 const { success, failure } = require("../utils/serviceResult");
+const storage = require("./storage/storage.service");
 
 const validateImageFile = (entityType, file) => {
   try {
@@ -98,7 +100,37 @@ const normalizeImageToFile = async (image, opts = {}) => {
   }
 };
 
+const uploadImage = async (entityType, file, { schoolSlug, category, filenamePrefix, bucketType = "private" } = {}) => {
+  try {
+    const validation = validateImageFile(entityType, file);
+    if (validation.error) throw validation.error;
+    if (!validation.data?.isValid) throw new ValidationError(validation.data?.error || "Invalid image file");
+    if (!schoolSlug || !category || !filenamePrefix) {
+      throw new ValidationError("schoolSlug, category, and filenamePrefix are required to upload an image");
+    }
+
+    const extension = path.extname(file.originalname || "").slice(1).toLowerCase();
+    const key = storage.createUploadKey({
+      schoolSlug,
+      category,
+      filename: `${filenamePrefix}-${randomUUID()}`,
+      extension,
+    });
+    await storage.uploadFile({
+      bucketType,
+      key,
+      body: file.buffer,
+      contentType: file.mimetype,
+      cacheControl: bucketType === "private" ? "private, no-store" : undefined,
+    });
+    return success({ key, extension, mimeType: file.mimetype, fileName: file.originalname || "" });
+  } catch (error) {
+    return failure(error);
+  }
+};
+
 module.exports = {
   normalizeImageToFile,
   validateImageFile,
+  uploadImage,
 };

@@ -30,6 +30,7 @@ router.put("/:id/password", StudentController.setStudentPassword);
 
 // Student details + image (base64)
 router.get("/:id/details", StudentController.getStudentDetails);
+router.get("/:id/image", StudentController.getStudentImage);
 
 // Student subjects: list and set
 router.get("/:id/subjects", StudentController.listStudentSubjects);

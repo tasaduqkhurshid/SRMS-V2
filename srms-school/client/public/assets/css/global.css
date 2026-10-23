@@ -812,6 +812,7 @@ body {
 .students-table .form-check-input { width: 20px; height: 20px; margin: 0; border-color: #aab6ce; accent-color: #4038f4; cursor: pointer; }
 .students-identity { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .students-identity .student-avatar { width: 54px; height: 54px; font-size: 17px; background: #e1f2ff !important; color: #2874a8; }
+.students-identity img.student-avatar { object-fit: cover; }
 .students-identity .student-name-cell { overflow: hidden; color: #13234c; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .students-identity .student-sub-cell { margin-top: 4px; font-size: 13px; color: #7180a4; }
 .students-class-badge,

@@ -148,7 +148,13 @@ const viewSchool = async (school) => {
   await router.push(`/schools/${school._id}`);
 };
 
-const schoolPortalUrl = (school, path = '/admin/') => getSchoolAdminUrl(school, path);
+const schoolPortalUrl = (school, path = '/admin/') => {
+  const url = getSchoolAdminUrl(school, path);
+  const version = path.endsWith('/logo') ? school?.branding?.logoKey
+    : path.endsWith('/welcome-image') ? school?.branding?.welcomeImageKey : '';
+  if (!url || !version) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}`;
+};
 const studentPortalUrl = (school, path = '/') => getStudentPortalUrl(school, path);
 
 // Modal handlers

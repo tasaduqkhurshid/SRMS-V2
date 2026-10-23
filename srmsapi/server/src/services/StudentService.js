@@ -1,6 +1,5 @@
 "use strict";
 
-const path = require("path");
 const fs = require("fs").promises;
 const { randomInt } = require("crypto");
 
@@ -8,7 +7,8 @@ const ModelUtils = require("../utils/ModelUtils");
 const logger = require("../utils/logger");
 const PwpConstants = require("../constants/PwpConstants");
 const ImageService = require("./ImageService");
-const { Student, School, Image, Subject, StudentSubject, AcademicYear } = require("../db/models");
+const storage = require("./storage/storage.service");
+const { Student, School, Image, Subject, StudentSubject, AcademicYear, Course } = require("../db/models");
 const { ValidationError, NotFoundError, DatabaseError } = require("../utils/applicationErrors");
 const { success, failure } = require("../utils/serviceResult");
 
@@ -107,42 +107,28 @@ const updateStudent = async (id, payload) => {
   }
 };
 
-const getStudentDetails = async (id) => {
+const getStudentDetails = async (id, schoolId = null) => {
   try {
     if (!id) return success(null);
 
-    const student = await ModelUtils.findOne(Student, { _id: id });
+    const student = await Student.findOne({ _id: id, ...(schoolId ? { school_id: schoolId } : {}) }).lean();
     if (!student) return success(null);
 
-    const imageRecord = await ModelUtils.findOne(Image, {
-      entity: "STUDENT",
-      entity_id: id,
-      entity_type: "PROFILE"
-    });
+    const courseId = String(student.class || "");
+    if (/^[a-f\d]{24}$/i.test(courseId)) {
+      const course = await Course.findOne({ _id: courseId, ...(student.school_id ? { school_id: student.school_id } : {}) }).select("course_name").lean();
+      if (course?.course_name) student.class = course.course_name;
+    }
 
     let imageData = null;
-    if (imageRecord && imageRecord.image_data) {
-      let buffer = imageRecord.image_data;
-      if (!Buffer.isBuffer(buffer) && buffer.data) {
-        buffer = Buffer.from(buffer.data);
-      } else if (!Buffer.isBuffer(buffer)) {
-        try {
-          buffer = Buffer.from(buffer);
-        } catch (e) {
-          buffer = null;
-        }
-      }
-
-      if (buffer) {
-        const base64 = buffer.toString("base64");
-        const dataUrl = `data:${imageRecord.mime_type || "image/jpeg"};base64,${base64}`;
-        imageData = {
-          url: dataUrl,
-          file_name: imageRecord.file_name || null,
-          mime_type: imageRecord.mime_type || null,
-          created_at: imageRecord.createdAt || imageRecord.created_at || null,
-        };
-      }
+    const storedImage = await readStudentImage(student);
+    if (storedImage) {
+      imageData = {
+        url: `data:${storedImage.mimeType};base64,${storedImage.buffer.toString("base64")}`,
+        file_name: storedImage.fileName || null,
+        mime_type: storedImage.mimeType,
+        created_at: storedImage.updatedAt || null,
+      };
     }
 
     return success({
@@ -187,6 +173,20 @@ const listStudents = async ({ page = 1, limit = 20, query = "", reqParams = {} }
       sort: { _id: -1 }
     });
 
+    const students = result.rows || [];
+    const courseIds = [...new Set(students.map((student) => String(student.class || "")).filter((id) => /^[a-f\d]{24}$/i.test(id)))];
+    const [courses, legacyImageStudentIds] = await Promise.all([
+      courseIds.length ? Course.find({ _id: { $in: courseIds } }).select("course_name").lean() : [],
+      students.length ? Image.distinct("entity_id", { entity: "STUDENT", entity_type: "PROFILE", entity_id: { $in: students.map((student) => student._id) } }) : [],
+    ]);
+    const courseNames = new Map(courses.map((course) => [String(course._id), course.course_name]));
+    const legacyImageIds = new Set(legacyImageStudentIds.map(String));
+    const formattedStudents = students.map((student) => ({
+      ...student,
+      class: courseNames.get(String(student.class || "")) || student.class,
+      has_profile_image: Boolean(student.profile_image_key) || legacyImageIds.has(String(student._id)),
+    }));
+
     return success({
       meta: {
         page: pg,
@@ -194,7 +194,7 @@ const listStudents = async ({ page = 1, limit = 20, query = "", reqParams = {} }
         total: result.count,
         pages: Math.ceil(result.count / lim),
       },
-      students: result.rows,
+      students: formattedStudents,
     });
   } catch (error) {
     return failure(error);
@@ -296,43 +296,68 @@ const assignCourseToStudent = async (studentId, courseId, schoolId = null) => {
   }
 };
 
-const saveStudentImage = async (studentId, file) => {
+const readStudentImage = async (student) => {
+  if (student?.profile_image_key) {
+    const object = await storage.getFile(student.profile_image_key, "private");
+    return {
+      buffer: object.body,
+      mimeType: student.profile_image_mime_type || object.contentType || "image/jpeg",
+      fileName: student.profile_image_name,
+      updatedAt: student.profile_image_updated_at || student.updatedAt,
+    };
+  }
+
+  // Retain read access to photos uploaded before private bucket storage was introduced.
+  const legacy = await Image.findOne({ entity: "STUDENT", entity_id: student._id, entity_type: "PROFILE" }).lean();
+  if (!legacy?.image_data) return null;
+  const buffer = Buffer.isBuffer(legacy.image_data) ? legacy.image_data : Buffer.from(legacy.image_data?.data || legacy.image_data);
+  return { buffer, mimeType: legacy.mime_type || "image/jpeg", fileName: legacy.file_name, updatedAt: legacy.updatedAt || legacy.created_at };
+};
+
+const getStudentImage = async (studentId, schoolId) => {
+  try {
+    const student = await Student.findOne({ _id: studentId, school_id: schoolId })
+      .select("profile_image_key profile_image_mime_type profile_image_name profile_image_updated_at updatedAt").lean();
+    if (!student) throw new NotFoundError("Student");
+    return success(await readStudentImage({ ...student, _id: studentId }));
+  } catch (error) {
+    return failure(error);
+  }
+};
+
+const saveStudentImage = async (studentId, file, schoolId) => {
   try {
     if (!studentId) throw new ValidationError("studentId is required");
     if (!file) throw new ValidationError("file is required");
+    if (!schoolId) throw new ValidationError("School context is required to upload a student image");
 
-    const validation = ImageService.validateImageFile("STUDENT", file);
-    if (!validation.isValid) {
-      throw new ValidationError(`Invalid student image: ${validation.error}`);
-    }
-
-    const student = await ModelUtils.findOne(Student, { _id: studentId });
+    const student = await Student.findOne({ _id: studentId, school_id: schoolId });
     if (!student) throw new NotFoundError("Student");
-
-    const payload = {
-      entity: "STUDENT",
-      entity_id: studentId,
-      entity_type: "PROFILE",
-      image_data: file.buffer,
-      file_name: file.originalname || null,
-      mime_type: file.mimetype || null,
-    };
-
-    const existing = await ModelUtils.findOne(Image, {
-      entity: "STUDENT",
-      entity_id: studentId,
-      entity_type: "PROFILE"
+    const school = await School.findById(schoolId).select("slug").lean();
+    if (!school?.slug) throw new ValidationError("School storage location is unavailable");
+    const uploaded = await ImageService.uploadImage("STUDENT", file, {
+      schoolSlug: school.slug,
+      category: "students",
+      filenamePrefix: `${student._id}-profile`,
+      bucketType: "private",
     });
-
-    logger.debug("saveStudentImage: existing image =", existing ? existing._id : null, existing ? "found" : "not found");
-
-    if (existing) {
-      const updated = await ModelUtils.updateAndReturn(Image, { _id: existing._id }, payload);
-      return success(updated && updated.rows && updated.rows.length ? updated.rows[0] : updated);
-    } else {
-      const created = await ModelUtils.createAndReturn(Image, payload);
-      return success(created);
+    if (uploaded.error) throw uploaded.error;
+    const { key, mimeType, fileName } = uploaded.data;
+    const previousKey = student.profile_image_key;
+    const updatedAt = new Date();
+    try {
+      student.profile_image_key = key;
+      student.profile_image_mime_type = mimeType;
+      student.profile_image_name = fileName;
+      student.profile_image_updated_at = updatedAt;
+      await student.save();
+    } catch (error) {
+      await storage.deleteFile(key, "private").catch(() => {});
+      throw error;
     }
+    await Image.deleteMany({ entity: "STUDENT", entity_id: studentId, entity_type: "PROFILE" }).catch(() => {});
+    if (previousKey && previousKey !== key) await storage.deleteFile(previousKey, "private").catch(() => {});
+    return success({ imageUrl: `/students/${studentId}/image?v=${updatedAt.getTime()}`, file_name: student.profile_image_name, mime_type: student.profile_image_mime_type, updated_at: updatedAt });
   } catch (error) {
     return failure(error);
   }
@@ -423,6 +448,7 @@ module.exports = {
   createStudent,
   updateStudent,
   getStudentDetails,
+  getStudentImage,
   getStudentSubjects,
   setStudentSubjects,
   assignCourseToStudent,
