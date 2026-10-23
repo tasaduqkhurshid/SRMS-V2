@@ -17,18 +17,16 @@ The migration creates school-scoped fee type, structure, assignment, payment, re
 
 ## Online payments
 
-Razorpay is optional. To enable live online checkout, configure the following API-only environment variables:
+The gateway catalog contains Razorpay, Cashfree Payments, and PhonePe Payment Gateway. Only Razorpay Standard Checkout is integrated; the other catalog entries stay unavailable. Each school supplies its own Razorpay Key ID, Key Secret, and webhook secret in **Fees → Payment Gateways**. Super Admin can disable Razorpay for the platform. Schools must save and validate credentials before enabling the gateway. Legacy global Razorpay environment variables are no longer used for fee collections.
 
-```env
-PAYMENT_GATEWAY_PROVIDER=razorpay
-RAZORPAY_KEY_ID=<Razorpay key ID>
-RAZORPAY_KEY_SECRET=<Razorpay key secret>
-RAZORPAY_WEBHOOK_SECRET=<webhook signing secret>
-```
+Set `PAYMENT_CREDENTIALS_ENCRYPTION_KEY` on the API server to a base64 encoded 32-byte key or a 64-character hexadecimal key. Generate one with `openssl rand -base64 32`, keep it in the deployment secret store, and back it up securely: changing or losing it makes existing encrypted merchant secrets unreadable. The API fails closed when the key is missing or invalid. Do not commit this key. The gateway's Sandbox mode requires a Razorpay Test Key ID (`rzp_test_…`); live credentials are rejected in test mode.
 
-Then configure the school's online payment toggle in Super Admin and set the webhook URL to `https://<school-host>/api/student/payments/webhook`. Subscribe to `payment.captured`, `payment.failed`, `refund.processed`, and `refund.failed`. The server creates one-hour orders and marks balances paid only after a valid signed webhook. A failed payment attempt keeps the order open for retries; closing checkout keeps its reservation until provider order expiry is confirmed. Students can use **Check status** to refresh the provider state. Online refunds are submitted through the provider API and reduce the balance only after a valid refund webhook.
+Point each school's Razorpay webhook endpoint to `https://<school-host>/api/student/payments/webhook` and configure the same webhook secret saved in that school's gateway configuration. Subscribe to `payment.captured`, `payment.failed`, `refund.processed`, and `refund.failed`. Webhooks resolve the school configuration from the referenced local transaction, then verify using its secret. The server marks balances paid only after a valid signed webhook. Failed payment attempts keep the order available for retries; a checkout dismissal keeps its reservation until provider expiry is verified. Online refunds are submitted through the original school's provider credentials and reduce balances only after a valid refund webhook.
 
-No gateway credentials are included in this repository. The UI reports readiness from server configuration and does not expose key secrets. Manual refunds remain auditable ledger entries for the school's finance team to record after the funds have been returned.
+The School Portal lets schools allow UPI, cards, net banking, and wallets individually; the selected groups are passed to Razorpay Standard Checkout. Razorpay does not allow this integration to restrict individual UPI apps such as Google Pay or PhonePe, or separate credit and debit cards. Method availability still depends on the merchant account. See [Razorpay's Standard Checkout method configuration](https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/configure-payment-methods/sample-code). Existing global keys are not copied to schools; configure each merchant account individually. Historical fee transactions are retained.
+
+When the gateway is enabled in Sandbox mode and its test credentials are validated, the School Portal exposes a dedicated test page. It creates a ₹1.00 test-mode order, opens Razorpay Checkout, then verifies the signed payment response and captured provider payment server-side. It does not create a fee ledger transaction or alter student balances. Successful tests are recorded in the school fee audit log.
+
 
 ## School fee routes
 
@@ -43,6 +41,8 @@ School fee routes are available at `/api/fees` through the school host API proxy
 - `GET /payments`, `POST /payments/:id/refunds`, `GET /payments/:id/receipt` — transaction history, refund ledger entries, and confirmed receipts.
 - `GET /dashboard`, `GET /reports`, `GET /reports/export.csv`, `GET /audit` — school-scoped reporting, current-page CSV export, and audit history.
 - `GET /online-settings` — readiness information for the current school.
+- `GET /payment-gateways`, `PUT /payment-gateways/:code`, `PATCH /payment-gateways/:code/enabled`, `POST /payment-gateways/:code/validate`, `POST /payment-gateways/:code/reset-inherited`, `DELETE /payment-gateways/:code` — safe school-scoped gateway management. Secrets are write-only and omitted from responses.
+- Super Admin: `GET /api/admin/payment-gateways`, `PATCH /api/admin/payment-gateways/:code` — catalog availability; `GET /api/admin/schools/:id/payment-gateways` and `PUT /api/admin/schools/:id/payment-gateways/:code` — seeder-mapped school gateway configuration.
 
 Student and linked parent requests use `/api/student/fees`; parent logins use the shared Student Portal and can only access children linked to their account.
 

@@ -12,11 +12,14 @@ type FeeAccount = { _id: string; structure_name: string; gross_minor: number; co
 type FeeData = { summary: { gross_minor: number; concessions_minor: number; paid_minor: number; outstanding_minor: number }; accounts: FeeAccount[]; transactions: FeePayment[]; online_payments?: { eligible: boolean; status: string } };
 
 const asRupees = (minor: number) => (Number(minor) || 0) / 100;
+const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[character] as string));
 const showReceipt = (payment: FeePayment, childName: string) => {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const popup = window.open('', '_blank', 'width=720,height=760');
     if (!popup) return Alert.alert('Receipt', 'Allow pop-ups to print the receipt.');
-    popup.document.write(`<title>Fee receipt</title><main style="font:16px Arial;max-width:600px;margin:50px auto;padding:24px;border:1px solid #ddd;border-radius:12px"><h1>Fee receipt</h1><p>Receipt: ${payment.receipt_number || payment.reference || payment._id}</p><p>Student: ${childName}</p><p>Date: ${new Date(payment.createdAt).toLocaleString()}</p><p>Method: ${payment.method.replace('_', ' ')}</p><h2>Amount: ${formatCurrency(asRupees(payment.amount_minor))}</h2><button onclick="window.print()">Print / Save PDF</button></main>`);
+    popup.document.write(`<title>Fee receipt</title><main style="font:16px Arial;max-width:600px;margin:50px auto;padding:24px;border:1px solid #ddd;border-radius:12px"><h1>Fee receipt</h1><p>Receipt: ${escapeHtml(payment.receipt_number || payment.reference || payment._id)}</p><p>Student: ${escapeHtml(childName)}</p><p>Date: ${escapeHtml(new Date(payment.createdAt).toLocaleString())}</p><p>Method: ${escapeHtml(payment.method.replace('_', ' '))}</p><h2>Amount: ${escapeHtml(formatCurrency(asRupees(payment.amount_minor)))}</h2><button onclick="window.print()">Print / Save PDF</button></main>`);
     popup.document.close();
     return;
   }
@@ -50,7 +53,7 @@ export default function FeesScreen() {
     if (!fees?.online_payments?.eligible || busy || Platform.OS !== 'web') return;
     setBusy(true); setError('');
     try {
-      const order = await ApiClient.request<{ key_id: string; order_id: string; amount_minor: number; currency: string }>(`/api/student/fees/accounts/${account._id}/payments`, {
+      const order = await ApiClient.request<{ key_id: string; order_id: string; amount_minor: number; currency: string; payment_methods?: string[] }>(`/api/student/fees/accounts/${account._id}/payments`, {
         method: 'POST',
         body: JSON.stringify({ amount_minor: account.balance_minor, idempotency_key: crypto.randomUUID() }),
       });
@@ -64,7 +67,9 @@ export default function FeesScreen() {
       }
       const Checkout = win.Razorpay;
       if (!Checkout) throw new Error('Secure checkout is unavailable.');
-      new Checkout({ key: order.key_id, order_id: order.order_id, amount: order.amount_minor, currency: order.currency || 'INR', name: 'School', description: account.structure_name, handler: () => { Alert.alert('Payment pending', 'The school will update your fee balance after server verification.'); setTimeout(() => void loadFees(), 2500); }, modal: { ondismiss: () => void loadFees() }, theme: { color: '#4f46e5' } }).open();
+      const allowed = new Set(order.payment_methods || ['upi', 'card', 'netbanking', 'wallet']);
+      const methods = ['upi', 'card', 'netbanking', 'wallet'].filter((method) => allowed.has(method)).map((method) => ({ method }));
+      new Checkout({ key: order.key_id, order_id: order.order_id, amount: order.amount_minor, currency: order.currency || 'INR', name: 'School', description: account.structure_name, config: { display: { blocks: { schoolMethods: { name: 'Payment methods', instruments: methods } }, sequence: ['block.schoolMethods'], preferences: { show_default_blocks: false } } }, handler: () => { Alert.alert('Payment pending', 'The school will update your fee balance after server verification.'); setTimeout(() => void loadFees(), 2500); }, modal: { ondismiss: () => void loadFees() }, theme: { color: '#4f46e5' } }).open();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Payment could not be started.'); }
     finally { setBusy(false); }
   };

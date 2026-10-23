@@ -84,6 +84,9 @@ export default `
           </router-link>
         </div>
       </div>
+      <router-link class="nav-link" :class="{ 'nav-link-active': isActive('/payment-gateways') }" to="/payment-gateways">
+        <i class="fa-solid fa-credit-card"></i><span v-if="!collapsed">Payment Gateways</span>
+      </router-link>
 
       <!-- Results Section -->
       <div class="sidebar-section" v-if="!collapsed">

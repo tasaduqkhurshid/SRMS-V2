@@ -12,9 +12,10 @@ export default {
     schoolPortalUrl: { type: Function, required: true },
     paymentSettings: { type: Object, default: null },
     paymentSettingsSaving: { type: Boolean, default: false },
+    gatewayConfigs: { type: Array, default: () => [] },
   },
   emits: [
-    'back', 'edit', 'upload-branding',
+    'back', 'edit', 'gateways', 'upload-branding',
     'start-password-reset', 'cancel-password-reset', 'update-password',
     'update-admin-password', 'create-administrator', 'toggle-online-payments',
   ],

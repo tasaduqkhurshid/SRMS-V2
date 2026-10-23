@@ -21,7 +21,7 @@ const parentAccess = asyncHandler(async (req, res, next) => send(res, next, awai
 const listAccounts = asyncHandler(async (req, res, next) => send(res, next, await FeeService.listAccounts(schoolId(req), req.query), "Fee accounts retrieved"));
 const getAccount = asyncHandler(async (req, res, next) => send(res, next, await FeeService.getAccount(schoolId(req), req.params.id), "Fee account retrieved"));
 const collect = asyncHandler(async (req, res, next) => send(res, next, await FeeService.recordCollection(schoolId(req), actorId(req), req.params.id, req.body || {}), "Fee collection recorded", 201));
-const paymentWebhook = asyncHandler(async (req, res, next) => send(res, next, await FeeService.handlePaymentWebhook(schoolId(req), req.rawBody, req.get('x-razorpay-signature'), req.body || {}), "Payment notification processed"));
+const paymentWebhook = asyncHandler(async (req, res, next) => send(res, next, await FeeService.handlePaymentWebhook(req.rawBody, req.get('x-razorpay-signature'), req.body || {}), "Payment notification processed"));
 const adjust = asyncHandler(async (req, res, next) => send(res, next, await FeeService.applyAdjustment(schoolId(req), actorId(req), req.params.id, req.body || {}), "Fee adjustment recorded"));
 const refund = asyncHandler(async (req, res, next) => send(res, next, await FeeService.refundPayment(schoolId(req), actorId(req), req.params.id, req.body || {}), "Refund recorded", 201));
 const listPayments = asyncHandler(async (req, res, next) => send(res, next, await FeeService.listPayments(schoolId(req), req.query), "Fee payments retrieved"));

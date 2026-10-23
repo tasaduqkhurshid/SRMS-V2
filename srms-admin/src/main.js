@@ -14,6 +14,8 @@ const router = createRouter({
     { path: '/dashboard', name: 'dashboard', component: AdminDashboard },
     { path: '/schools', name: 'schools', component: AdminDashboard },
     { path: '/schools/:id', name: 'school-detail', component: AdminDashboard },
+    { path: '/schools/:id/gateways', name: 'school-gateways', component: AdminDashboard },
+    { path: '/payment-gateways', name: 'payment-gateways', component: AdminDashboard },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
 });

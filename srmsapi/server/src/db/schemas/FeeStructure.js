@@ -10,6 +10,7 @@ const LineSchema = new mongoose.Schema({
   fee_type_id: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'FeeType' },
   name: { type: String, required: true, trim: true, maxlength: 100 },
   amount_minor: { type: Number, required: true, min: 1, validate: Number.isSafeInteger },
+  required: { type: Boolean, default: true },
 }, { _id: false });
 
 const FeeStructureSchema = new mongoose.Schema({
@@ -17,6 +18,8 @@ const FeeStructureSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 120 },
   course_id: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Course', index: true },
   academic_year_id: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'AcademicYear', index: true },
+  due_day: { type: Number, min: 1, max: 31, default: 10 },
+  monthly_model: { type: Boolean, default: false },
   lines: { type: [LineSchema], required: true, validate: (rows) => rows.length > 0 },
   installments: { type: [InstallmentSchema], default: [] },
   total_minor: { type: Number, required: true, min: 1, validate: Number.isSafeInteger },

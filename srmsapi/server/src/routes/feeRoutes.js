@@ -1,5 +1,14 @@
 const router = require('express').Router();
 const FeeController = require('../controllers/FeeController');
+const GatewayController = require('../controllers/SchoolGatewayController');
+
+router.get('/payment-gateways', GatewayController.list);
+router.put('/payment-gateways/:code', GatewayController.configure);
+router.patch('/payment-gateways/:code/enabled', GatewayController.enable);
+router.post('/payment-gateways/:code/validate', GatewayController.validate);
+router.post('/payment-gateways/:code/test-orders', GatewayController.createSandboxTestOrder);
+router.post('/payment-gateways/:code/test-orders/verify', GatewayController.verifySandboxTestPayment);
+router.delete('/payment-gateways/:code', GatewayController.disconnect);
 
 router.get('/dashboard', FeeController.dashboard);
 router.get('/types', FeeController.listTypes);

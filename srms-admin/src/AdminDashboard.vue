@@ -6,6 +6,7 @@ import PlatformSidebar from './components/common/PlatformSidebar.js';
 import PlatformStats from './components/pages/dashboard/PlatformStats.js';
 import SchoolList from './components/pages/school/SchoolList.js';
 import SchoolDetails from './components/pages/school/SchoolDetails.js';
+import SchoolGateways from './components/pages/school/SchoolGateways.vue';
 import SchoolModalComponent from './components/pages/school/SchoolModalComponent.js';
 import AddUserModal from './components/pages/school/AddUserModal.js';
 
@@ -35,7 +36,10 @@ const loading = ref(false);
 const saving = ref(false);
 const error = ref('');
 const success = ref('');
-
+const platformGateways = ref([]);
+const gatewaySaving = ref('');
+const schoolGateways = ref([]);
+const schoolGatewaySaving = ref('');
 // Modal state
 const modalOpen = ref(false);
 const modalMode = ref('create'); // 'create' | 'edit'
@@ -60,6 +64,59 @@ const api = async (path, options = {}) => {
   return result.data;
 };
 
+const loadPlatformGateways = async () => {
+  loading.value = true; error.value = '';
+  try { platformGateways.value = await api('/payment-gateways'); }
+  catch (cause) { error.value = cause.message || 'Could not load gateway catalog.'; }
+  finally { loading.value = false; }
+};
+const loadSchoolGateways = async (id = route.params.id) => {
+  if (!id) return;
+  try {
+    schoolGateways.value = await api(`/schools/${id}/payment-gateways`);
+  } catch (cause) { error.value = cause.message || 'Could not load school gateways.'; }
+};
+const saveSchoolGateway = async ({ code, form, enableAfterSave = false }) => {
+  schoolGatewaySaving.value = code; error.value = ''; success.value = '';
+  try {
+    await api(`/schools/${route.params.id}/payment-gateways/${code}`, { method: 'PUT', body: JSON.stringify(form) });
+    if (enableAfterSave) {
+      await api(`/schools/${route.params.id}/payment-gateways/${code}/validate`, { method: 'POST' });
+      await api(`/schools/${route.params.id}/payment-gateways/${code}/enabled`, { method: 'PATCH', body: JSON.stringify({ enabled: true }) });
+      success.value = 'Gateway credentials saved, validated and enabled for this school.';
+    } else success.value = 'Gateway configuration saved for this school.';
+    await loadSchoolGateways();
+  } catch (cause) { error.value = cause.message || 'Could not save gateway configuration.'; await loadSchoolGateways(); }
+  finally { schoolGatewaySaving.value = ''; }
+};
+const toggleSchoolGateway = async ({ code, enabled }) => {
+  schoolGatewaySaving.value = code; error.value = ''; success.value = '';
+  try {
+    await api(`/schools/${route.params.id}/payment-gateways/${code}/enabled`, { method: 'PATCH', body: JSON.stringify({ enabled }) });
+    success.value = `Gateway ${enabled ? 'enabled' : 'disabled'} for this school.`;
+    await loadSchoolGateways();
+  } catch (cause) { error.value = cause.message || 'Gateway availability could not be updated.'; }
+  finally { schoolGatewaySaving.value = ''; }
+};
+const validateSchoolGateway = async (code) => {
+  schoolGatewaySaving.value = code; error.value = ''; success.value = '';
+  try {
+    await api(`/schools/${route.params.id}/payment-gateways/${code}/validate`, { method: 'POST' });
+    success.value = 'Gateway credentials validated.';
+    await loadSchoolGateways();
+  } catch (cause) { error.value = cause.message || 'Gateway credentials could not be validated.'; await loadSchoolGateways(); }
+  finally { schoolGatewaySaving.value = ''; }
+};
+const togglePlatformGateway = async (gateway) => {
+  gatewaySaving.value = gateway.code; error.value = ''; success.value = '';
+  try {
+    await api(`/payment-gateways/${gateway.code}`, { method: 'PATCH', body: JSON.stringify({ enabled: !gateway.isEnabled }) });
+    success.value = `${gateway.name} ${gateway.isEnabled ? 'disabled' : 'enabled'} at platform level.`;
+    await loadPlatformGateways();
+  } catch (cause) { error.value = cause.message || 'Gateway availability could not be updated.'; }
+  finally { gatewaySaving.value = ''; }
+};
+
 const loadSchools = async () => {
   loading.value = true;
   error.value = '';
@@ -72,10 +129,12 @@ const loadSchools = async () => {
       selectedSchool.value = await api(`/schools/${route.params.id}`);
       administrators.value = await api(`/schools/${route.params.id}/admins`);
       paymentSettings.value = await api(`/schools/${route.params.id}/payment-settings`);
+      await loadSchoolGateways(route.params.id);
     } else {
       selectedSchool.value = null;
       administrators.value = [];
       paymentSettings.value = null;
+      schoolGateways.value = [];
     }
   } catch (cause) {
     error.value = cause.message;
@@ -230,6 +289,7 @@ const toggleOnlinePayments = async () => {
     paymentSettings.value = await api(`/schools/${selectedSchool.value._id}/payment-settings`, {
       method: 'PATCH', body: JSON.stringify({ enabled, provider: enabled ? 'razorpay' : '' }),
     });
+    await loadSchoolGateways(selectedSchool.value._id);
     success.value = `Online payments ${enabled ? 'enabled' : 'disabled'} for ${selectedSchool.value.school_name}.`;
   } catch (cause) { error.value = cause.message; }
   finally { paymentSettingsSaving.value = false; }
@@ -285,8 +345,9 @@ const logout = () => {
   router.replace('/login');
 };
 
-watch(() => route.path, () => { if (token.value) loadSchools(); });
-onMounted(() => { if (token.value) loadSchools(); });
+const loadForRoute = () => route.path === '/payment-gateways' ? loadPlatformGateways() : loadSchools();
+watch(() => route.path, () => { if (token.value) loadForRoute(); });
+onMounted(() => { if (token.value) loadForRoute(); });
 </script>
 
 <template>
@@ -296,6 +357,14 @@ onMounted(() => { if (token.value) loadSchools(); });
       <header class="topbar"><div><p class="eyebrow">PLATFORM OVERVIEW</p><h1>Good day, Administrator</h1></div><span class="admin-pill">Super Admin</span></header>
       <p v-if="error" class="alert error">{{ error }}</p>
       <p v-if="success" class="alert success">{{ success }}</p>
+      <section v-if="route.path === '/payment-gateways'" class="platform-gateway-list">
+        <article v-for="gateway in platformGateways" :key="gateway._id" class="platform-gateway-card">
+          <header><div><p class="eyebrow">{{ gateway.integrationStatus === 'implemented' ? 'INTEGRATION AVAILABLE' : 'NOT YET INTEGRATED' }}</p><h2>{{ gateway.name }}</h2><p>{{ gateway.description }}</p></div><span :class="['status', gateway.isEnabled ? 'on' : 'off']">{{ gateway.isEnabled ? 'Platform enabled' : 'Platform disabled' }}</span></header>
+          <button class="primary" :disabled="gatewaySaving === gateway.code || (!gateway.isEnabled && gateway.integrationStatus !== 'implemented')" @click="togglePlatformGateway(gateway)">{{ gatewaySaving === gateway.code ? 'Saving…' : gateway.integrationStatus !== 'implemented' ? 'Integration unavailable' : gateway.isEnabled ? 'Disable provider' : 'Enable provider' }}</button>
+          <div class="platform-gateway-schools"><h3>School configurations</h3><p v-if="!gateway.schools?.length" class="muted">No schools have configured this gateway.</p><div v-for="schoolConfig in gateway.schools" :key="schoolConfig._id" class="platform-gateway-row"><span>{{ schoolConfig.school_id?.school_name || 'School' }}</span><span>{{ schoolConfig.credentialsConfigured ? 'Credentials configured' : 'Credentials missing' }}</span><span>{{ schoolConfig.configurationStatus }} · {{ schoolConfig.validationStatus }}</span><span>{{ schoolConfig.isEnabled ? 'Enabled' : 'Disabled' }}</span></div></div>
+        </article>
+      </section>
+      <template v-else>
       <PlatformStats :statistics="statistics" />
       <SchoolList
         v-if="!selectedSchool"
@@ -321,8 +390,18 @@ onMounted(() => { if (token.value) loadSchools(); });
         @previous="currentSchoolPage--"
         @next="currentSchoolPage++"
       />
+      <SchoolGateways
+        v-if="route.name === 'school-gateways' && selectedSchool"
+        :school="selectedSchool"
+        :gateways="schoolGateways"
+        :saving-code="schoolGatewaySaving"
+        @back="router.push(`/schools/${selectedSchool._id}`)"
+        @save="saveSchoolGateway"
+        @toggle-enabled="toggleSchoolGateway"
+        @validate="validateSchoolGateway"
+      />
       <SchoolDetails
-        v-else
+        v-else-if="selectedSchool"
         :school="selectedSchool"
         :administrators="administrators"
         :password-reset-admin="passwordResetAdmin"
@@ -331,8 +410,10 @@ onMounted(() => { if (token.value) loadSchools(); });
         :saving="saving"
         :payment-settings="paymentSettings"
         :payment-settings-saving="paymentSettingsSaving"
+        :gateway-configs="schoolGateways"
         :school-portal-url="schoolPortalUrl"
         @back="router.push('/dashboard')"
+        @gateways="router.push(`/schools/${selectedSchool._id}/gateways`)"
         @edit="openEditModal"
         @upload-branding="uploadBrandingAsset"
         @start-password-reset="startPasswordReset"
@@ -357,6 +438,7 @@ onMounted(() => { if (token.value) loadSchools(); });
         :school="addUserModalSchool"
         @close="closeAddUserModal"
       />
+      </template>
       <footer class="content-footer">© {{ currentYear }} Hubi-Infotech. All rights reserved.</footer>
     </main>
   </div>

@@ -16,6 +16,8 @@ import StudentImport from '../components/pages/import/StudentImport.js';
 import ResultBook from '../components/pages/resultbook/ResultBook.js';
 import SchoolProfile from '../components/pages/school/SchoolProfile.js';
 import FeeManagement from '../components/pages/fees/FeeManagement.js';
+import PaymentGateways from '../components/pages/fees/PaymentGateways.js';
+import PaymentGatewayTest from '../components/pages/fees/PaymentGatewayTest.js';
 
 const feeSections = ['overview', 'types', 'structures', 'assign', 'parents', 'accounts', 'payments', 'reports', 'audit'];
 
@@ -35,6 +37,8 @@ const routes = [
   { path: "/exams", component: ExamsIndex },
   { path: "/fees", redirect: "/fees/overview" },
   { path: "/fees/:section", component: FeeManagement, beforeEnter: (to) => feeSections.includes(to.params.section) || "/fees/overview" },
+  { path: "/payment-gateways", component: PaymentGateways },
+  { path: "/payment-gateways/test/:code", component: PaymentGatewayTest },
   // results
   { path: "/results", component: ResultsIndex },
   { path: "/results/student-wise", component: StudentWiseResults },

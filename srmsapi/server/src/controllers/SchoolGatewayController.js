@@ -1,0 +1,13 @@
+"use strict";
+const Service = require("../services/SchoolGatewayService");
+const { asyncHandler } = require("../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
+const send = (res, next, promise, message, statusCode = 200) => promise.then((data) => sendSuccessJsonResponse(res, { statusCode, message, data })).catch(next);
+const list = asyncHandler((req, res, next) => send(res, next, Service.list(req.schoolId), "Payment gateways retrieved"));
+const configure = asyncHandler((req, res, next) => send(res, next, Service.configure(req.schoolId, req.user?.id, req.params.code, req.body || {}), "Gateway configuration saved"));
+const enable = asyncHandler((req, res, next) => send(res, next, Service.setEnabled(req.schoolId, req.user?.id, req.params.code, req.body?.enabled === true), "Gateway availability updated"));
+const validate = asyncHandler((req, res, next) => send(res, next, Service.validate(req.schoolId, req.user?.id, req.params.code), "Gateway credentials validated"));
+const disconnect = asyncHandler((req, res, next) => send(res, next, Service.disconnect(req.schoolId, req.user?.id, req.params.code), "Gateway disconnected"));
+const createSandboxTestOrder = asyncHandler((req, res, next) => send(res, next, Service.createSandboxTestOrder(req.schoolId, req.user?.id, req.params.code), "Sandbox test order created", 201));
+const verifySandboxTestPayment = asyncHandler((req, res, next) => send(res, next, Service.verifySandboxTestPayment(req.schoolId, req.user?.id, req.params.code, req.body || {}), "Sandbox payment verified"));
+module.exports = { list, configure, enable, validate, disconnect, createSandboxTestOrder, verifySandboxTestPayment };

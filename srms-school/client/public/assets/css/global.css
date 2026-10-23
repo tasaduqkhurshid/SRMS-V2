@@ -1809,3 +1809,71 @@ body {
 @media (max-width: 760px) {
   .fee-page .fee-search select { width: 100%; min-width: 0; flex: 1 1 100%; }
 }
+
+.gateway-page { max-width: 1180px; margin: 0 auto; padding: 28px; color: #182642; }
+.gateway-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+.gateway-heading h1 { margin: 0 0 7px; font-size: 26px; font-weight: 700; }
+.gateway-heading p:not(.gateway-eyebrow) { margin: 0; color: #71809b; }
+.gateway-eyebrow { margin: 0 0 6px; color: #6864dc; font-size: 11px; font-weight: 700; letter-spacing: .1em; }
+.gateway-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,480px),1fr)); gap: 18px; }
+.gateway-card { padding: 22px; border: 1px solid #e4eaf3; border-radius: 14px; background: #fff; box-shadow: 0 4px 16px rgba(25,42,76,.035); }
+.gateway-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.gateway-card-head h2 { margin: 0 0 6px; font-size: 18px; }
+.gateway-card-head p { margin: 0; color: #71809b; font-size: 13px; line-height: 1.5; }
+.gateway-pill { padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.gateway-pill.ready { color: #147447; background: #e8f7ef; }.gateway-pill.idle { color: #63718b; background: #f0f2f7; }
+.gateway-meta { display: flex; flex-wrap: wrap; gap: 9px 18px; margin: 18px 0; color: #75819a; font-size: 12px; }
+.gateway-meta b { color: #33415e; font-weight: 600; }
+.gateway-form { display: grid; gap: 12px; }
+.gateway-form > label { display: grid; gap: 6px; color: #34425e; font-size: 12px; font-weight: 600; }
+.gateway-form input:not([type=checkbox]), .gateway-form select { box-sizing: border-box; width: 100%; min-height: 40px; padding: 9px 11px; border: 1px solid #d8e1ef; border-radius: 9px; background: #fff; color: #263653; font: inherit; font-size: 13px; }
+.gateway-form input:focus, .gateway-form select:focus { outline: 0; border-color: #8885f7; box-shadow: 0 0 0 3px rgba(79,70,229,.11); }
+.gateway-form fieldset { display: flex; flex-wrap: wrap; gap: 10px 16px; padding: 12px; border: 1px solid #e6ebf3; border-radius: 10px; }
+.gateway-form legend { padding: 0 5px; color: #34425e; font-size: 12px; font-weight: 700; }
+.gateway-form .gateway-check { display: flex; align-items: center; gap: 6px; color: #475672; font-size: 12px; text-transform: capitalize; }
+.gateway-form small { flex-basis: 100%; color: #7b879c; font-size: 11px; line-height: 1.5; }
+.gateway-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 4px; }
+.gateway-actions button { min-height: 37px; padding: 8px 12px; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.gateway-actions button:focus-visible { outline: 3px solid rgba(79,70,229,.3); outline-offset: 2px; }
+.gateway-actions button:disabled { opacity: .55; cursor: not-allowed; }
+.gateway-sandbox-toggle { display: flex !important; align-items: center; flex-wrap: wrap; gap: 8px !important; padding: 11px 12px; border: 1px solid #e6ebf3; border-radius: 10px; background: #fafbff; }.gateway-sandbox-toggle input { accent-color: #514de0; }.gateway-sandbox-toggle span { flex-basis: 100%; padding-left: 22px; color: #7b879c; font-size: 11px; font-weight: 400; }
+.gateway-test-link,.gateway-back { display: inline-flex; margin-top: 12px; color: #514de0; font-size: 13px; font-weight: 650; text-decoration: none; }.gateway-test-link:hover,.gateway-back:hover { text-decoration: underline; }.gateway-back { margin: 0 0 18px; }
+.gateway-test-card { max-width: 700px; padding: 24px; border: 1px solid #e4eaf3; border-radius: 14px; background: #fff; box-shadow: 0 4px 16px rgba(25,42,76,.035); }.gateway-test-state { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; color: #52617b; font-size: 13px; }.gateway-test-description { margin: 18px 0; color: #687791; font-size: 13px; line-height: 1.65; }.gateway-test-button { min-height: 42px; padding: 10px 16px; font-size: 13px !important; }.gateway-test-result { display: grid; justify-items: start; gap: 8px; margin: 16px 0; padding: 16px; border: 1px solid #d3ecdd; border-radius: 11px; background: #f3fbf6; }.gateway-test-result p,.gateway-test-result small { margin: 0; color: #536c60; font-size: 13px; }
+.gateway-primary { border: 1px solid #514de0; background: #514de0; color: white; }.gateway-secondary { border: 1px solid #dce3ef; background: #fff; color: #3f4d68; }.gateway-link { border: 0; background: transparent; color: #b33c51; }
+.gateway-notice { margin: 0 0 15px; padding: 11px 14px; border-radius: 9px; font-size: 13px; }.gateway-notice.success { background: #e9f7ef; color: #176c45; }.gateway-notice.danger,.gateway-unavailable { background: #fff1f1; color: #a33a46; }
+.gateway-inheritance{padding:10px;border-radius:8px;background:#f4f6fb;color:#5d6b82;font-size:12px;line-height:1.5}.gateway-reset-link{justify-self:start;border:0;background:transparent;color:#4f46e5;font-size:12px;font-weight:700;cursor:pointer}.gateway-reset-link:disabled{opacity:.55}.gateway-form .gateway-check input:disabled{cursor:not-allowed;opacity:.55}
+@media(max-width:700px) { .gateway-page { padding: 18px 14px; }.gateway-card { padding: 17px; }.gateway-actions button { flex: 1 1 auto; } }
+.gateway-environment-switch{display:inline-flex;width:max-content;gap:4px;padding:4px;border-radius:999px;background:#edf2f8}.gateway-environment-switch button{border:0;border-radius:999px;padding:8px 14px;background:transparent;color:#526078;cursor:pointer}.gateway-environment-switch button.selected{background:#fff;color:#3730a3;box-shadow:0 1px 4px #1e293b24}.gateway-environment-switch .live-option.selected{color:#087443}.gateway-environment-switch i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#94a3b8}.gateway-environment-switch .live-option.selected i{background:#16a34a}.gateway-help,.gateway-form small{grid-column:1/-1;color:#64748b;font-size:12px;line-height:1.45}.gateway-form fieldset{display:flex;flex-wrap:wrap;gap:10px;grid-column:1/-1;border:1px solid #e4eaf3;border-radius:10px}.gateway-form fieldset label{display:flex;align-items:center;gap:6px}
+
+/* Give the fee editor enough room for its amount fields and installment controls. */
+@media (min-width: 761px) {
+  .fee-grid-two { grid-template-columns: minmax(340px, 1fr) minmax(0, 1.15fr); }
+  .fee-installment-row { grid-template-columns: minmax(130px, 1fr) minmax(130px, .8fr) minmax(100px, .55fr) 36px; }
+}
+@media (max-width: 760px) {
+  .fee-installment-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+
+.fee-required-choice { display: flex !important; align-items: center; gap: 7px !important; min-height: 40px; white-space: nowrap; }
+.fee-required-choice input,.fee-assignment-summary input { width: 16px !important; min-height: 16px !important; accent-color: #514de0; }
+.fee-assignment-summary { display: grid; gap: 8px; padding: 14px; border: 1px solid #e4eaf3; border-radius: 10px; background: #fafbff; }
+.fee-assignment-summary h3 { margin: 0; font-size: 14px; }
+.fee-assignment-summary>label { display: flex !important; align-items: center; gap: 9px !important; padding: 7px 0; border-bottom: 1px solid #e8edf5; }
+.fee-assignment-summary>label span { flex: 1; }
+.fee-assignment-totals { display: flex; flex-wrap: wrap; gap: 12px 24px; padding-top: 7px; color: #53627d; font-size: 12px; }
+.fee-assignment-totals span { display: grid; gap: 3px; }
+.fee-assignment-totals b { color: #17264a; font-size: 14px; }
+.fee-month-matrix { min-width: 720px; }
+.fee-month-matrix .fee-status.overdue { background: #fff0f0; color: #bd2938; }
+@media (min-width: 761px) { .fee-structure-line { grid-template-columns: minmax(150px, 1fr) minmax(125px, .8fr) minmax(105px, auto) 36px; } }
+@media (max-width: 760px) { .fee-structure-line { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.fee-month-matrix .fee-status.waived { background: #edf1f7; color: #63718a; }
+.fee-individual-settings { display: grid; gap: 10px; }
+.fee-individual-settings>h3 { margin: 0; color: #24334d; font-size: 14px; }
+.fee-individual-settings article { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); align-items: end; gap: 10px; padding: 13px; border: 1px solid #e4eaf3; border-radius: 10px; background: #fafbff; }
+.fee-individual-settings article header { display: grid; gap: 3px; }
+.fee-individual-settings article header small { color: #77849b; }
+.fee-individual-settings article>label { display: flex !important; align-items: center; gap: 8px !important; }
+.fee-individual-settings article>label input[type=checkbox] { width: 16px; min-height: 16px; accent-color: #514de0; }
+.fee-individual-settings article>label input[type=number] { flex: 1; min-width: 0; }
+.fee-individual-settings .fee-assignment-totals { grid-column: 1/-1; }

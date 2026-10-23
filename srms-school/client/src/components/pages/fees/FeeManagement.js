@@ -1,7 +1,7 @@
 import template from './FeeManagementTemplate.js';
 import { api } from '../../../Services/api.js';
 
-const { ref, computed, onMounted } = Vue;
+const { ref, computed, onMounted, watch } = Vue;
 const { useRoute, useRouter } = VueRouter;
 const feeSections = ['overview', 'types', 'structures', 'assign', 'parents', 'accounts', 'payments', 'reports', 'audit'];
 const money = (minor) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format((Number(minor) || 0) / 100);
@@ -56,8 +56,9 @@ export default {
     const paymentTo = ref('');
     const paymentMethod = ref('');
     const typeForm = ref({ name: '', code: '', description: '' });
-    const structureForm = ref({ name: '', course_id: '', academic_year_id: '', lines: [{ fee_type_id: '', amount: '' }], installments: [] });
-    const assignment = ref({ fee_structure_id: '', concession: '', student_ids: [] });
+    const structureForm = ref({ name: '', course_id: '', academic_year_id: '', due_day: 10, lines: [{ fee_type_id: '', amount: '', required: true }] });
+    const assignment = ref({ fee_structure_id: '', concession: '', optional_fee_type_ids: [], student_ids: [], student_options: {} });
+    watch(() => assignment.value.fee_structure_id, () => { assignment.value.optional_fee_type_ids = []; assignment.value.student_options = {}; assignment.value.student_ids = []; assignment.value.concession = ''; });
     const parentForm = ref({ username: '', email: '', password: '', student_ids: [] });
     const dialog = ref({ open: false, kind: '', account: null, payment: null });
     const paymentForm = ref({ amount: '', method: 'CASH', reference: '', notes: '', idempotency_key: '' });
@@ -74,6 +75,31 @@ export default {
       ].filter(Boolean).map((value) => String(value).trim().toLowerCase()));
       return students.value.filter((student) => classValues.has(String(student.class || '').trim().toLowerCase()));
     });
+    const selectedAssignmentStudents = computed(() => accountStudents.value.filter((student) => assignment.value.student_ids.includes(student._id)));
+    const assignmentStructure = computed(() => structures.value.find((row) => row._id === assignment.value.fee_structure_id) || null);
+    const assignmentOptionalLines = computed(() => (assignmentStructure.value?.lines || []).filter((line) => line.required === false));
+    const assignmentMonthlyTotalMinor = computed(() => (assignmentStructure.value?.lines || []).reduce((sum, line) =>
+      sum + (line.required !== false || assignment.value.optional_fee_type_ids.includes(String(line.fee_type_id?._id || line.fee_type_id)) ? Number(line.amount_minor || 0) : 0), 0));
+    const assignmentMonthsRemaining = computed(() => {
+      const year = assignmentStructure.value?.academic_year_id;
+      if (!year?.start_date || !year?.end_date) return 0;
+      const now = new Date();
+      const start = new Date(year.start_date);
+      const end = new Date(year.end_date);
+      const current = new Date(now.getFullYear(), now.getMonth(), 1);
+      const first = new Date(start.getFullYear(), start.getMonth(), 1);
+      const last = new Date(end.getFullYear(), end.getMonth(), 1);
+      const month = first < current ? current : first;
+      return month > last ? 0 : (last.getFullYear() - month.getFullYear()) * 12 + last.getMonth() - month.getMonth() + 1;
+    });
+    const assignmentTotalMinor = computed(() => assignmentMonthlyTotalMinor.value * assignmentMonthsRemaining.value);
+    const studentMonthlyTotal = (studentId) => {
+      const choices = assignment.value.student_options[studentId] || { optional_fee_type_ids: [] };
+      return (assignmentStructure.value?.lines || []).reduce((sum, line) => sum + (line.required !== false || choices.optional_fee_type_ids.includes(String(line.fee_type_id?._id || line.fee_type_id)) ? Number(line.amount_minor || 0) : 0), 0);
+    };
+    const studentTotal = (studentId) => studentMonthlyTotal(studentId) * assignmentMonthsRemaining.value;
+    const studentPayable = (studentId) => Math.max(0, studentTotal(studentId) - Math.round(Number(assignment.value.student_options[studentId]?.concession || 0) * 100));
+    const assignmentPayableMinor = computed(() => Math.max(0, assignmentTotalMinor.value - Math.round(Number(assignment.value.concession || 0) * 100)));
     const unwrap = (response) => response?.data?.data ?? response?.data ?? {};
     const fetchOptions = async () => {
       const [coursesResponse, yearsResponse, studentsResponse] = await Promise.all([
@@ -152,16 +178,13 @@ export default {
       catch (cause) { toastMessage('error', cause.response?.data?.message || cause.message); }
       finally { saving.value = false; }
     };
-    const addLine = () => structureForm.value.lines.push({ fee_type_id: '', amount: '' });
+    const addLine = () => structureForm.value.lines.push({ fee_type_id: '', amount: '', required: false });
     const removeLine = (index) => { if (structureForm.value.lines.length > 1) structureForm.value.lines.splice(index, 1); };
-    const addInstallment = () => structureForm.value.installments.push({ name: '', due_date: '', amount: '' });
-    const removeInstallment = (index) => structureForm.value.installments.splice(index, 1);
     const saveStructure = async () => {
       saving.value = true;
       const payload = {
-        name: structureForm.value.name, course_id: structureForm.value.course_id, academic_year_id: structureForm.value.academic_year_id,
-        lines: structureForm.value.lines.map((line) => ({ fee_type_id: line.fee_type_id, amount_minor: Math.round(Number(line.amount) * 100) })),
-        installments: structureForm.value.installments.map((item) => ({ name: item.name, due_date: item.due_date, amount_minor: Math.round(Number(item.amount) * 100) })),
+        name: structureForm.value.name, course_id: structureForm.value.course_id, academic_year_id: structureForm.value.academic_year_id, due_day: Number(structureForm.value.due_day),
+        lines: structureForm.value.lines.map((line) => ({ fee_type_id: line.fee_type_id, amount_minor: Math.round(Number(line.amount) * 100), required: line.required !== false })),
       };
       try {
         if (editingStructureId.value) await api.patch(`/fees/structures/${editingStructureId.value}`, { ...payload, active: structures.value.find((item) => item._id === editingStructureId.value)?.active !== false });
@@ -172,13 +195,12 @@ export default {
       catch (cause) { toastMessage('error', cause.response?.data?.message || cause.message); }
       finally { saving.value = false; }
     };
-    const resetStructureForm = () => { structureForm.value = { name: '', course_id: '', academic_year_id: '', lines: [{ fee_type_id: '', amount: '' }], installments: [] }; editingStructureId.value = ''; };
+    const resetStructureForm = () => { structureForm.value = { name: '', course_id: '', academic_year_id: '', due_day: 10, lines: [{ fee_type_id: '', amount: '', required: true }] }; editingStructureId.value = ''; };
     const editStructure = (structure) => {
       structureForm.value = {
-        name: structure.name, course_id: structure.course_id?._id || structure.course_id,
+        name: structure.name, course_id: structure.course_id?._id || structure.course_id, due_day: structure.due_day || 10,
         academic_year_id: structure.academic_year_id?._id || structure.academic_year_id,
-        lines: (structure.lines || []).map((line) => ({ fee_type_id: line.fee_type_id?._id || line.fee_type_id, amount: (Number(line.amount_minor) / 100).toFixed(2) })),
-        installments: (structure.installments || []).map((item) => ({ name: item.name, due_date: String(item.due_date).slice(0, 10), amount: (Number(item.amount_minor) / 100).toFixed(2) })),
+        lines: (structure.lines || []).map((line, index) => ({ fee_type_id: line.fee_type_id?._id || line.fee_type_id, amount: (Number(line.amount_minor) / 100).toFixed(2), required: line.required !== false || index === 0 })),
       };
       editingStructureId.value = structure._id;
     };
@@ -188,8 +210,8 @@ export default {
         await api.patch(`/fees/structures/${structure._id}`, {
           name: structure.name, course_id: structure.course_id?._id || structure.course_id,
           academic_year_id: structure.academic_year_id?._id || structure.academic_year_id,
-          lines: (structure.lines || []).map((line) => ({ fee_type_id: line.fee_type_id?._id || line.fee_type_id, amount_minor: line.amount_minor })),
-          installments: (structure.installments || []).map((item) => ({ name: item.name, due_date: item.due_date, amount_minor: item.amount_minor })),
+          due_day: structure.due_day || 10,
+          lines: (structure.lines || []).map((line) => ({ fee_type_id: line.fee_type_id?._id || line.fee_type_id, amount_minor: line.amount_minor, required: line.required !== false })),
           active: !structure.active,
         });
         await loadStructures(); toastMessage('success', `Fee structure ${structure.active ? 'deactivated' : 'activated'}.`);
@@ -207,9 +229,13 @@ export default {
       if (!assignment.value.fee_structure_id) return toastMessage('error', 'Select a fee structure first.');
       saving.value = true;
       try {
-        const data = unwrap(await api.post('/fees/assignments', { fee_structure_id: assignment.value.fee_structure_id, student_ids: assignment.value.student_ids, concession_minor: Math.round(Number(assignment.value.concession || 0) * 100) }));
+        const studentOptions = assignment.value.student_ids.map((student_id) => {
+          const choices = assignment.value.student_options[student_id] || {};
+          return { student_id, optional_fee_type_ids: choices.optional_fee_type_ids || [], concession_minor: Math.round(Number(choices.concession || 0) * 100) };
+        });
+        const data = unwrap(await api.post('/fees/assignments', { fee_structure_id: assignment.value.fee_structure_id, student_ids: assignment.value.student_ids, student_options: studentOptions, optional_fee_type_ids: assignment.value.optional_fee_type_ids, concession_minor: Math.round(Number(assignment.value.concession || 0) * 100) }));
         toastMessage('success', `${data.assigned} account(s) assigned; ${data.skipped} existing account(s) skipped.`);
-        assignment.value = { ...assignment.value, student_ids: [] };
+        assignment.value = { ...assignment.value, optional_fee_type_ids: [], student_ids: [], student_options: {} };
         await Promise.all([loadAccounts(1), loadDashboard()]);
       } catch (cause) { toastMessage('error', cause.response?.data?.message || cause.message); }
       finally { saving.value = false; }
@@ -284,9 +310,18 @@ export default {
       } catch (cause) { toastMessage('error', cause.response?.data?.message || cause.message); }
     };
     const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN') : '—';
-    const selectAllStudents = () => { assignment.value.student_ids = accountStudents.value.map((student) => student._id); };
-    const clearStudentSelection = () => { assignment.value.student_ids = []; };
+    const toggleStudent = (studentId, checked) => {
+      const ids = new Set(assignment.value.student_ids);
+      if (checked) { ids.add(studentId); assignment.value.student_options[studentId] ||= { optional_fee_type_ids: [], concession: '' }; }
+      else { ids.delete(studentId); delete assignment.value.student_options[studentId]; }
+      assignment.value.student_ids = [...ids];
+    };
+    const selectAllStudents = () => {
+      assignment.value.student_ids = accountStudents.value.map((student) => student._id);
+      for (const student of accountStudents.value) assignment.value.student_options[student._id] ||= { optional_fee_type_ids: [], concession: '' };
+    };
+    const clearStudentSelection = () => { assignment.value.student_ids = []; assignment.value.student_options = {}; };
     onMounted(refresh);
-    return { activeSection, loading, saving, error, dashboard, feeTypes, structures, students, accounts, accountPagination, payments, paymentPagination, feeReport, auditEvents, reportYear, reportCourse, reportFrom, reportTo, editingTypeId, editingStructureId, courses, academicYears, accountSearch, accountSort, paymentSearch, paymentSort, paymentFrom, paymentTo, paymentMethod, typeForm, structureForm, assignment, parentForm, accountStudents, dialog, paymentForm, adjustmentForm, refundForm, money, formatDate, refresh, selectSection, saveType, resetTypeForm, editType, toggleType, addLine, removeLine, addInstallment, removeInstallment, saveStructure, resetStructureForm, editStructure, toggleStructure, assignFees, createParentAccess, searchAccounts, loadAccounts, loadPayments, clearPaymentFilters, loadReport, clearReportFilters, exportReport, openDialog, closeDialog, viewStatement, submitCollection, submitAdjustment, submitRefund, printReceipt, selectAllStudents, clearStudentSelection };
+    return { activeSection, loading, saving, error, dashboard, feeTypes, structures, students, accounts, accountPagination, payments, paymentPagination, feeReport, auditEvents, reportYear, reportCourse, reportFrom, reportTo, editingTypeId, editingStructureId, courses, academicYears, accountSearch, accountSort, paymentSearch, paymentSort, paymentFrom, paymentTo, paymentMethod, typeForm, structureForm, assignment, parentForm, accountStudents, selectedAssignmentStudents, assignmentStructure, assignmentOptionalLines, assignmentMonthlyTotalMinor, assignmentMonthsRemaining, assignmentTotalMinor, assignmentPayableMinor, studentMonthlyTotal, studentTotal, studentPayable, dialog, paymentForm, adjustmentForm, refundForm, money, formatDate, refresh, selectSection, saveType, resetTypeForm, editType, toggleType, addLine, removeLine, saveStructure, resetStructureForm, editStructure, toggleStructure, assignFees, createParentAccess, searchAccounts, loadAccounts, loadPayments, clearPaymentFilters, loadReport, clearReportFilters, exportReport, openDialog, closeDialog, viewStatement, submitCollection, submitAdjustment, submitRefund, printReceipt, selectAllStudents, clearStudentSelection, toggleStudent };
   },
 };

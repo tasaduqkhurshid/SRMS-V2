@@ -2,9 +2,10 @@
 
 const crypto = require("node:crypto");
 const PaymentProvider = require("./payment/PaymentProvider");
+const SchoolGatewayService = require("./SchoolGatewayService");
 const {
   FeeType, FeeStructure, StudentFeeAccount, FeePayment, FeeAudit,
-  Student, Course, AcademicYear, School, User, mongoose,
+  Student, Course, AcademicYear, School, SchoolGateway, Gateway, User, mongoose,
 } = require("../db/models");
 const { ValidationError, NotFoundError, ConflictError, AuthorizationError } = require("../utils/applicationErrors");
 const { success, failure } = require("../utils/serviceResult");
@@ -49,6 +50,13 @@ const ensureOwned = async (Model, id, schoolId, resource, session = null) => {
   return value;
 };
 const parsePage = (page, limit) => ({ page: Math.max(1, Number(page) || 1), limit: Math.min(100, Math.max(1, Number(limit) || 20)) });
+const monthCountInclusive = (startValue, endValue) => {
+  if (!startValue || !endValue) return 12;
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) return 12;
+  return (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth() + 1;
+};
 const cleanAccount = (account) => {
   const value = typeof account.toObject === "function" ? account.toObject() : account;
   return { ...value, balance_minor: accountDue(value) };
@@ -110,7 +118,12 @@ const listStructures = async (schoolId, filters = {}) => {
     .populate("course_id", "course_name course_code")
     .populate("academic_year_id", "name start_date end_date")
     .sort({ createdAt: -1 }).lean();
-  return rows;
+  return rows.map((row) => {
+    if (row.monthly_model === true) return row;
+    const months = monthCountInclusive(row.academic_year_id?.start_date, row.academic_year_id?.end_date);
+    const lines = (row.lines || []).map((line) => ({ ...line, amount_minor: Math.max(1, Math.round(line.amount_minor / months)) }));
+    return { ...row, lines, total_minor: lines.reduce((sum, line) => sum + line.amount_minor, 0), monthly_model: true };
+  });
 };
 const saveStructure = async (schoolId, actorId, payload = {}, id = null) => {
   const name = String(payload.name || "").trim();
@@ -128,24 +141,16 @@ const saveStructure = async (schoolId, actorId, payload = {}, id = null) => {
   const typeMap = new Map(types.map((type) => [String(type._id), type]));
   const lines = inputLines.map((line) => {
     const type = typeMap.get(String(line.fee_type_id));
-    return { fee_type_id: type._id, name: type.name, amount_minor: asMinor(line.amount_minor, `${type.name} amount`) };
+    return { fee_type_id: type._id, name: type.name, amount_minor: asMinor(line.amount_minor, `${type.name} monthly amount`), required: line.required !== false };
   });
   if (lines.some((line) => line.amount_minor < 1)) throw new ValidationError("Fee line amounts must be greater than zero");
   const totalMinor = lines.reduce((sum, line) => sum + line.amount_minor, 0);
   if (!Number.isSafeInteger(totalMinor)) throw new ValidationError("Fee structure total exceeds the supported amount");
-  let installments = Array.isArray(payload.installments) ? payload.installments.map((item) => ({
-    name: String(item.name || "").trim(),
-    due_date: new Date(item.due_date),
-    amount_minor: asMinor(item.amount_minor, "Installment amount"),
-  })) : [];
-  if (installments.some((item) => !item.name || Number.isNaN(item.due_date.getTime()) || item.amount_minor < 1)) {
-    throw new ValidationError("Each installment needs a name, valid due date, and amount greater than zero");
-  }
-  if (installments.length && installments.reduce((sum, item) => sum + item.amount_minor, 0) !== totalMinor) {
-    throw new ValidationError("Installment amounts must add up to the fee structure total");
-  }
+  if (!lines.some((line) => line.required)) throw new ValidationError("At least one fee type, such as Tuition, must be compulsory");
+  const dueDay = Number(payload.due_day ?? 10);
+  if (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31) throw new ValidationError("Monthly due day must be between 1 and 31");
   const fields = {
-    name, course_id: course._id, academic_year_id: year._id, lines, installments,
+    name, course_id: course._id, academic_year_id: year._id, lines, installments: [], due_day: dueDay, monthly_model: true,
     total_minor: totalMinor, active: payload.active !== false, updated_by: actorId,
   };
   if (!id) fields.created_by = actorId;
@@ -172,11 +177,29 @@ const assignStructure = async (schoolId, actorId, payload = {}) => {
     : { class: { $in: courseClasses } })).select("_id class name").lean();
   if (studentIds.length && students.length !== studentIds.length) throw new ValidationError("Some selected students do not belong to this school and course");
   if (!students.length) return { assigned: 0, skipped: 0, accounts: [] };
-  const concession = asMinor(payload.concession_minor || 0, "Concession");
-  if (concession >= structure.total_minor) throw new ValidationError("Concession must be less than the fee structure total");
-  const schedule = structure.installments.length
-    ? structure.installments
-    : [{ name: "Full payment", due_date: new Date(), amount_minor: structure.total_minor }];
+  const academicYear = await AcademicYear.findOne(schoolFilter(schoolId, { _id: structure.academic_year_id })).select("start_date end_date").lean();
+  if (!academicYear?.start_date || !academicYear?.end_date || new Date(academicYear.start_date) > new Date(academicYear.end_date)) throw new ValidationError("Set valid start and end dates on the academic year before assigning monthly fees");
+  const periodMonths = monthCountInclusive(academicYear.start_date, academicYear.end_date);
+  const validOptionalIds = new Set(structure.lines.filter((line) => line.required === false).map((line) => String(line.fee_type_id)));
+  const defaultOptionalIds = (Array.isArray(payload.optional_fee_type_ids) ? payload.optional_fee_type_ids : []).map(String);
+  const studentOptions = new Map((Array.isArray(payload.student_options) ? payload.student_options : []).map((item) => [String(item.student_id), item]));
+  if (studentIds.length && studentOptions.size && studentOptions.size !== studentIds.length) throw new ValidationError("Provide fee choices for every selected student");
+  if ([...studentOptions.keys()].some((id) => !studentIds.includes(id))) throw new ValidationError("Fee choices include a student outside this assignment");
+  const start = new Date(academicYear.start_date);
+  const end = new Date(academicYear.end_date);
+  const now = new Date();
+  let firstMonth = new Date(start.getFullYear(), start.getMonth(), 1);
+  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  if (firstMonth < currentMonth) firstMonth = currentMonth;
+  const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+  if (firstMonth > endMonth) throw new ValidationError("The academic year has ended; no monthly fees remain to assign");
+  const months = [];
+  for (let cursor = firstMonth; cursor <= endMonth; cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)) {
+    const day = Math.min(structure.due_day || 10, new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate());
+    const due_date = new Date(cursor.getFullYear(), cursor.getMonth(), day, 23, 59, 59, 999);
+    months.push({ name: due_date.toLocaleString("en", { month: "long", year: "numeric" }), due_date });
+  }
+  const monthsRemaining = months.length;
   const accounts = [];
   let skipped = 0;
   for (const student of students) {
@@ -184,18 +207,36 @@ const assignStructure = async (schoolId, actorId, payload = {}) => {
       student_id: student._id, academic_year_id: structure.academic_year_id, fee_structure_id: structure._id,
     }));
     if (exists) { skipped += 1; continue; }
+    const perStudent = studentOptions.get(String(student._id));
+    const chosenOptionalIds = perStudent?.optional_fee_type_ids ?? defaultOptionalIds;
+    if (!Array.isArray(chosenOptionalIds)) throw new ValidationError("Optional fee choices must be a list");
+    const optionalIds = new Set(chosenOptionalIds.map(String));
+    if ([...optionalIds].some((feeTypeId) => !validOptionalIds.has(feeTypeId))) throw new ValidationError("Choose optional fee types from this structure");
+    const selectedLines = structure.lines.filter((line) => line.required !== false || optionalIds.has(String(line.fee_type_id)))
+      .map((line) => ({ ...line, amount_minor: structure.monthly_model === true ? line.amount_minor : Math.max(1, Math.round(line.amount_minor / periodMonths)) }));
+    if (!selectedLines.some((line) => line.required !== false)) throw new ValidationError("The compulsory fee is missing from this structure");
+    const monthlyTotal = selectedLines.reduce((sum, line) => sum + line.amount_minor, 0);
+    const totalAssigned = monthlyTotal * monthsRemaining;
+    if (!Number.isSafeInteger(totalAssigned)) throw new ValidationError("Total assigned fee exceeds the supported amount");
+    const concession = asMinor(perStudent?.concession_minor ?? payload.concession_minor ?? 0, "Concession");
+    if (concession >= totalAssigned) throw new ValidationError("Concession must be less than the total assigned fee");
+    const schedule = months.map(({ name, due_date }) => ({
+      name, due_date, amount_minor: monthlyTotal,
+      lines: selectedLines.map((line) => ({ fee_type_id: line.fee_type_id, name: line.name, amount_minor: line.amount_minor })),
+    }));
     const installments = schedule.map((item) => ({ ...item, paid_minor: 0 }));
     const account = await StudentFeeAccount.create({
       school_id: schoolId, student_id: student._id, course_id: structure.course_id,
       academic_year_id: structure.academic_year_id, fee_structure_id: structure._id,
-      structure_name: structure.name, lines: structure.lines.map((line) => ({ ...line })),
+      structure_name: structure.name, lines: selectedLines.map((line) => ({ ...line })),
+      monthly_total_minor: monthlyTotal, months_remaining: monthsRemaining, due_day: structure.due_day || 10, assigned_at: now,
       installments,
-      gross_minor: structure.total_minor, concession_minor: concession, adjustment_minor: 0,
+      gross_minor: totalAssigned, concession_minor: concession, adjustment_minor: 0,
       paid_minor: 0, assigned_by: actorId,
     });
     accounts.push(cleanAccount(account));
   }
-  if (accounts.length) await audit(schoolId, actorId, "STUDENT_FEES_ASSIGNED", "StudentFeeAccount", accounts[0]._id, { count: accounts.length, structure_id: structure._id });
+  if (accounts.length) await audit(schoolId, actorId, "STUDENT_FEES_ASSIGNED", "StudentFeeAccount", accounts[0]._id, { count: accounts.length, structure_id: structure._id, months_remaining: monthsRemaining });
   return { assigned: accounts.length, skipped, accounts };
 };
 
@@ -252,7 +293,13 @@ const getAccount = async (schoolId, accountId) => {
   const paid = payments.filter((payment) => payment.status === "CONFIRMED").reduce((sum, payment) =>
     sum + (payment.kind === "COLLECTION" ? payment.amount_minor : -payment.amount_minor), 0);
   const statement = cleanAccount({ ...account, paid_minor: Math.max(0, paid) });
-  return { ...statement, installments: effectiveInstallments(statement), payments };
+  const today = new Date();
+  const installments = effectiveInstallments(statement).map((item) => {
+    const dueDate = new Date(item.due_date);
+    const status = item.effective_amount_minor <= 0 ? "WAIVED" : item.balance_minor <= 0 ? "PAID" : dueDate < today ? "OVERDUE" : item.paid_minor > 0 ? "PART_PAID" : "PENDING";
+    return { ...item, status, overdue: status === "OVERDUE" };
+  });
+  return { ...statement, installments, payments };
 };
 
 const recordCollection = async (schoolId, actorId, accountId, payload = {}) => {
@@ -292,10 +339,12 @@ const initiateOnlinePayment = async (user, accountId, payload = {}) => {
   const amount = asMinor(payload.amount_minor, "Payment amount");
   if (!amount) throw new ValidationError("Payment amount must be greater than zero");
   if (!schoolId) throw new AuthorizationError("A school account is required");
-  const school = await School.findById(schoolId).select("status settings.onlinePayments").lean();
-  const config = school?.settings?.onlinePayments || {};
+  const school = await School.findById(schoolId).select("status").lean();
   if (!school || school.status !== "active") throw new ValidationError("This school cannot currently accept payments");
-  if (!config.enabled || config.provider !== "razorpay" || !PaymentProvider.isConfigured()) throw new ValidationError("Online payments are not available for this school");
+  const gateway = await Gateway.findOne({ code: "razorpay", isEnabled: true, integrationStatus: "implemented" }).lean();
+  const gatewayConfig = gateway && await SchoolGateway.findOne({ school_id: schoolId, gateway_id: gateway._id, isEnabled: true, credentialsConfigured: true, configurationStatus: "READY", validationStatus: "VALID" }).lean();
+  if (!gateway || !gatewayConfig) throw new ValidationError("Online payments are not available for this school");
+  const credentials = await SchoolGatewayService.loadCredentials(schoolId, gateway._id);
   const account = await StudentFeeAccount.findOne(schoolFilter(schoolId, { _id: accountId, status: "ACTIVE" })).lean();
   if (!account) throw new NotFoundError("Student fee account");
   assertPortalStudentAccess(user, account.student_id);
@@ -304,7 +353,8 @@ const initiateOnlinePayment = async (user, accountId, payload = {}) => {
   const activePending = await FeePayment.findOne(schoolFilter(schoolId, { account_id: account._id, status: "PENDING", method: "ONLINE" })).lean();
   if (activePending) {
     if (activePending.amount_minor !== amount || !activePending.provider_order_id) throw new ConflictError("An online payment is already in progress for this fee account");
-    return { payment_id: activePending._id, order_id: activePending.provider_order_id, key_id: process.env.RAZORPAY_KEY_ID, amount_minor: activePending.amount_minor, currency: "INR", status: activePending.status };
+    const pendingCredentials = await SchoolGatewayService.loadCredentials(schoolId, gateway._id, activePending.gateway_environment);
+    return { payment_id: activePending._id, order_id: activePending.provider_order_id, key_id: pendingCredentials.keyId, amount_minor: activePending.amount_minor, currency: "INR", payment_methods: gatewayConfig.paymentMethods, status: activePending.status };
   }
   const due = accountAvailable(account);
   if (!due || amount > due) throw new ValidationError("Payment amount must be within the available outstanding balance");
@@ -326,19 +376,23 @@ const initiateOnlinePayment = async (user, accountId, payload = {}) => {
     const [created] = await FeePayment.create([{
       school_id: schoolId, account_id: current._id, student_id: current.student_id,
       amount_minor: amount, kind: "COLLECTION", method: "ONLINE", status: "PENDING",
-      idempotency_key: idempotencyKey, notes: "Online payment initiated",
+      idempotency_key: idempotencyKey, notes: "Online payment initiated", gateway_id: gateway._id,
+      gateway_code: gateway.code, gateway_environment: gatewayConfig.environment,
     }], { session });
     return { payment: created, createOrder: true };
   });
   const { payment, createOrder: shouldCreateOrder } = pendingOrder;
-  if (payment.provider_order_id) return { payment_id: payment._id, order_id: payment.provider_order_id, key_id: process.env.RAZORPAY_KEY_ID, amount_minor: payment.amount_minor, status: payment.status };
+  if (payment.provider_order_id) {
+    const paymentCredentials = await SchoolGatewayService.loadCredentials(schoolId, gateway._id, payment.gateway_environment);
+    return { payment_id: payment._id, order_id: payment.provider_order_id, key_id: paymentCredentials.keyId, amount_minor: payment.amount_minor, payment_methods: gatewayConfig.paymentMethods, status: payment.status };
+  }
   if (!shouldCreateOrder) throw new ConflictError("The online payment order is still being prepared. Retry in a moment.");
   try {
-    const order = await PaymentProvider.createOrder({ amountMinor: amount, receipt: payment._id, notes: { fee_payment_id: String(payment._id), school_id: String(schoolId) } });
+    const order = await PaymentProvider.createOrder({ amountMinor: amount, receipt: payment._id, credentials, notes: { fee_payment_id: String(payment._id), school_id: String(schoolId) } });
     payment.provider_order_id = order.id;
     payment.provider_expires_at = order.expire_by ? new Date(Number(order.expire_by) * 1000) : undefined;
     await payment.save();
-    return { payment_id: payment._id, order_id: order.id, key_id: order.key_id, amount_minor: amount, currency: "INR", status: "PENDING" };
+    return { payment_id: payment._id, order_id: order.id, key_id: order.key_id, amount_minor: amount, currency: "INR", payment_methods: gatewayConfig.paymentMethods, status: "PENDING" };
   } catch (error) {
     await sessionWork(async (session) => {
       const currentPayment = await FeePayment.findOne(schoolFilter(schoolId, { _id: payment._id })).session(session);
@@ -354,9 +408,20 @@ const initiateOnlinePayment = async (user, accountId, payload = {}) => {
   }
 };
 
-const handlePaymentWebhook = async (schoolId, rawBody, signature, body = {}) => {
-  if (!PaymentProvider.verifyWebhook(rawBody, signature)) throw new AuthorizationError("Invalid payment webhook signature");
+const handlePaymentWebhook = async (rawBody, signature, body = {}) => {
   const event = String(body.event || "");
+  const paymentEntityForLookup = body.payload?.payment?.entity;
+  const orderEntityForLookup = body.payload?.order?.entity;
+  const refundEntityForLookup = body.payload?.refund?.entity;
+  let feePayment = null;
+  const linkedPaymentId = paymentEntityForLookup?.notes?.fee_payment_id || orderEntityForLookup?.notes?.fee_payment_id;
+  if (linkedPaymentId && mongoose.isValidObjectId(linkedPaymentId)) feePayment = await FeePayment.findOne({ _id: linkedPaymentId, method: "ONLINE" }).lean();
+  if (!feePayment && (paymentEntityForLookup?.order_id || orderEntityForLookup?.id)) feePayment = await FeePayment.findOne({ provider_order_id: paymentEntityForLookup?.order_id || orderEntityForLookup.id, method: "ONLINE" }).lean();
+  if (!feePayment && refundEntityForLookup?.notes?.fee_refund_id) feePayment = await FeePayment.findById(refundEntityForLookup.notes.fee_refund_id).lean();
+  if (!feePayment) return { accepted: true, ignored: true };
+  const webhookConfig = await SchoolGatewayService.loadCredentials(feePayment.school_id, feePayment.gateway_id, feePayment.gateway_environment);
+  if (!PaymentProvider.verifyWebhook(rawBody, signature, webhookConfig.webhookSecret)) throw new AuthorizationError("Invalid payment webhook signature");
+  const schoolId = feePayment.school_id;
   if (["refund.processed", "refund.failed"].includes(event)) {
     const refundEntity = body.payload?.refund?.entity;
     const refundId = String(refundEntity?.id || "");
@@ -365,9 +430,13 @@ const handlePaymentWebhook = async (schoolId, rawBody, signature, body = {}) => 
     return sessionWork(async (session) => {
       const refund = await FeePayment.findOne(schoolFilter(schoolId, { _id: feeRefundId, kind: "REFUND" })).session(session);
       if (!refund) return { accepted: true, ignored: true };
+      if (refund.provider_refund_id && refund.provider_refund_id !== refundId) {
+        throw new ValidationError("Provider refund ID does not match the pending fee refund");
+      }
       if (refund.status === "CONFIRMED") return { accepted: true, duplicate: true, status: refund.status };
       if (event === "refund.failed") {
         if (refund.status === "FAILED" && refund.provider_refund_id === refundId) return { accepted: true, duplicate: true, status: refund.status };
+        if (refund.status !== "PENDING") return { accepted: true, ignored: true, status: refund.status };
         const original = await ensureOwned(FeePayment, refund.related_payment_id, schoolId, "Original fee payment", session);
         original.refund_reserved_minor = Math.max(0, Number(original.refund_reserved_minor || 0) - refund.amount_minor);
         refund.provider_refund_id = refundId;
@@ -384,6 +453,14 @@ const handlePaymentWebhook = async (schoolId, rawBody, signature, body = {}) => 
       }
       const account = await ensureOwned(StudentFeeAccount, refund.account_id, schoolId, "Student fee account", session);
       if (refund.amount_minor > account.paid_minor) throw new ConflictError("Refund exceeds the account's confirmed paid amount");
+      const confirmedRefunds = await FeePayment.aggregate([
+        { $match: schoolFilter(schoolId, { related_payment_id: original._id, kind: "REFUND", status: "CONFIRMED" }) },
+        { $group: { _id: null, amount: { $sum: "$amount_minor" } } },
+      ]).session(session);
+      const otherReservations = Math.max(0, Number(original.refund_reserved_minor || 0) - (refund.status === "PENDING" ? refund.amount_minor : 0));
+      if (refund.amount_minor > original.amount_minor - Number(confirmedRefunds[0]?.amount || 0) - otherReservations) {
+        throw new ConflictError("Refund exceeds the original payment's remaining refundable amount");
+      }
       original.refund_reserved_minor = Math.max(0, Number(original.refund_reserved_minor || 0) - refund.amount_minor);
       account.paid_minor -= refund.amount_minor;
       let refundRemaining = refund.amount_minor;
@@ -463,8 +540,9 @@ const cancelOnlinePayment = async (user, paymentId) => {
   assertPortalStudentAccess(user, payment.student_id);
   if (payment.status === "CANCELLED") return { status: "CANCELLED" };
   if (payment.status !== "PENDING" || !payment.provider_order_id) throw new ConflictError("Only pending online payments can be cancelled");
-  const providerOrder = await PaymentProvider.getOrder(payment.provider_order_id);
-  const providerPayments = await PaymentProvider.getOrderPayments(payment.provider_order_id);
+  const credentials = await SchoolGatewayService.loadCredentials(schoolId, payment.gateway_id, payment.gateway_environment);
+  const providerOrder = await PaymentProvider.getOrder(payment.provider_order_id, credentials);
+  const providerPayments = await PaymentProvider.getOrderPayments(payment.provider_order_id, credentials);
   if (!PaymentProvider.isOrderSafelyExpired(providerOrder, providerPayments)) {
     return { status: "PENDING", message: "The provider has not confirmed this order as expired. Its reservation remains in place until a terminal provider status arrives." };
   }
@@ -540,7 +618,7 @@ const refundPayment = async (schoolId, actorId, paymentId, payload = {}) => {
           await original.save({ session });
           await existingRefund.save({ session });
         }
-        return { refund: existingRefund.toObject(), processOnline: true, providerPaymentId: original.provider_payment_id };
+        return { refund: existingRefund.toObject(), processOnline: true, providerPaymentId: original.provider_payment_id, gatewayId: original.gateway_id };
       }
       return { refund: existingRefund.toObject(), processOnline: false };
     }
@@ -555,17 +633,19 @@ const refundPayment = async (schoolId, actorId, paymentId, payload = {}) => {
     const account = await ensureOwned(StudentFeeAccount, original.account_id, schoolId, "Student fee account", session);
     if (amount > account.paid_minor) throw new ConflictError("Refund exceeds the account's confirmed paid amount");
     if (original.method === "ONLINE") {
-      if (!PaymentProvider.isConfigured() || !original.provider_payment_id) throw new ValidationError("The online refund provider is not ready to refund this payment");
+      if (!original.gateway_id || !original.provider_payment_id) throw new ValidationError("The original payment provider is not ready to refund this payment");
+      await SchoolGatewayService.loadCredentials(schoolId, original.gateway_id, original.gateway_environment);
       original.refund_reserved_minor = Number(original.refund_reserved_minor || 0) + amount;
       await original.save({ session });
       const [refund] = await FeePayment.create([{
         school_id: schoolId, account_id: account._id, student_id: original.student_id,
         amount_minor: amount, kind: "REFUND", method: "ONLINE", status: "PENDING",
         idempotency_key: idempotencyKey, received_by: actorId,
-        related_payment_id: original._id, notes: reason,
+        related_payment_id: original._id, notes: reason, gateway_id: original.gateway_id,
+        gateway_code: original.gateway_code, gateway_environment: original.gateway_environment,
       }], { session });
       await audit(schoolId, actorId, "ONLINE_REFUND_REQUESTED", "FeePayment", refund._id, { amount_minor: amount, original_payment_id: original._id }, session);
-      return { refund: refund.toObject(), processOnline: true, providerPaymentId: original.provider_payment_id };
+      return { refund: refund.toObject(), processOnline: true, providerPaymentId: original.provider_payment_id, gatewayId: original.gateway_id };
     }
     account.paid_minor -= amount;
     let refundRemaining = amount;
@@ -588,12 +668,13 @@ const refundPayment = async (schoolId, actorId, paymentId, payload = {}) => {
   });
   if (!prepared.processOnline) return prepared.refund;
   if (!prepared.providerPaymentId) throw new ValidationError("The original provider payment reference is missing");
+  const providerCredentials = await SchoolGatewayService.loadCredentials(schoolId, prepared.gatewayId || prepared.refund.gateway_id, prepared.refund.gateway_environment);
   try {
-    const priorRefunds = await PaymentProvider.getPaymentRefunds(prepared.providerPaymentId);
+    const priorRefunds = await PaymentProvider.getPaymentRefunds(prepared.providerPaymentId, providerCredentials);
     let providerRefund = priorRefunds.find((item) => String(item.notes?.fee_refund_id || "") === String(prepared.refund._id));
     if (!providerRefund) {
       providerRefund = await PaymentProvider.createRefund({
-        paymentId: prepared.providerPaymentId, amountMinor: amount, receipt: prepared.refund._id,
+        paymentId: prepared.providerPaymentId, amountMinor: amount, receipt: prepared.refund._id, credentials: providerCredentials,
         notes: { fee_refund_id: String(prepared.refund._id) },
       });
     }
@@ -680,14 +761,17 @@ const getStudentFees = async (studentId, schoolId) => {
     outstanding += statement.balance_minor;
     return portalAccount({ ...statement, installments: dueByInstallment });
   });
-  const onlineSettings = await School.findById(schoolId).select("settings.onlinePayments status").lean();
-  const gatewayConfigured = Boolean(process.env.PAYMENT_GATEWAY_PROVIDER === "razorpay" && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_WEBHOOK_SECRET);
-  const onlineEligible = onlineSettings?.status === "active" && onlineSettings?.settings?.onlinePayments?.enabled === true && onlineSettings.settings.onlinePayments.provider === "razorpay" && gatewayConfigured;
+  const [school, gateway] = await Promise.all([
+    School.findById(schoolId).select("status").lean(),
+    Gateway.findOne({ code: "razorpay", isEnabled: true, integrationStatus: "implemented" }).lean(),
+  ]);
+  const configuredGateway = gateway && await SchoolGateway.findOne({ school_id: schoolId, gateway_id: gateway._id, isEnabled: true, credentialsConfigured: true, configurationStatus: "READY", validationStatus: "VALID" }).lean();
+  const onlineEligible = school?.status === "active" && Boolean(configuredGateway);
   return {
     summary: { gross_minor: gross, concessions_minor: concessions, paid_minor: paid, outstanding_minor: outstanding, currency: "INR" },
     accounts: feeAccounts,
     transactions: payments.map(portalPayment),
-    online_payments: { enabled: onlineSettings?.settings?.onlinePayments?.enabled === true, eligible: onlineEligible, provider: onlineEligible ? "razorpay" : null, status: onlineEligible ? "READY" : "UNAVAILABLE" },
+    online_payments: { enabled: Boolean(configuredGateway), eligible: onlineEligible, provider: onlineEligible ? "razorpay" : null, status: onlineEligible ? "READY" : "UNAVAILABLE" },
   };
 };
 
@@ -854,29 +938,29 @@ const getReceipt = async (schoolId, paymentId, studentId = null) => {
 
 const setOnlinePaymentSettings = async (schoolId, actorId, payload = {}) => {
   const enabled = payload.enabled === true;
-  const provider = payload.provider === "razorpay" ? "razorpay" : "";
-  const gatewayConfigured = provider === "razorpay" && process.env.PAYMENT_GATEWAY_PROVIDER === "razorpay" && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_WEBHOOK_SECRET;
-  if (enabled && !gatewayConfigured) throw new ValidationError("Online payments cannot be enabled until the server has a supported provider and all required credentials configured");
+  const provider = "razorpay";
+  const gateway = provider && await Gateway.findOne({ code: provider }).lean();
+  const config = gateway && await SchoolGateway.findOne({ school_id: schoolId, gateway_id: gateway._id });
+  const gatewayConfigured = Boolean(config?.credentialsConfigured && config.validationStatus === "VALID" && config.configurationStatus === "READY");
+  if (!config) throw new ValidationError("This school has not configured the selected payment provider");
+  if (enabled && (!gatewayConfigured || !gateway.isEnabled || gateway.integrationStatus !== "implemented")) throw new ValidationError("Online payments require validated school credentials and an available platform provider");
   const currentSchool = await School.findById(schoolId).select("status").lean();
   if (!currentSchool) throw new NotFoundError("School");
   if (enabled && currentSchool.status !== "active") throw new ValidationError("Online payments cannot be enabled for an inactive school");
-  const school = await School.findByIdAndUpdate(schoolId, { $set: {
-    "settings.onlinePayments.enabled": enabled,
-    "settings.onlinePayments.provider": enabled ? provider : "",
-    "settings.onlinePayments.updatedBy": actorId,
-    "settings.onlinePayments.updatedAt": new Date(),
-  } }, { new: true, runValidators: true }).select("_id school_name status settings.onlinePayments").lean();
-  if (!school) throw new NotFoundError("School");
-  await FeeAudit.create({ school_id: schoolId, actor_id: actorId, action: enabled ? "ONLINE_PAYMENTS_ENABLED" : "ONLINE_PAYMENTS_DISABLED", entity_type: "School", entity_id: schoolId, details: { provider: enabled ? provider : null } });
-  return { enabled: school.settings?.onlinePayments?.enabled === true, provider: school.settings?.onlinePayments?.provider || null, status: gatewayConfigured && enabled ? "READY" : enabled ? "MISCONFIGURED" : "DISABLED", credentials_configured: Boolean(gatewayConfigured), updated_at: school.settings?.onlinePayments?.updatedAt || null };
+  config.isEnabled = enabled;
+  config.updatedBy = actorId;
+  await config.save();
+  await FeeAudit.create({ school_id: schoolId, actor_id: actorId, action: enabled ? "SCHOOL_GATEWAY_ENABLED_BY_PLATFORM" : "SCHOOL_GATEWAY_DISABLED_BY_PLATFORM", entity_type: "SchoolGateway", entity_id: config._id, details: { provider } });
+  return { enabled: config.isEnabled, provider, status: currentSchool.status !== "active" ? "SCHOOL_INACTIVE" : !enabled ? "DISABLED" : gatewayConfigured ? "READY" : "MISCONFIGURED", credentials_configured: Boolean(config.credentialsConfigured), updated_at: config.updatedAt || null };
 };
 
 const getOnlinePaymentSettings = async (schoolId) => {
   const school = await School.findById(schoolId).select("status settings.onlinePayments").lean();
   if (!school) throw new NotFoundError("School");
-  const config = school.settings?.onlinePayments || {};
-  const credentialsConfigured = Boolean(config.provider === "razorpay" && process.env.PAYMENT_GATEWAY_PROVIDER === "razorpay" && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_WEBHOOK_SECRET);
-  return { enabled: config.enabled === true, provider: config.provider || null, credentials_configured: credentialsConfigured, status: school.status !== "active" ? "SCHOOL_INACTIVE" : !config.enabled ? "DISABLED" : credentialsConfigured ? "READY" : "MISCONFIGURED", updated_at: config.updatedAt || null };
+  const gateway = await Gateway.findOne({ code: "razorpay" }).lean();
+  const config = gateway && await SchoolGateway.findOne({ school_id: schoolId, gateway_id: gateway._id }).lean();
+  const credentialsConfigured = Boolean(config?.credentialsConfigured && config.validationStatus === "VALID");
+  return { enabled: config?.isEnabled === true, provider: config ? gateway.code : null, credentials_configured: Boolean(config?.credentialsConfigured), status: school.status !== "active" ? "SCHOOL_INACTIVE" : !config?.isEnabled ? "DISABLED" : gateway?.isEnabled && credentialsConfigured ? "READY" : "MISCONFIGURED", updated_at: config?.updatedAt || null };
 };
 
 const listAudit = async (schoolId, filters = {}) => FeeAudit.find(schoolFilter(schoolId, filters.entity_type ? { entity_type: filters.entity_type } : {}))

@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const GatewayController = require('../controllers/platformGatewayController');
 const controller = require('../controllers/platformSchoolController');
 const brandingController = require('../controllers/platformBrandingController');
 const multer = require('multer');
@@ -21,12 +22,19 @@ const uploadBrandingImage = (req, res, next) => brandingUpload(req, res, (error)
   return res.status(status).json({ success: false, message: status === 413 ? 'Branding images must be 5 MB or smaller' : error.message });
 });
 
+router.get('/payment-gateways', GatewayController.list);
+router.patch('/payment-gateways/:code', GatewayController.update);
+
 router.get('/schools', controller.listSchools);
 router.post('/schools', controller.createSchool);
 router.get('/schools/:id', controller.getSchool);
 router.patch('/schools/:id', controller.updateSchool);
 router.get('/schools/:id/payment-settings', require('../controllers/FeeController').onlineSettings);
 router.patch('/schools/:id/payment-settings', require('../controllers/FeeController').updateOnlineSettings);
+router.get('/schools/:id/payment-gateways', GatewayController.schoolGateways);
+router.put('/schools/:id/payment-gateways/:code', GatewayController.configureSchoolGateway);
+router.patch('/schools/:id/payment-gateways/:code/enabled', GatewayController.setSchoolGatewayEnabled);
+router.post('/schools/:id/payment-gateways/:code/validate', GatewayController.validateSchoolGateway);
 router.get('/schools/:id/admins', controller.listAdministrators);
 router.post('/schools/:id/admins', controller.createAdministrator);
 router.patch('/schools/:id/admins/:adminId', controller.updateAdministrator);
