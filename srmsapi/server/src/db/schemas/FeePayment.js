@@ -4,6 +4,8 @@ const FeePaymentSchema = new mongoose.Schema({
   school_id: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'School', index: true },
   account_id: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'StudentFeeAccount', index: true },
   student_id: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Student', index: true },
+  installment_id: { type: mongoose.Schema.Types.ObjectId },
+  installment_name: { type: String, trim: true, maxlength: 100, default: '' },
   amount_minor: { type: Number, required: true, min: 1, validate: Number.isSafeInteger },
   kind: { type: String, enum: ['COLLECTION', 'REFUND', 'REVERSAL'], default: 'COLLECTION', index: true },
   method: { type: String, enum: ['CASH', 'BANK_TRANSFER', 'CHEQUE', 'CARD', 'ONLINE'], required: true },

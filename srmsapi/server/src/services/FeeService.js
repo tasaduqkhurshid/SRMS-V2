@@ -9,7 +9,7 @@ const {
 } = require("../db/models");
 const { ValidationError, NotFoundError, ConflictError, AuthorizationError } = require("../utils/applicationErrors");
 const { success, failure } = require("../utils/serviceResult");
-const { asMinor, accountDue, accountAvailable, schoolFilter, effectiveInstallments } = require("./feeMath");
+const { asMinor, accountDue, accountAvailable, schoolFilter, effectiveInstallments, allocateToInstallment, reverseCollectionAllocation, synchronizeAccountStructure } = require("./feeMath");
 const { assertPortalStudentAccess } = require("./feeAuthorization");
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const requestIdempotencyKey = (payload = {}) => {
@@ -72,6 +72,8 @@ const portalPayment = (payment) => ({
 const portalAccount = (account) => ({
   _id: account._id, structure_name: account.structure_name, academic_year_id: account.academic_year_id,
   lines: account.lines, installments: account.installments, gross_minor: account.gross_minor,
+  monthly_total_minor: account.monthly_total_minor, monthly_concession_minor: account.monthly_concession_minor,
+  annual_total_minor: account.annual_total_minor || 0, annual_concession_minor: account.annual_concession_minor || 0,
   concession_minor: account.concession_minor, adjustment_minor: account.adjustment_minor,
   paid_minor: account.paid_minor, balance_minor: account.balance_minor, status: account.status,
 });
@@ -121,7 +123,7 @@ const listStructures = async (schoolId, filters = {}) => {
   return rows.map((row) => {
     if (row.monthly_model === true) return row;
     const months = monthCountInclusive(row.academic_year_id?.start_date, row.academic_year_id?.end_date);
-    const lines = (row.lines || []).map((line) => ({ ...line, amount_minor: Math.max(1, Math.round(line.amount_minor / months)) }));
+    const lines = (row.lines || []).map((line) => ({ ...line, amount_minor: line.billing_period === "ANNUAL" ? line.amount_minor : Math.max(1, Math.round(line.amount_minor / months)) }));
     return { ...row, lines, total_minor: lines.reduce((sum, line) => sum + line.amount_minor, 0), monthly_model: true };
   });
 };
@@ -141,7 +143,8 @@ const saveStructure = async (schoolId, actorId, payload = {}, id = null) => {
   const typeMap = new Map(types.map((type) => [String(type._id), type]));
   const lines = inputLines.map((line) => {
     const type = typeMap.get(String(line.fee_type_id));
-    return { fee_type_id: type._id, name: type.name, amount_minor: asMinor(line.amount_minor, `${type.name} monthly amount`), required: line.required !== false };
+    const billing_period = line.billing_period === "ANNUAL" ? "ANNUAL" : "MONTHLY";
+    return { fee_type_id: type._id, name: type.name, amount_minor: asMinor(line.amount_minor, `${type.name} ${billing_period.toLowerCase()} amount`), billing_period, required: line.required !== false };
   });
   if (lines.some((line) => line.amount_minor < 1)) throw new ValidationError("Fee line amounts must be greater than zero");
   const totalMinor = lines.reduce((sum, line) => sum + line.amount_minor, 0);
@@ -154,12 +157,33 @@ const saveStructure = async (schoolId, actorId, payload = {}, id = null) => {
     total_minor: totalMinor, active: payload.active !== false, updated_by: actorId,
   };
   if (!id) fields.created_by = actorId;
-  const row = id
-    ? await FeeStructure.findOneAndUpdate(schoolFilter(schoolId, { _id: id }), { $set: fields }, { new: true, runValidators: true })
-    : await FeeStructure.create({ ...fields, school_id: schoolId });
-  if (!row) throw new NotFoundError("Fee structure");
-  await audit(schoolId, actorId, id ? "FEE_STRUCTURE_UPDATED" : "FEE_STRUCTURE_CREATED", "FeeStructure", row._id, { total_minor: totalMinor });
-  return row.toObject();
+  return sessionWork(async (session) => {
+    let row;
+    if (id) {
+      const existingStructure = await FeeStructure.findOne(schoolFilter(schoolId, { _id: id })).session(session);
+      if (!existingStructure) throw new NotFoundError("Fee structure");
+      const hasAssignedAccounts = await StudentFeeAccount.exists(schoolFilter(schoolId, { fee_structure_id: id })).session(session);
+      const changesAssignmentScope = String(existingStructure.course_id) !== String(course._id) || String(existingStructure.academic_year_id) !== String(year._id);
+      if (hasAssignedAccounts && changesAssignmentScope) throw new ValidationError("A structure with assigned student accounts cannot be moved to another class or academic year; create a new structure instead");
+      const query = FeeStructure.findOneAndUpdate(schoolFilter(schoolId, { _id: id }), { $set: fields }, { new: true, runValidators: true });
+      query.session(session);
+      row = await query;
+    } else {
+      [row] = await FeeStructure.create([{ ...fields, school_id: schoolId }], { session });
+    }
+    if (!row) throw new NotFoundError("Fee structure");
+    let updatedAccounts = 0;
+    if (id) {
+      const accounts = await StudentFeeAccount.find(schoolFilter(schoolId, { fee_structure_id: row._id, status: "ACTIVE" })).session(session);
+      for (const account of accounts) {
+        Object.assign(account, synchronizeAccountStructure(account, row));
+        await account.save({ session });
+        updatedAccounts += 1;
+      }
+    }
+    await audit(schoolId, actorId, id ? "FEE_STRUCTURE_UPDATED" : "FEE_STRUCTURE_CREATED", "FeeStructure", row._id, { total_minor: totalMinor, updated_accounts: updatedAccounts }, session);
+    return { ...row.toObject(), updated_accounts: updatedAccounts };
+  });
 };
 
 const assignStructure = async (schoolId, actorId, payload = {}) => {
@@ -213,25 +237,48 @@ const assignStructure = async (schoolId, actorId, payload = {}) => {
     const optionalIds = new Set(chosenOptionalIds.map(String));
     if ([...optionalIds].some((feeTypeId) => !validOptionalIds.has(feeTypeId))) throw new ValidationError("Choose optional fee types from this structure");
     const selectedLines = structure.lines.filter((line) => line.required !== false || optionalIds.has(String(line.fee_type_id)))
-      .map((line) => ({ ...line, amount_minor: structure.monthly_model === true ? line.amount_minor : Math.max(1, Math.round(line.amount_minor / periodMonths)) }));
+      .map((line) => ({ ...line, amount_minor: structure.monthly_model === true || line.billing_period === "ANNUAL" ? line.amount_minor : Math.max(1, Math.round(line.amount_minor / periodMonths)) }));
     if (!selectedLines.some((line) => line.required !== false)) throw new ValidationError("The compulsory fee is missing from this structure");
-    const monthlyTotal = selectedLines.reduce((sum, line) => sum + line.amount_minor, 0);
-    const totalAssigned = monthlyTotal * monthsRemaining;
+    const concessionInput = perStudent?.concession_by_fee_type_minor ?? {};
+    if (!concessionInput || typeof concessionInput !== "object" || Array.isArray(concessionInput)) throw new ValidationError("Fee type concessions must be provided as an object");
+    const selectedLineIds = new Set(selectedLines.map((line) => String(line.fee_type_id)));
+    if (Object.keys(concessionInput).some((feeTypeId) => !selectedLineIds.has(feeTypeId))) throw new ValidationError("Concessions can only be set for fee types included for this student");
+    const concessionLines = selectedLines.map((line) => {
+      const feeTypeId = String(line.fee_type_id);
+      const concessionMinor = asMinor(concessionInput[feeTypeId] ?? 0, `${line.name} concession`);
+      if (concessionMinor > line.amount_minor) throw new ValidationError(`${line.name} concession cannot exceed its ${line.billing_period === "ANNUAL" ? "yearly" : "monthly"} fee`);
+      return { ...line, concession_minor: concessionMinor };
+    });
+    const monthlyLines = concessionLines.filter((line) => line.billing_period !== "ANNUAL");
+    const annualLines = concessionLines.filter((line) => line.billing_period === "ANNUAL");
+    const monthlyTotal = monthlyLines.reduce((sum, line) => sum + line.amount_minor, 0);
+    const annualTotal = annualLines.reduce((sum, line) => sum + line.amount_minor, 0);
+    const totalAssigned = monthlyTotal * monthsRemaining + annualTotal;
     if (!Number.isSafeInteger(totalAssigned)) throw new ValidationError("Total assigned fee exceeds the supported amount");
-    const concession = asMinor(perStudent?.concession_minor ?? payload.concession_minor ?? 0, "Concession");
+    const monthlyConcession = monthlyLines.reduce((sum, line) => sum + line.concession_minor, 0);
+    const annualConcession = annualLines.reduce((sum, line) => sum + line.concession_minor, 0);
+    const scheduledConcession = monthlyConcession * monthsRemaining + annualConcession;
+    if (!Number.isSafeInteger(scheduledConcession)) throw new ValidationError("Total fee type concession exceeds the supported amount");
+    const legacyConcession = asMinor(perStudent?.concession_minor ?? (perStudent ? 0 : payload.concession_minor ?? 0), "Concession");
+    const concession = scheduledConcession + legacyConcession;
+    if (!Number.isSafeInteger(concession)) throw new ValidationError("Total concession exceeds the supported amount");
     if (concession >= totalAssigned) throw new ValidationError("Concession must be less than the total assigned fee");
-    const schedule = months.map(({ name, due_date }) => ({
-      name, due_date, amount_minor: monthlyTotal,
-      lines: selectedLines.map((line) => ({ fee_type_id: line.fee_type_id, name: line.name, amount_minor: line.amount_minor })),
-    }));
+    const schedule = months.map(({ name, due_date }, monthIndex) => {
+      const installmentLines = [...monthlyLines, ...(monthIndex === 0 ? annualLines : [])];
+      return {
+        name, due_date,
+        amount_minor: monthlyTotal - monthlyConcession + (monthIndex === 0 ? annualTotal - annualConcession : 0),
+        lines: installmentLines.map((line) => ({ fee_type_id: line.fee_type_id, name: line.name, billing_period: line.billing_period, gross_amount_minor: line.amount_minor, concession_minor: line.concession_minor, amount_minor: line.amount_minor - line.concession_minor })),
+      };
+    });
     const installments = schedule.map((item) => ({ ...item, paid_minor: 0 }));
     const account = await StudentFeeAccount.create({
       school_id: schoolId, student_id: student._id, course_id: structure.course_id,
       academic_year_id: structure.academic_year_id, fee_structure_id: structure._id,
-      structure_name: structure.name, lines: selectedLines.map((line) => ({ ...line })),
-      monthly_total_minor: monthlyTotal, months_remaining: monthsRemaining, due_day: structure.due_day || 10, assigned_at: now,
+      structure_name: structure.name, lines: concessionLines.map((line) => ({ fee_type_id: line.fee_type_id, name: line.name, billing_period: line.billing_period, amount_minor: line.amount_minor, concession_minor: line.concession_minor })),
+      monthly_total_minor: monthlyTotal, monthly_concession_minor: monthlyConcession, annual_total_minor: annualTotal, annual_concession_minor: annualConcession, months_remaining: monthsRemaining, due_day: structure.due_day || 10, assigned_at: now,
       installments,
-      gross_minor: totalAssigned, concession_minor: concession, adjustment_minor: 0,
+      gross_minor: totalAssigned, concession_minor: concession, scheduled_concession_minor: scheduledConcession, adjustment_minor: 0,
       paid_minor: 0, assigned_by: actorId,
     });
     accounts.push(cleanAccount(account));
@@ -312,24 +359,26 @@ const recordCollection = async (schoolId, actorId, accountId, payload = {}) => {
   return sessionWork(async (session) => {
     const existingPayment = await FeePayment.findOne(schoolFilter(schoolId, { idempotency_key: idempotencyKey })).session(session).lean();
     if (existingPayment) {
-      if (String(existingPayment.account_id) !== String(accountId) || existingPayment.amount_minor !== amount || existingPayment.kind !== "COLLECTION") throw new ConflictError("The idempotency key was already used for another transaction");
+      if (String(existingPayment.account_id) !== String(accountId) || existingPayment.amount_minor !== amount || existingPayment.kind !== "COLLECTION" || String(existingPayment.installment_id || "") !== String(payload.installment_id || "")) throw new ConflictError("The idempotency key was already used for another transaction");
       const existingAccount = await ensureOwned(StudentFeeAccount, accountId, schoolId, "Student fee account", session);
       return { payment: existingPayment, account: cleanAccount(existingAccount) };
     }
     const account = await ensureOwned(StudentFeeAccount, accountId, schoolId, "Student fee account", session);
     if (account.status !== "ACTIVE") throw new ConflictError("This fee account is closed");
     if (amount > accountAvailable(account)) throw new ValidationError("Collection cannot exceed the available outstanding balance after pending online payments");
-    allocateToInstallments(account, amount);
+    if (payload.installment_id) allocateToInstallment(account, payload.installment_id, amount);
+    else allocateToInstallments(account, amount);
     account.paid_minor += amount;
     await account.save({ session });
     const [payment] = await FeePayment.create([{
       school_id: schoolId, account_id: account._id, student_id: account.student_id,
+      ...(payload.installment_id ? { installment_id: payload.installment_id, installment_name: String(account.installments.id(payload.installment_id)?.name || "").slice(0, 100) } : {}),
       amount_minor: amount, kind: "COLLECTION", method, status: "CONFIRMED",
       reference: String(payload.reference || "").trim(), idempotency_key: idempotencyKey,
       receipt_number: receiptNumber, received_by: actorId,
       notes: String(payload.notes || "").trim(), confirmed_at: new Date(),
     }], { session });
-    await audit(schoolId, actorId, "FEE_PAYMENT_COLLECTED", "FeePayment", payment._id, { amount_minor: amount, method, account_id: account._id }, session);
+    await audit(schoolId, actorId, "FEE_PAYMENT_COLLECTED", "FeePayment", payment._id, { amount_minor: amount, method, account_id: account._id, installment_id: payload.installment_id || null }, session);
     return { payment: payment.toObject(), account: cleanAccount(account) };
   });
 };
@@ -463,13 +512,7 @@ const handlePaymentWebhook = async (rawBody, signature, body = {}) => {
       }
       original.refund_reserved_minor = Math.max(0, Number(original.refund_reserved_minor || 0) - refund.amount_minor);
       account.paid_minor -= refund.amount_minor;
-      let refundRemaining = refund.amount_minor;
-      for (const installment of [...account.installments].sort((a, b) => new Date(b.due_date) - new Date(a.due_date))) {
-        const take = Math.min(installment.paid_minor, refundRemaining);
-        installment.paid_minor -= take;
-        refundRemaining -= take;
-        if (!refundRemaining) break;
-      }
+      reverseCollectionAllocation(account, original, refund.amount_minor);
       refund.provider_refund_id = refundId;
       refund.reference = refundId;
       refund.status = "CONFIRMED";
@@ -639,6 +682,7 @@ const refundPayment = async (schoolId, actorId, paymentId, payload = {}) => {
       await original.save({ session });
       const [refund] = await FeePayment.create([{
         school_id: schoolId, account_id: account._id, student_id: original.student_id,
+        ...(original.installment_id ? { installment_id: original.installment_id, installment_name: original.installment_name } : {}),
         amount_minor: amount, kind: "REFUND", method: "ONLINE", status: "PENDING",
         idempotency_key: idempotencyKey, received_by: actorId,
         related_payment_id: original._id, notes: reason, gateway_id: original.gateway_id,
@@ -648,16 +692,11 @@ const refundPayment = async (schoolId, actorId, paymentId, payload = {}) => {
       return { refund: refund.toObject(), processOnline: true, providerPaymentId: original.provider_payment_id, gatewayId: original.gateway_id };
     }
     account.paid_minor -= amount;
-    let refundRemaining = amount;
-    for (const installment of [...account.installments].sort((a, b) => new Date(b.due_date) - new Date(a.due_date))) {
-      const take = Math.min(installment.paid_minor, refundRemaining);
-      installment.paid_minor -= take;
-      refundRemaining -= take;
-      if (!refundRemaining) break;
-    }
+    reverseCollectionAllocation(account, original, amount);
     await account.save({ session });
     const [refund] = await FeePayment.create([{
       school_id: schoolId, account_id: account._id, student_id: original.student_id,
+      ...(original.installment_id ? { installment_id: original.installment_id, installment_name: original.installment_name } : {}),
       amount_minor: amount, kind: "REFUND", method: original.method,
       status: "CONFIRMED", idempotency_key: idempotencyKey,
       reference: String(payload.reference || "").trim(), received_by: actorId,

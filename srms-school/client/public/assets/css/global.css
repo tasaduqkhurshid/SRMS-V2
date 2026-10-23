@@ -1877,3 +1877,110 @@ body {
 .fee-individual-settings article>label input[type=checkbox] { width: 16px; min-height: 16px; accent-color: #514de0; }
 .fee-individual-settings article>label input[type=number] { flex: 1; min-width: 0; }
 .fee-individual-settings .fee-assignment-totals { grid-column: 1/-1; }
+.fee-individual-settings article { grid-template-columns: 1fr; align-items: stretch; }
+.fee-individual-line-list { display: grid; gap: 7px; }
+.fee-individual-line { display: grid; grid-template-columns: minmax(130px,1.1fr) minmax(100px,.7fr) minmax(220px,1.35fr) minmax(105px,.75fr); align-items: center; gap: 12px; padding: 9px 10px; border: 1px solid #e8edf5; border-radius: 8px; background: #fff; }
+.fee-individual-line .fee-optional-toggle { display: flex; align-items: center; gap: 8px; }
+.fee-individual-line .fee-optional-toggle input { width: 16px; min-height: 16px; accent-color: #514de0; }
+.fee-required-name { display: grid; gap: 2px; }
+.fee-required-name small { color: #73819a; font-size: 10px; }
+.fee-individual-amount { color: #293957; font-size: 12px; white-space: nowrap; }
+.fee-individual-line .fee-concession-input { display: grid !important; grid-template-columns: minmax(120px,1fr) minmax(110px,.8fr); align-items: center; gap: 10px !important; color: #596984; font-size: 11px; }
+.fee-individual-line .fee-concession-input input { min-width: 0; width: 100%; padding: 7px 8px; border: 1px solid #dce3ee; border-radius: 7px; font: inherit; }
+.fee-individual-line .fee-concession-input input:disabled { background: #f1f4f8; color: #8591a5; }
+@media(max-width:760px){.fee-individual-line{grid-template-columns:minmax(0,1fr) minmax(100px,auto)}.fee-individual-line .fee-concession-input,.fee-individual-line .fee-line-net{grid-column:1/-1}.fee-individual-line .fee-concession-input{grid-template-columns:1fr minmax(110px,.5fr)}}
+.fee-type-name{min-width:0}.fee-type-name .fee-optional-toggle{display:flex!important;align-items:center;gap:8px!important;flex-wrap:wrap}.fee-type-name .fee-optional-toggle strong{color:#263653}.fee-type-name .fee-optional-toggle small,.fee-required-name small{color:#75839b;font-size:10px}.fee-line-monthly,.fee-line-net{display:grid;gap:3px}.fee-line-monthly small,.fee-line-net small{color:#74829a;font-size:10px}.fee-line-monthly b,.fee-line-net b{color:#253651;font-size:12px}.fee-collective-totals{display:flex;flex-wrap:wrap;gap:12px 24px;margin-top:10px;padding:14px;border:1px solid #dce5f4;border-radius:10px;background:#f5f8ff;color:#566782;font-size:12px}.fee-collective-totals h4{flex-basis:100%;margin:0;color:#203150;font-size:13px}.fee-collective-totals span{display:grid;gap:4px}.fee-collective-totals b{color:#17264a;font-size:14px}
+.fee-modal-wide{width:min(1180px,calc(100vw - 36px))}
+.fee-payment-row{display:grid;grid-template-columns:minmax(130px,.8fr) minmax(130px,1fr) auto minmax(110px,.6fr);align-items:center;gap:14px;margin-top:8px;padding:12px 14px;border:1px solid #e6ebf3;border-radius:10px;background:#fff}
+.fee-payment-date{color:#53627d;font-size:12px;font-weight:600;white-space:nowrap}
+.fee-payment-method{display:grid;gap:2px;color:#263653;font-size:12px;font-weight:700}
+.fee-payment-method small{color:#8490a4;font-size:10px;font-weight:500}
+.fee-payment-row .fee-status{justify-self:start}
+.fee-payment-row .fee-status.payment-failed{background:#fff0f0;color:#bd2938}
+.fee-payment-row>b{color:#17264a;font-size:14px;text-align:right;white-space:nowrap}
+.fee-statement-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0 0 18px}
+.fee-statement-card{min-width:0;padding:14px;border:1px solid #e4eaf3;border-radius:12px;background:#fbfcff}
+.fee-statement-card h4{margin:0 0 10px;color:#243451;font-size:13px}
+.fee-statement-totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px}
+.fee-statement-totals span{display:grid;align-content:start;gap:5px;min-width:0;padding:10px;border:1px solid #e8edf5;border-radius:9px;background:#fff;color:#71809a;font-size:11px}
+.fee-statement-totals b{color:#17264a;font-size:14px;overflow-wrap:anywhere}
+.fee-month-matrix{min-width:900px}
+@media(max-width:680px){.fee-modal-wide{width:100%}.fee-statement-summary{grid-template-columns:1fr}.fee-statement-totals{grid-template-columns:repeat(2,minmax(0,1fr))}.fee-payment-row{grid-template-columns:1fr auto;gap:8px 12px}.fee-payment-date,.fee-payment-method{grid-column:1}.fee-payment-row .fee-status,.fee-payment-row>b{grid-column:2;justify-self:end}.fee-payment-row .fee-status{grid-row:1}.fee-payment-row>b{grid-row:2}}
+.fee-assignment-card{width:100%;max-width:none}
+.fee-annual-matrix-cell{display:grid;gap:3px}
+.fee-annual-matrix-cell b{color:#243451}
+.fee-annual-matrix-cell small,.fee-matrix-not-applicable{color:#8490a4;font-size:10px}
+.fee-structure-line{grid-template-columns:minmax(150px,1.2fr) minmax(140px,.8fr) minmax(120px,auto) minmax(160px,auto) 36px}
+.fee-structure-line .fee-required-choice{display:flex!important;align-items:center;gap:7px!important;white-space:nowrap}
+.fee-structure-line .fee-required-choice input{width:16px;min-height:16px;accent-color:#514de0}
+@media(max-width:760px){.fee-structure-line{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.fee-structure-line .fee-required-choice{align-self:center}.fee-structure-line>.fee-icon-button{justify-self:start}}
+
+/* Give the class-wide concession field room for comfortable data entry. */
+.fee-assignment-summary > .fee-class-concession {
+  display: grid !important;
+  grid-template-columns: minmax(190px, 1fr) minmax(220px, 320px);
+  align-items: center;
+  gap: 12px !important;
+  padding: 10px 0;
+}
+.fee-class-concession > span { color: #34435e; font-size: 12px; font-weight: 700; }
+.fee-class-concession > input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 13px;
+  border: 1px solid #d5deed;
+  border-radius: 9px;
+  background: #fff;
+  color: #1b2a49;
+  font: inherit;
+  font-size: 14px;
+}
+.fee-class-concession > input:focus { outline: 0; border-color: #766cff; box-shadow: 0 0 0 3px #5145e51a; }
+@media (max-width: 600px) {
+  .fee-assignment-summary > .fee-class-concession { grid-template-columns: 1fr; gap: 7px !important; }
+}
+
+/* Replace the browser-default checkbox with one consistent accessible control. */
+input[type="checkbox"]:not(.marksheet-exam-option input) {
+  box-sizing: border-box;
+  width: 19px;
+  height: 19px;
+  min-width: 19px;
+  min-height: 19px;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  place-content: center;
+  flex: 0 0 19px;
+  border: 1.5px solid #b8c4d8;
+  border-radius: 6px;
+  background: #fff;
+  color: #fff;
+  vertical-align: middle;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+input[type="checkbox"]:not(.marksheet-exam-option input)::before {
+  width: 10px;
+  height: 6px;
+  border-bottom: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+  content: "";
+  transform: rotate(-45deg) scale(0);
+  transform-origin: center;
+  transition: transform .12s ease;
+}
+input[type="checkbox"]:not(.marksheet-exam-option input):checked {
+  border-color: #514de0;
+  background: linear-gradient(145deg, #625cff, #493de0);
+  box-shadow: 0 2px 5px rgba(73, 61, 224, .2);
+}
+input[type="checkbox"]:not(.marksheet-exam-option input):checked::before { transform: rotate(-45deg) scale(1); }
+input[type="checkbox"]:not(.marksheet-exam-option input):hover:not(:disabled) { border-color: #7168ed; }
+input[type="checkbox"]:not(.marksheet-exam-option input):focus-visible { outline: 3px solid rgba(81, 77, 224, .2); outline-offset: 2px; }
+input[type="checkbox"]:not(.marksheet-exam-option input):disabled { background: #edf0f5; border-color: #d8deea; cursor: not-allowed; box-shadow: none; opacity: .75; }
+input[type="checkbox"]:not(.marksheet-exam-option input):indeterminate { border-color: #514de0; background: #514de0; }
+input[type="checkbox"]:not(.marksheet-exam-option input):indeterminate::before { width: 9px; height: 0; border: 0; border-top: 2px solid #fff; transform: none; }

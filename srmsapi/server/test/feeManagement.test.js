@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const mongoose = require("mongoose");
-const { asMinor, accountDue, accountAvailable, schoolFilter, effectiveInstallments } = require("../src/services/feeMath");
+const { asMinor, accountDue, accountAvailable, schoolFilter, effectiveInstallments, allocateToInstallment, reverseCollectionAllocation, synchronizeAccountStructure } = require("../src/services/feeMath");
 const { assertPortalStudentAccess } = require("../src/services/feeAuthorization");
 const PaymentProvider = require("../src/services/payment/PaymentProvider");
 const CredentialCrypto = require("../src/services/payment/credentialCrypto");
@@ -221,6 +221,64 @@ test("installment calculations support Mongoose subdocuments used by collection 
   assert.equal(installment.effective_amount_minor, 400);
   assert.equal(installment.balance_minor, 250);
   assert.ok(installment._id);
+});
+
+test("month-targeted collections and refunds update only their selected installment", () => {
+  const schema = new mongoose.Schema({ gross_minor: Number, concession_minor: Number, adjustment_minor: Number, installments: [{ name: String, due_date: Date, amount_minor: Number, paid_minor: Number }] });
+  const Account = mongoose.models.FeeTargetedCollectionTest || mongoose.model("FeeTargetedCollectionTest", schema);
+  const account = new Account({
+    gross_minor: 1000,
+    installments: [
+      { name: "First", due_date: "2026-01-01", amount_minor: 500, paid_minor: 0 },
+      { name: "Second", due_date: "2026-02-01", amount_minor: 500, paid_minor: 0 },
+    ],
+  });
+  const secondId = account.installments[1]._id;
+  allocateToInstallment(account, secondId, 400);
+  assert.deepEqual(account.installments.map((item) => item.paid_minor), [0, 400]);
+  reverseCollectionAllocation(account, { installment_id: secondId }, 150);
+  assert.deepEqual(account.installments.map((item) => item.paid_minor), [0, 250]);
+  assert.throws(() => allocateToInstallment(account, secondId, 300), /outstanding installment balance/);
+});
+
+test("structure edits refresh unpaid installments while retaining paid month values and optional choices", () => {
+  const account = {
+    structure_name: "Old structure", due_day: 10, months_remaining: 2,
+    gross_minor: 3000, concession_minor: 300, scheduled_concession_minor: 300,
+    monthly_total_minor: 1500, monthly_concession_minor: 150,
+    lines: [
+      { fee_type_id: "tuition", name: "Tuition", amount_minor: 1000, billing_period: "MONTHLY", concession_minor: 100 },
+      { fee_type_id: "bus", name: "Bus", amount_minor: 500, billing_period: "MONTHLY", concession_minor: 50 },
+    ],
+    installments: [
+      { name: "January 2026", due_date: new Date(2026, 0, 10), amount_minor: 1350, paid_minor: 1350, lines: [
+        { fee_type_id: "tuition", name: "Tuition", billing_period: "MONTHLY", gross_amount_minor: 1000, concession_minor: 100, amount_minor: 900 },
+        { fee_type_id: "bus", name: "Bus", billing_period: "MONTHLY", gross_amount_minor: 500, concession_minor: 50, amount_minor: 450 },
+      ] },
+      { name: "February 2026", due_date: new Date(2026, 1, 10), amount_minor: 1350, paid_minor: 0, lines: [
+        { fee_type_id: "tuition", name: "Tuition", billing_period: "MONTHLY", gross_amount_minor: 1000, concession_minor: 100, amount_minor: 900 },
+        { fee_type_id: "bus", name: "Bus", billing_period: "MONTHLY", gross_amount_minor: 500, concession_minor: 50, amount_minor: 450 },
+      ] },
+    ],
+  };
+  const updated = synchronizeAccountStructure(account, {
+    name: "Updated structure", due_day: 15,
+    lines: [
+      { fee_type_id: "tuition", name: "Tuition", amount_minor: 1200, billing_period: "MONTHLY", required: true },
+      { fee_type_id: "bus", name: "Bus", amount_minor: 700, billing_period: "MONTHLY", required: false },
+      { fee_type_id: "annual", name: "Annual fee", amount_minor: 600, billing_period: "ANNUAL", required: true },
+    ],
+  });
+  assert.equal(updated.installments[0].amount_minor, 1350);
+  assert.equal(updated.installments[1].amount_minor, 2350);
+  assert.equal(updated.installments[1].due_date.getDate(), 15);
+  assert.equal(updated.installments[1].lines.some((line) => line.fee_type_id === "bus"), true);
+  assert.equal(updated.installments[1].lines.find((line) => line.fee_type_id === "annual").amount_minor, 600);
+  assert.equal(updated.gross_minor, 4000);
+  assert.equal(updated.monthly_total_minor, 1900);
+  assert.equal(updated.annual_total_minor, 600);
+  const refreshedAccount = { ...account, ...updated, paid_minor: 1350, adjustment_minor: 0 };
+  assert.equal(effectiveInstallments(refreshedAccount).reduce((sum, item) => sum + item.balance_minor, 0), accountDue(refreshedAccount));
 });
 
 test("students and parents are restricted to their own or explicitly linked students", () => {

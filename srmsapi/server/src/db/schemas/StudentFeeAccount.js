@@ -4,6 +4,8 @@ const AccountLineSchema = new mongoose.Schema({
   fee_type_id: { type: mongoose.Schema.Types.ObjectId, ref: 'FeeType' },
   name: { type: String, required: true },
   amount_minor: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
+  billing_period: { type: String, enum: ['MONTHLY', 'ANNUAL'], default: 'MONTHLY' },
+  concession_minor: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
 }, { _id: false });
 const AccountInstallmentSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -11,7 +13,7 @@ const AccountInstallmentSchema = new mongoose.Schema({
   amount_minor: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
   paid_minor: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
   reserved_minor: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
-  lines: { type: [{ fee_type_id: { type: mongoose.Schema.Types.ObjectId, ref: 'FeeType' }, name: String, amount_minor: { type: Number, min: 0, validate: Number.isSafeInteger } }], default: [] },
+  lines: { type: [{ fee_type_id: { type: mongoose.Schema.Types.ObjectId, ref: 'FeeType' }, name: String, billing_period: { type: String, enum: ['MONTHLY', 'ANNUAL'], default: 'MONTHLY' }, amount_minor: { type: Number, min: 0, validate: Number.isSafeInteger }, gross_amount_minor: { type: Number, min: 0, validate: Number.isSafeInteger }, concession_minor: { type: Number, min: 0, validate: Number.isSafeInteger } }], default: [] },
 }, { _id: true });
 const AdjustmentSchema = new mongoose.Schema({
   kind: { type: String, enum: ['CONCESSION', 'ADJUSTMENT'], required: true },
@@ -31,12 +33,16 @@ const StudentFeeAccountSchema = new mongoose.Schema({
   structure_name: { type: String, required: true },
   lines: { type: [AccountLineSchema], default: [] },
   monthly_total_minor: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
+  monthly_concession_minor: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
+  annual_total_minor: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
+  annual_concession_minor: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
   months_remaining: { type: Number, default: 0, min: 0 },
   assigned_at: { type: Date, default: Date.now },
   due_day: { type: Number, min: 1, max: 31, default: 10 },
   installments: { type: [AccountInstallmentSchema], default: [] },
   gross_minor: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
   concession_minor: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
+  scheduled_concession_minor: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
   adjustment_minor: { type: Number, default: 0, validate: Number.isSafeInteger },
   paid_minor: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
   status: { type: String, enum: ['ACTIVE', 'CLOSED'], default: 'ACTIVE', index: true },

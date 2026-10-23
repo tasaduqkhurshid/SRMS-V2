@@ -10,6 +10,7 @@ const LineSchema = new mongoose.Schema({
   fee_type_id: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'FeeType' },
   name: { type: String, required: true, trim: true, maxlength: 100 },
   amount_minor: { type: Number, required: true, min: 1, validate: Number.isSafeInteger },
+  billing_period: { type: String, enum: ['MONTHLY', 'ANNUAL'], default: 'MONTHLY' },
   required: { type: Boolean, default: true },
 }, { _id: false });
 

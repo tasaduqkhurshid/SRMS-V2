@@ -1,6 +1,6 @@
 # Fee Management
 
-The fee module uses the existing school tenant, user, student, course, and academic-year records. Money is stored as integer INR paise. Student fee accounts keep a copy of the structure lines and installments from the time they are assigned, so later structure edits affect future assignments only.
+The fee module uses the existing school tenant, user, student, course, and academic-year records. Money is stored as integer INR paise. Student fee accounts snapshot the structure and selected student options. Editing a structure recalculates unpaid installments on active assigned accounts while preserving installments that already have recorded payments.
 
 ## Database setup
 
