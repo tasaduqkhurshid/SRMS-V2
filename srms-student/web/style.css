@@ -5,3 +5,162 @@
 
 .portal-brand>img{width:40px;height:40px;flex:0 0 40px;object-fit:contain;border-radius:13px;background:#fff}
 .student-chip>img{width:36px;height:36px;object-fit:cover;border-radius:50%;background:#dbeafe}.profile-photo-heading{display:flex;align-items:center;gap:12px;margin-bottom:12px}.profile-photo-heading h2{margin:0}.profile-photo-heading img,.profile-photo-heading span{width:58px;height:58px;display:grid;place-items:center;object-fit:cover;border-radius:16px;background:#2460e3;color:#fff;font-size:20px;font-weight:800}
+
+/* Student portal dashboard */
+.portal-mobile-header,.portal-bottom-nav{display:none}
+.student-dashboard{max-width:1100px;margin:0 auto}
+.dashboard-welcome{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 0 20px}
+.dashboard-welcome>div:first-child>small{color:#7185ae;font-size:11px;letter-spacing:.12em;font-weight:800}
+.dashboard-welcome h1{margin:2px 0 2px;color:#142448;font:800 28px/1.1 Manrope}
+.dashboard-welcome p{margin:0;color:#7888a5;font-size:14px}
+.dashboard-student{display:flex;align-items:center;gap:9px;min-width:0}
+.dashboard-student img,.dashboard-student>span{width:42px;height:42px;flex:none;object-fit:cover;border-radius:50%;background:#245fe4;color:#fff;display:grid;place-items:center;font-weight:800}
+.dashboard-student div{display:grid;gap:3px;min-width:0}
+.dashboard-student b{color:#243454;font-size:12px}
+.dashboard-student small{color:#8491aa;font-size:10px;white-space:nowrap}
+.dashboard-highlights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.dashboard-highlight{min-height:94px;display:flex;align-items:center;gap:11px;padding:13px;border:1px solid #e7edf5;border-radius:14px;background:#fff;color:#1c2e51;text-decoration:none;box-shadow:0 3px 12px #234a7907}
+.dashboard-highlight.blue{background:#f2f8ff;border-color:#e0edfc}.dashboard-highlight.green{background:#f1fbf5;border-color:#e1f3e8}.dashboard-highlight.purple{background:#f7f4ff;border-color:#eae4ff}.dashboard-highlight.orange{background:#fff9ed;border-color:#faefd8}
+.highlight-icon{width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:50%;background:#dcecff;color:#2870f4;font-size:21px;font-weight:800}
+.green .highlight-icon{background:#d9f4e2;color:#2eaa62}.purple .highlight-icon{background:#e9e1ff;color:#8658ef}.orange .highlight-icon{background:#ffebc7;color:#dc8a17}
+.dashboard-highlight>div{display:grid;gap:2px;min-width:0}
+.dashboard-highlight small{color:#6f7e9b;font-size:10px}
+.dashboard-highlight b{color:#17294d;font:800 20px/1.15 Manrope;overflow-wrap:anywhere}
+.dashboard-highlight.orange b{font-size:13px;line-height:1.25}
+.dashboard-highlight i,.upcoming-exam>i{margin-left:auto;color:#8392ac;font-size:22px;font-style:normal}
+.dashboard-list-card{margin-bottom:12px;padding:13px 12px 4px;border:1px solid #e8edf4;border-radius:14px;background:#fff;box-shadow:0 4px 14px #1838680b}
+.dashboard-list-card>header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 4px}
+.dashboard-list-card h2{margin:0;color:#17294e;font:800 14px Manrope}
+.dashboard-list-card>header>a{color:#2460ed;text-decoration:none;font-size:10px;font-weight:700}
+.dashboard-update{min-height:57px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #edf1f6}
+.dashboard-update:last-child{border-bottom:0}
+.update-icon{width:36px;height:36px;flex:none;display:grid;place-items:center;border-radius:50%;background:#e8f5ec;color:#37ad6d;font-size:17px;font-weight:800}
+.update-icon.purple{background:#eee8ff;color:#8055ed}.update-icon.blue{background:#e5f0ff;color:#2868eb}
+.dashboard-update>div,.upcoming-exam>div{display:grid;gap:3px;min-width:0;flex:1}
+.dashboard-update b,.upcoming-exam b{color:#263857;font-size:11px}
+.dashboard-update small,.upcoming-exam small{overflow:hidden;color:#8290a9;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-update time{flex:none;color:#8190aa;font-size:9px;white-space:nowrap}
+.dashboard-empty{padding:14px 2px;color:#8290a9;font-size:11px}
+.upcoming-card{padding-bottom:10px}
+.upcoming-exam{min-height:53px;display:flex;align-items:center;gap:10px;margin-top:7px;padding:6px 8px;border-radius:10px;background:#f6f3ff;text-decoration:none}
+.upcoming-exam .update-icon{width:36px;height:36px}
+
+.student-profile-page{position:relative;isolation:isolate;min-height:calc(100vh - 150px);padding:4px 0 28px}
+.student-profile-page:before,.student-profile-page:after{position:absolute;z-index:-1;right:-40px;left:-40px;height:150px;content:"";pointer-events:none}
+.student-profile-page:before{top:-22px;background:radial-gradient(ellipse at 5% 0%,#d7e8ff 0 24%,transparent 25%),radial-gradient(ellipse at 48% -15%,#e7f1ff 0 45%,transparent 46%),linear-gradient(180deg,#eff6ff,#f7fbfd 85%);border-radius:0 0 48% 38%}
+.student-profile-page:after{bottom:-5px;height:100px;background:radial-gradient(ellipse at 18% 130%,#d4e6ff 0 42%,transparent 43%),radial-gradient(ellipse at 88% 150%,#d0e2ff 0 46%,transparent 47%)}
+.profile-page-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 17px;padding:3px 2px}
+.profile-page-title{display:flex;align-items:center;gap:10px}
+.profile-page-title>span{width:39px;height:39px;display:grid;place-items:center;border-radius:50%;background:#e4efff;color:#2867ed;font-size:20px}
+.profile-page-title h1{margin:0;color:#17294b;font:800 23px Manrope}
+.profile-heading-student{display:flex;align-items:center;gap:7px;min-width:0}
+.profile-heading-student img,.profile-heading-student>span{width:34px;height:34px;flex:none;display:grid;place-items:center;object-fit:cover;border-radius:50%;background:#2867ed;color:#fff;font-size:10px;font-weight:800}
+.profile-heading-student b{max-width:120px;overflow:hidden;color:#263856;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.student-profile-card{width:min(100%,650px);margin:0 auto;padding:19px 22px 15px;border:1px solid #e6edf5;border-radius:16px;background:#ffffffed;box-shadow:0 6px 18px #143d6917;text-align:center}
+.student-profile-hero-photo,.student-profile-hero-fallback{width:90px;height:90px;display:grid;place-items:center;margin:0 auto 10px;border:2px solid #2867f2;border-radius:50%;background:#2867ed;color:#fff;object-fit:cover;font-size:27px;font-weight:800;box-shadow:0 3px 10px #2867f22e}
+.student-profile-card>h2{margin:0;color:#1a2d50;font:800 19px Manrope}
+.student-profile-classline{margin:4px 0 12px;padding-bottom:13px;border-bottom:1px solid #e8edf4;color:#74839f;font-size:11px}
+.student-profile-rows{text-align:left}
+.student-profile-row{min-height:60px;display:flex;align-items:center;gap:13px;padding:8px 4px;border-bottom:1px solid #e9eef5}
+.student-profile-row:last-child{border-bottom:0}
+.profile-row-icon{width:39px;height:39px;flex:none;display:grid;place-items:center;border-radius:50%;font-size:17px;font-weight:800}
+.profile-row-icon.blue{background:#e5efff;color:#2d6bf3}.profile-row-icon.green{background:#e5f7ed;color:#24a260}.profile-row-icon.purple{background:#ece7ff;color:#8256ed}.profile-row-icon.orange{background:#fff0d4;color:#dc8b18}
+.student-profile-row>div{display:grid;gap:3px;min-width:0}
+.student-profile-row small{color:#7d8ba3;font-size:10px}
+.student-profile-row b{overflow-wrap:anywhere;color:#1d2f52;font-size:13px;font-weight:800}
+
+@media(max-width:700px){
+  body{background:#edf4f7}
+  .portal-layout{min-height:100vh;padding-bottom:64px;background:linear-gradient(90deg,#e6f3f2 0,#f7fbfd 5%,#f7fbfd 95%,#e6f3f2 100%)}
+  .portal-mobile-header{position:relative;z-index:5;display:flex;width:min(100%,430px);min-height:62px;align-items:center;margin:0 auto;background:linear-gradient(112deg,#09234b,#082c59);color:#fff;box-shadow:0 4px 12px #12355a25}
+  .portal-mobile-brand{min-height:62px;display:flex;flex:1;align-items:center;gap:9px;padding:8px 12px 8px 48px}
+  .mobile-menu-button{position:absolute;z-index:2;left:12px;top:50%;width:28px;height:30px;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:5px;border:0;border-radius:7px;background:transparent;transform:translateY(-50%)}
+  .mobile-menu-button span{width:17px;height:2px;border-radius:2px;background:#fff}
+  .portal-mobile-brand>img,.portal-mobile-brand>span{width:46px;height:46px;flex:none;display:grid;place-items:center;object-fit:contain;border-radius:12px;background:#2160e7;color:#fff;font-size:11px;font-weight:800}
+  .portal-mobile-brand>div{display:grid;gap:3px;min-width:0;max-width:calc(100% - 125px)}
+  .portal-mobile-brand b{overflow:hidden;color:#fff;font-size:12px;line-height:1.2;text-overflow:ellipsis}
+  .portal-mobile-brand small{color:#c3d3e9;font-size:10px}
+  .mobile-signout{display:flex;align-items:center;gap:5px;min-height:33px;margin-left:auto;padding:0 9px;border:1px solid #506888;border-radius:9px;background:transparent;color:#fff;font-size:10px;white-space:nowrap}
+  .mobile-signout span{font-size:15px}
+  .mobile-nav-backdrop{position:fixed;z-index:20;inset:0;background:#071a33a6;backdrop-filter:blur(2px)}
+  .mobile-nav-drawer{position:fixed;z-index:21;inset:0 auto 0 0;width:min(292px,84vw);display:flex;flex-direction:column;padding:20px 14px 18px;background:linear-gradient(180deg,#09234b,#0c315e);box-shadow:12px 0 34px #071a3340;animation:drawer-in .18s ease-out}
+  .mobile-drawer-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:5px 4px 22px;border-bottom:1px solid #ffffff25}
+  .mobile-drawer-heading>div{display:grid;gap:4px;min-width:0}
+  .mobile-drawer-heading b{color:#fff;font-size:14px;line-height:1.35}
+  .mobile-drawer-heading small{color:#b7c9e1;font-size:11px}
+  .mobile-drawer-heading button{width:30px;height:30px;border:1px solid #ffffff40;border-radius:8px;background:transparent;color:#fff;font-size:23px;line-height:1}
+  .mobile-nav-drawer nav{display:grid;gap:5px;padding-top:17px}
+  .mobile-nav-drawer nav a{min-height:43px;display:flex;align-items:center;gap:12px;padding:0 10px;border-radius:9px;color:#d2def0;text-decoration:none;font-size:13px;font-weight:600}
+  .mobile-nav-drawer nav a>span{width:25px;height:25px;display:grid;place-items:center;border-radius:7px;background:#ffffff16;color:#dbe8ff;font-size:11px;font-weight:800}
+  .mobile-nav-drawer nav a.active{background:#ffffff1c;color:#fff}
+  .mobile-nav-drawer nav a.active>span{background:#2563eb;color:#fff}
+  .mobile-drawer-signout{min-height:40px;margin-top:auto;border:1px solid #ffffff3b;border-radius:9px;background:#ffffff0a;color:#fff;font-size:12px;font-weight:700}
+  @keyframes drawer-in{from{transform:translateX(-18px);opacity:.7}to{transform:translateX(0);opacity:1}}
+  .portal-sidebar{display:none}
+  .portal-main{width:min(100%,430px);min-height:calc(100vh - 171px);margin:0 auto;padding:17px 16px 20px;background:#f7fbfd}
+  .portal-topbar{margin:0 0 16px}
+  .portal-topbar h1{font-size:21px}
+  .portal-topbar small{font-size:9px}
+  .portal-topbar .student-chip{font-size:11px}
+  .portal-topbar .student-chip>img,.portal-topbar .student-chip>span{width:32px;height:32px}
+  .portal-topbar:has(+ .portal-error),.portal-topbar:has(+ .portal-message),.portal-topbar:has(+ .portal-loading){display:flex}
+  .dashboard-welcome{align-items:flex-end;margin-bottom:14px}
+  .dashboard-welcome>div:first-child>small{font-size:9px}
+  .dashboard-welcome h1{font-size:21px}
+  .dashboard-welcome p{font-size:11px}
+  .dashboard-student{gap:6px}
+  .dashboard-student img,.dashboard-student>span{width:34px;height:34px;font-size:11px}
+  .dashboard-student b{max-width:95px;overflow:hidden;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+  .dashboard-student small{font-size:8px}
+  .dashboard-highlights{gap:8px;margin-bottom:11px}
+  .dashboard-highlight{min-height:73px;gap:8px;padding:9px;border-radius:12px}
+  .highlight-icon{width:34px;height:34px;font-size:17px}
+  .dashboard-highlight small{font-size:9px}
+  .dashboard-highlight b{font-size:16px}
+  .dashboard-highlight.orange b{font-size:12px}
+  .dashboard-highlight i{font-size:19px}
+  .dashboard-list-card{margin-bottom:10px;padding:11px 10px 3px;border-radius:12px}
+  .dashboard-list-card h2{font-size:12px}
+  .dashboard-list-card>header>a{font-size:9px}
+  .dashboard-update{min-height:50px;gap:8px}
+  .update-icon{width:31px;height:31px;font-size:15px}
+  .dashboard-update b,.upcoming-exam b{font-size:10px}
+  .dashboard-update small,.upcoming-exam small{font-size:9px}
+  .dashboard-update time{font-size:8px}
+  .upcoming-exam{min-height:46px;gap:8px;padding:5px 7px}
+  .upcoming-exam .update-icon{width:31px;height:31px}
+  .portal-bottom-nav{position:fixed;z-index:10;right:0;bottom:0;left:0;display:flex;justify-content:center;gap:0;padding:5px max(12px,calc((100vw - 430px)/2 + 12px)) calc(5px + env(safe-area-inset-bottom));border-top:1px solid #e9edf3;background:#fff;box-shadow:0 -4px 14px #1d3e6410}
+  .portal-bottom-nav a{flex:1;max-width:100px;min-height:42px;display:grid;place-content:center;justify-items:center;gap:2px;border-radius:9px;color:#7888a3;text-decoration:none;font-size:8px}
+  .portal-bottom-nav a span{font-size:17px;line-height:18px}
+  .portal-bottom-nav a.active{background:#e8f1ff;color:#2462eb;font-weight:700}
+  .portal-layout:has(.student-dashboard) .portal-topbar{display:none}
+  .portal-layout:has(.student-profile-page) .portal-topbar{display:none}
+  .portal-main:has(.student-profile-page){padding-top:15px;background:linear-gradient(180deg,#eff6ff 0,#f7fbfd 140px,#f7fbfd 100%)}
+  .student-profile-page{min-height:calc(100vh - 177px);padding:3px 0 34px}
+  .student-profile-page:before{top:-15px;right:-16px;left:-16px;height:142px}
+  .student-profile-page:after{right:-16px;bottom:-17px;left:-16px;height:82px}
+  .profile-page-heading{margin-bottom:14px;padding:2px 1px}
+  .profile-page-title{gap:8px}
+  .profile-page-title>span{width:37px;height:37px;font-size:19px}
+  .profile-page-title h1{font-size:21px}
+  .profile-heading-student{gap:6px}
+  .profile-heading-student img,.profile-heading-student>span{width:31px;height:31px}
+  .profile-heading-student b{max-width:90px;font-size:9px}
+  .student-profile-card{padding:13px 17px 10px;border-radius:14px}
+  .student-profile-hero-photo,.student-profile-hero-fallback{width:90px;height:90px;margin-bottom:9px}
+  .student-profile-card>h2{font-size:18px}
+  .student-profile-classline{margin:4px 0 8px;padding-bottom:11px;font-size:10px}
+  .student-profile-row{min-height:59px;gap:12px;padding:7px 4px}
+  .profile-row-icon{width:39px;height:39px;font-size:16px}
+  .student-profile-row small{font-size:10px}
+  .student-profile-row b{font-size:12px}
+}
+
+/* Keep the shared page title and student identity in one place, and fill the
+   available desktop workspace beside the fixed navigation. */
+@media(min-width:701px){
+  .portal-main{width:auto;max-width:none;min-height:100vh}
+}
+@media(max-width:700px){
+  .portal-layout:has(.student-profile-page) .portal-topbar{display:flex}
+}

@@ -1,6 +1,6 @@
 "use strict";
 
-const { Student, School, AcademicYear, Result, Exam } = require("../db/models");
+const { Student, School, AcademicYear, Result, Exam, Course } = require("../db/models");
 const { success, failure } = require("../utils/serviceResult");
 const FeeService = require("./FeeService");
 const { brandingAssetUrl } = require("../utils/brandingUrls");
@@ -73,6 +73,11 @@ const getNextExam = async (schoolId, academicYearId) => {
 
 const toStudentProfile = async (student, school) => {
   try {
+    let className = String(student.class || "").trim() || "N/A";
+    if (/^[a-f\d]{24}$/i.test(className)) {
+      const course = await Course.findOne({ _id: className, school_id: student.school_id }).select("course_name").lean();
+      className = course?.course_name || "N/A";
+    }
     const rawAcademicYear = student.academic_year_id
       ? await getAcademicYearById(student.academic_year_id)
       : null;
@@ -92,7 +97,7 @@ const toStudentProfile = async (student, school) => {
     return success({
       id: student._id.toString(),
       name: student.name,
-      className: student.class || "N/A",
+      className,
       section: student.section || "N/A",
       admissionNumber: student.admission_number || "",
       academicYear: academicYearName,

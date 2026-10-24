@@ -10,6 +10,7 @@ const loading = ref(true);
 const error = ref('');
 const actionMessage = ref('');
 const actionBusy = ref(false);
+const mobileNavOpen = ref(false);
 const photoUrl = ref('');
 let photoObjectUrl = '';
 const session = portalApi.getSession() || {};
@@ -23,10 +24,22 @@ const allNavigation = [
   ['attendance', 'Attendance'], ['fees', 'Fees'], ['lectures', 'Lectures'], ['notes', 'Notes'], ['notifications', 'Notifications'],
 ];
 const navigation = computed(() => parentMode.value ? [['fees', 'Fees']] : allNavigation);
+const bottomNavigation = [['dashboard', 'Home', '⌂'], ['results', 'Results', '▤'], ['performance', 'Performance', '▥'], ['attendance', 'Attendance', '▦']];
 const title = computed(() => props.section[0].toUpperCase() + props.section.slice(1));
 const displayValue = (value) => value === null || value === undefined || value === '' ? '—' : value;
 const money = (minor) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format((Number(minor) || 0) / 100);
 const shortDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const studentName = computed(() => student.value?.name || data.value?.student?.name || 'Student');
+const recentUpdates = computed(() => [
+  ...(data.value?.notifications || []),
+  ...(data.value?.notices || []),
+  ...(data.value?.learning || []).map((item) => ({
+    ...item,
+    description: item.description || [item.subject, item.chapter].filter(Boolean).join(' · '),
+    date: item.updatedAt,
+  })),
+].slice(0, 3));
+const initials = (name) => String(name || 'Student').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 
 async function loadSection(preserveActionMessage = false) {
   loading.value = true;
@@ -125,19 +138,62 @@ onMounted(async () => {
   await loadSection();
 });
 onUnmounted(() => { if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl); });
-watch(() => props.section, loadSection);
+watch(() => props.section, () => { mobileNavOpen.value = false; loadSection(); });
 watch(selectedStudentId, () => { if (parentMode.value) { void loadStudentPhoto(); if (props.section === 'fees') loadSection(); } });
 </script>
 
 <template>
   <div class="portal-layout">
+    <header v-if="!parentMode" class="portal-mobile-header">
+      <button class="mobile-menu-button" type="button" aria-label="Open navigation menu" :aria-expanded="mobileNavOpen" @click="mobileNavOpen = true"><span></span><span></span><span></span></button>
+      <div class="portal-mobile-brand">
+        <img v-if="school.logoUrl || school.logo_url" :src="school.logoUrl || school.logo_url" alt="School logo" @error="$event.target.hidden = true" />
+        <span v-else>{{ school.abbreviation || 'SR' }}</span>
+        <div><b>{{ school.name || school.school_name || 'School' }}</b><small>Student Portal</small></div>
+        <button class="mobile-signout" @click="logout"><span aria-hidden="true">⇥</span> Sign out</button>
+      </div>
+    </header>
+    <div v-if="mobileNavOpen" class="mobile-nav-backdrop" @click="mobileNavOpen = false" @keydown.esc="mobileNavOpen = false"></div>
+    <aside v-if="mobileNavOpen" class="mobile-nav-drawer" aria-label="Student portal navigation">
+      <div class="mobile-drawer-heading"><div><b>{{ school.name || school.school_name || 'Student Portal' }}</b><small>Student Portal</small></div><button type="button" aria-label="Close navigation menu" @click="mobileNavOpen = false">×</button></div>
+      <nav>
+        <RouterLink v-for="item in allNavigation" :key="item[0]" :to="`/${item[0]}`" :class="{ active: item[0] === section }"><span>{{ item[1][0] }}</span>{{ item[1] }}</RouterLink>
+      </nav>
+      <button class="mobile-drawer-signout" @click="logout">Sign out</button>
+    </aside>
     <aside class="portal-sidebar"><a class="portal-brand" href="/dashboard"><img v-if="school.logoUrl || school.logo_url" :src="school.logoUrl || school.logo_url" alt="School logo" @error="$event.target.hidden = true" /><span v-else>{{ school.abbreviation || 'SR' }}</span><b>{{ school.name || school.school_name || 'Student Portal' }}<small>{{ parentMode ? 'Parent access' : 'Student Portal' }}</small></b></a><nav><RouterLink v-for="item in navigation" :key="item[0]" :to="`/${item[0]}`" :class="{ active: item[0] === section }">{{ item[1] }}</RouterLink></nav><button class="logout-button" @click="logout">Sign out</button></aside>
     <main class="portal-main"><header class="portal-topbar"><div><small>{{ parentMode ? 'FAMILY FEE PORTAL' : 'STUDENT PORTAL' }}</small><h1>{{ title }}</h1></div><label v-if="section === 'fees' && parentMode && children.length > 1" class="child-selector">Student<select v-model="selectedStudentId"><option v-for="child in children" :key="child.id || child._id" :value="child.id || child._id">{{ child.name }} · {{ child.className || child.class }}</option></select></label><div class="student-chip"><img v-if="photoUrl" :src="photoUrl" alt="Student profile" /><span v-else>{{ (student.name || 'Student').slice(0,1) }}</span>{{ student.name || 'Student' }}</div></header>
       <div v-if="error" class="portal-error" role="alert"><span>{{ error }}</span><button class="portal-retry" @click="loadSection">Retry</button></div>
       <p v-if="actionMessage" class="portal-message" role="status">{{ actionMessage }}</p>
       <div v-if="loading" class="portal-card portal-loading">Loading {{ title.toLowerCase() }}…</div>
       <template v-else-if="!error">
-        <section v-if="section === 'dashboard'" class="portal-stats"><article><small>Attendance</small><strong>{{ displayValue(data?.dashboard?.attendance) }}%</strong></article><article><small>Performance</small><strong>{{ displayValue(data?.dashboard?.performance) }}%</strong></article><article><small>Next examination</small><strong>{{ displayValue(data?.dashboard?.nextExam) }}</strong></article><article><small>School</small><strong>{{ school.name || '—' }}</strong></article></section>
+        <section v-if="section === 'dashboard'" class="student-dashboard">
+          <header class="dashboard-welcome">
+            <div><small>STUDENT PORTAL</small><h1>Dashboard</h1><p>Welcome back, {{ studentName }}!</p></div>
+            <div class="dashboard-student"><img v-if="photoUrl" :src="photoUrl" :alt="studentName" /><span v-else>{{ initials(studentName) }}</span><div><b>{{ studentName }}</b><small>Class {{ student.className || student.class || '—' }}<template v-if="student.section"> · Section {{ student.section }}</template></small></div></div>
+          </header>
+          <div class="dashboard-highlights">
+            <RouterLink to="/attendance" class="dashboard-highlight blue"><span class="highlight-icon">▣</span><div><small>Attendance</small><b>{{ displayValue(data?.dashboard?.attendance) }}<template v-if="data?.dashboard?.attendance !== null && data?.dashboard?.attendance !== undefined">%</template></b><small>Attendance overview</small></div><i>›</i></RouterLink>
+            <RouterLink to="/performance" class="dashboard-highlight green"><span class="highlight-icon">▥</span><div><small>Performance</small><b>{{ displayValue(data?.dashboard?.performance) }}<template v-if="data?.dashboard?.performance !== null && data?.dashboard?.performance !== undefined">%</template></b><small>Overall average</small></div><i>›</i></RouterLink>
+            <RouterLink to="/results" class="dashboard-highlight purple"><span class="highlight-icon">▤</span><div><small>Next examination</small><b>{{ displayValue(data?.dashboard?.nextExam) }}</b><small>{{ data?.dashboard?.nextExamDate ? shortDate(data.dashboard.nextExamDate) : 'Exam schedule' }}</small></div><i>›</i></RouterLink>
+            <article class="dashboard-highlight orange"><span class="highlight-icon">♙</span><div><small>School</small><b>{{ school.name || school.school_name || '—' }}</b></div><i>›</i></article>
+          </div>
+          <section class="dashboard-list-card">
+            <header><h2>Recent Updates</h2><RouterLink to="/notifications">View all</RouterLink></header>
+            <div v-if="recentUpdates.length" class="dashboard-updates">
+              <article v-for="(update, index) in recentUpdates" :key="update.id || update._id || index" class="dashboard-update">
+                <span :class="['update-icon', ['green', 'purple', 'blue'][index % 3]]">{{ index === 0 ? '▤' : index === 1 ? '⚑' : '▣' }}</span>
+                <div><b>{{ update.title || 'School update' }}</b><small>{{ update.description || update.message || 'There is a new update for you.' }}</small></div>
+                <time>{{ update.date || update.updatedAt ? shortDate(update.date || update.updatedAt) : update.timeAgo || '' }}</time>
+              </article>
+            </div>
+            <p v-else class="dashboard-empty">No recent updates.</p>
+          </section>
+          <section class="dashboard-list-card upcoming-card">
+            <header><h2>Upcoming Examination</h2><RouterLink to="/results">View all</RouterLink></header>
+            <RouterLink to="/results" class="upcoming-exam"><span class="update-icon purple">▦</span><div><b>{{ displayValue(data?.dashboard?.nextExam) }}</b><small>{{ data?.dashboard?.nextExamDate ? shortDate(data.dashboard.nextExamDate) : 'Check your exam schedule' }}</small></div><i>›</i></RouterLink>
+          </section>
+        </section>
         <section v-if="section === 'fees'" class="fee-portal-view">
           <div v-if="data?.summary" class="fee-portal-summary"><article><small>Assigned</small><strong>{{ money(data.summary.gross_minor) }}</strong></article><article><small>Concessions</small><strong>{{ money(data.summary.concessions_minor) }}</strong></article><article><small>Paid</small><strong>{{ money(data.summary.paid_minor) }}</strong></article><article><small>Outstanding</small><strong>{{ money(data.summary.outstanding_minor) }}</strong></article></div>
           <template v-if="data?.accounts?.length">
@@ -149,9 +205,25 @@ watch(selectedStudentId, () => { if (parentMode.value) { void loadStudentPhoto()
           <section class="portal-card"><h2>Payment history</h2><div v-if="!data?.transactions?.length" class="portal-empty">No payments have been recorded yet.</div><div v-else class="fee-transaction-list"><article v-for="payment in data.transactions" :key="payment._id"><div><b>{{ payment.receipt_number || payment.reference || 'Payment' }}</b><small>{{ shortDate(payment.createdAt) }} · {{ payment.method.replace('_', ' ') }}</small><small v-if="payment.status_message">{{ payment.status_message }}</small></div><div class="fee-transaction-end"><span :class="['portal-status', payment.status.toLowerCase()]">{{ payment.status }}</span><b>{{ payment.kind === 'REFUND' && payment.status === 'CONFIRMED' ? '−' : '' }}{{ money(payment.amount_minor) }}</b><button v-if="payment.kind === 'COLLECTION' && payment.status === 'CONFIRMED'" class="fee-receipt-button" @click="printReceipt(payment)">Receipt</button><button v-else-if="payment.method === 'ONLINE' && payment.status === 'PENDING'" class="fee-receipt-button" @click="checkOnlinePayment(payment._id)">Check status</button></div></article></div></section>
           <div v-if="!data?.accounts?.length" class="portal-card portal-empty">Your school has not assigned any fee accounts yet.</div>
         </section>
-        <section v-else-if="section === 'profile'" class="portal-card"><div class="profile-photo-heading"><img v-if="photoUrl" :src="photoUrl" alt="Student profile" /><span v-else>{{ (student.name || 'Student').slice(0,1) }}</span><h2>Profile details</h2></div><p><b>Name</b>{{ displayValue(data?.student?.name || student.name) }}</p><p><b>Student ID</b>{{ displayValue(data?.student?.admissionNumber || student.admissionNumber) }}</p><p><b>Class / section</b>{{ displayValue(data?.student?.className || student.className) }} / {{ displayValue(data?.student?.section || student.section) }}</p><p><b>Academic year</b>{{ displayValue(data?.academicYear?.name || student.academicYear) }}</p></section>
+        <section v-else-if="section === 'profile'" class="student-profile-page">
+          <article class="student-profile-card">
+            <img v-if="photoUrl" class="student-profile-hero-photo" :src="photoUrl" :alt="data?.student?.name || studentName" />
+            <span v-else class="student-profile-hero-fallback">{{ initials(data?.student?.name || studentName) }}</span>
+            <h2>{{ data?.student?.name || studentName }}</h2>
+            <p class="student-profile-classline">Class {{ displayValue(data?.student?.className || student.className) }}<template v-if="data?.student?.section || student.section"> · {{ data?.student?.section || student.section }}</template></p>
+            <div class="student-profile-rows">
+              <div class="student-profile-row"><span class="profile-row-icon blue">♙</span><div><small>Name</small><b>{{ displayValue(data?.student?.name || studentName) }}</b></div></div>
+              <div class="student-profile-row"><span class="profile-row-icon green">▣</span><div><small>Student ID</small><b>{{ displayValue(data?.student?.admissionNumber || student.admissionNumber) }}</b></div></div>
+              <div class="student-profile-row"><span class="profile-row-icon purple">◆</span><div><small>Class / section</small><b>{{ displayValue(data?.student?.className || student.className) }} / {{ displayValue(data?.student?.section || student.section) }}</b></div></div>
+              <div class="student-profile-row"><span class="profile-row-icon orange">▦</span><div><small>Academic year</small><b>{{ displayValue(data?.academicYear?.name || student.academicYear) }}</b></div></div>
+            </div>
+          </article>
+        </section>
         <section v-else-if="section !== 'dashboard'" class="portal-card"><h2>{{ title }} details</h2><div v-if="Array.isArray(data) && data.length" class="data-list"><pre v-for="(item,index) in data" :key="item.id || item._id || index">{{ JSON.stringify(item, null, 2) }}</pre></div><div v-else-if="Array.isArray(data?.results) && data.results.length" class="data-list"><pre v-for="(item,index) in data.results" :key="item.id || item._id || index">{{ JSON.stringify(item, null, 2) }}</pre></div><div v-else class="empty-state">No {{ title.toLowerCase() }} information is available yet.</div></section>
       </template>
     </main>
+    <nav v-if="!parentMode" class="portal-bottom-nav" aria-label="Main navigation">
+      <RouterLink v-for="item in bottomNavigation" :key="item[0]" :to="`/${item[0]}`" :class="{ active: item[0] === section }"><span aria-hidden="true">{{ item[2] }}</span>{{ item[1] }}</RouterLink>
+    </nav>
   </div>
 </template>
