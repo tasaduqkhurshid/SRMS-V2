@@ -17,6 +17,7 @@ export default {
     const mode = ref("create");          // "create" | "edit"
     const selectedStudentId = ref(null);
     const studentList = ref(null);
+    const studentProfile = ref(null);
   const showSubjectsModal = ref(false);
   const studentForSubjects = ref(null);
 
@@ -102,6 +103,11 @@ export default {
         )
           studentList.value.getStudentList();
       } catch (e) {}
+      try {
+        if (studentProfile.value && typeof studentProfile.value.reload === "function") {
+          studentProfile.value.reload();
+        }
+      } catch (e) {}
     };
 
     return {
@@ -111,6 +117,7 @@ export default {
       selectedStudentId,
       student,
       studentList,
+      studentProfile,
   showSubjectsModal,
   studentForSubjects,
 

@@ -27,6 +27,11 @@ export default `
         <span v-if="!collapsed">Import Students</span>
       </router-link>
 
+      <router-link class="nav-link" :class="{ 'nav-link-active': isActive('/students/promote') }" to="/students/promote">
+        <i class="fa-solid fa-arrow-up-right-dots"></i>
+        <span v-if="!collapsed">Promote Students</span>
+      </router-link>
+
       <!-- Academics Section -->
       <div class="sidebar-section" v-if="!collapsed">
         <span class="sidebar-section-title">Academics</span>

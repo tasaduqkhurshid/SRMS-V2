@@ -1,6 +1,7 @@
 import template from './AddEditMarksheetTemplateTemplate.js'
 import { api } from '../../../Services/api.js';
-const { ref, onMounted, onUnmounted, computed } = Vue
+import { sampleMarksTable } from './marksheetPreview.js'
+const { ref, onMounted, computed } = Vue
 const { useRoute, useRouter } = VueRouter
 
 export default {
@@ -16,14 +17,36 @@ export default {
     const form = ref({
       name: '',
       html_content: '',
-      is_active: true
+      is_active: true,
+      entities: []
     })
+
+    const entityCatalog = ref([])
+    const selectedEntity = ref('')
+    const editorElement = ref(null)
+    const visualEditorFrame = ref(null)
+    const visualFontSize = ref('14')
+    const tableRows = ref(3)
+    const tableColumns = ref(3)
+    const selectedEntityDefinition = computed(() => entityCatalog.value.find(entity => entity.key === selectedEntity.value) || null)
+    const entityFields = computed(() => selectedEntityDefinition.value?.fields || [])
+    const visualDocument = ref('')
 
     const loading = ref(false)
     const saving = ref(false)
-    const showPreview = ref(false)
-    const editorMode = ref('code') // 'code' or 'preview'
-    let htmlEditor = null
+    const editorMode = ref('visual')
+    let savedVisualRange = null
+
+    const buildVisualDocument = (source = '') => {
+      const html = String(source || '').replace(/\{\{marks_table\}\}/gi, `<div data-template-placeholder="marks_table" contenteditable="false">${sampleMarksTable}</div>`)
+      if (/<html(?:\s|>)/i.test(html)) return html
+      const styles = []
+      const body = html.replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, (styleTag) => {
+        styles.push(styleTag)
+        return ''
+      })
+      return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{min-height:100%;}body{margin:0;padding:0;background:#eef2f7;}</style>${styles.join('\n')}</head><body>${body}</body></html>`
+    }
 
     // Fetch template if editing
     const fetchTemplate = async () => {
@@ -35,6 +58,7 @@ export default {
             name: response.data.data.name,
             html_content: response.data.data.html_content,
             is_active: response.data.data.is_active,
+            entities: Array.isArray(response.data.data.entities) ? response.data.data.entities : [],
             _id: response.data.data._id
           }
         }
@@ -42,6 +66,16 @@ export default {
         toast?.error?.(error.response?.data?.message || 'Error loading template')
       } finally {
         loading.value = false
+      }
+    }
+
+    const fetchEntityCatalog = async () => {
+      try {
+        const response = await api.get('/marksheet-templates/entities')
+        entityCatalog.value = response.data?.data || []
+        if (!selectedEntity.value) selectedEntity.value = entityCatalog.value[0]?.key || ''
+      } catch (error) {
+        toast?.error?.(error.response?.data?.message || 'Could not load template entities')
       }
     }
 
@@ -57,7 +91,8 @@ export default {
         const payload = {
           name: form.value.name,
           html_content: form.value.html_content,
-          is_active: form.value.is_active
+          is_active: form.value.is_active,
+          entities: form.value.entities
         }
 
         if (isEdit.value) {
@@ -75,103 +110,210 @@ export default {
       }
     }
 
+    const setEditorMode = (mode) => {
+      if (mode === editorMode.value) return
+      if (mode === 'visual') {
+        visualDocument.value = buildVisualDocument(form.value.html_content)
+        savedVisualRange = null
+        editorMode.value = 'visual'
+        return
+      }
+      syncVisualHtml()
+      editorMode.value = 'code'
+    }
+
+    const visualLogoPlaceholder = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="47" fill="#fff" stroke="#c99a37" stroke-width="5"/><path d="M50 18 71 28v20c0 17-10 28-21 34C39 76 29 65 29 48V28z" fill="#15345e"/><text x="50" y="56" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#fff">S</text></svg>')}`
+
+    const setVisualImages = (doc) => {
+      doc.querySelectorAll('img[data-template-original-src]').forEach((image) => {
+        image.setAttribute('src', visualLogoPlaceholder)
+      })
+      doc.querySelectorAll('img').forEach((image) => {
+        const src = image.getAttribute('src') || ''
+        if (src.includes('{{') && !image.hasAttribute('data-template-original-src')) {
+          image.setAttribute('data-template-original-src', src)
+          image.setAttribute('src', visualLogoPlaceholder)
+        }
+      })
+    }
+
+    const syncVisualHtml = () => {
+      const doc = visualEditorFrame.value?.contentDocument
+      if (!doc?.documentElement || !doc.body) return
+      const body = doc.body
+      body.removeAttribute('contenteditable')
+      body.removeAttribute('data-visual-editor')
+      body.removeAttribute('spellcheck')
+      const zoomStyle = doc.querySelector('style[data-visual-editor-zoom]')
+      zoomStyle?.remove()
+      const sampleTableMarkers = [...doc.querySelectorAll('[data-template-placeholder="marks_table"]')].map(node => {
+        const marker = doc.createTextNode('{{marks_table}}')
+        node.replaceWith(marker)
+        return { node, marker }
+      })
+      const images = [...doc.querySelectorAll('img[data-template-original-src]')]
+      images.forEach((image) => {
+        image.setAttribute('src', image.getAttribute('data-template-original-src'))
+        image.removeAttribute('data-template-original-src')
+      })
+      const serialized = `<!doctype html>${doc.documentElement.outerHTML}`
+      form.value.html_content = serialized
+      sampleTableMarkers.forEach(({ node, marker }) => marker.replaceWith(node))
+      body.setAttribute('contenteditable', 'true')
+      body.setAttribute('data-visual-editor', 'true')
+      if (zoomStyle) doc.head.appendChild(zoomStyle)
+      setVisualImages(doc)
+    }
+
+    const enableVisualEditing = () => {
+      const doc = visualEditorFrame.value?.contentDocument
+      if (!doc?.body) return
+      doc.body.setAttribute('contenteditable', 'true')
+      doc.body.setAttribute('data-visual-editor', 'true')
+      doc.body.setAttribute('spellcheck', 'true')
+      if (!doc.querySelector('style[data-visual-editor-zoom]')) {
+        const zoomStyle = doc.createElement('style')
+        zoomStyle.setAttribute('data-visual-editor-zoom', 'true')
+        zoomStyle.textContent = 'html{width:100%;min-height:100%;margin:0!important;overflow-x:auto!important;overflow-y:auto!important;scrollbar-gutter:stable}body{box-sizing:border-box!important;width:100%;min-height:100%;margin:0!important;padding:3px!important;overflow:visible!important;zoom:1.06!important}body>*:not(style){box-sizing:border-box!important;width:100%!important;max-width:none!important;margin:0!important}'
+        doc.head.appendChild(zoomStyle)
+      }
+      setVisualImages(doc)
+      doc.addEventListener('selectionchange', () => {
+        const selection = doc.getSelection()
+        if (selection?.rangeCount && doc.body.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+          savedVisualRange = selection.getRangeAt(0).cloneRange()
+        }
+      })
+      doc.body.addEventListener('input', syncVisualHtml)
+    }
+
+    const restoreVisualSelection = (doc) => {
+      if (!doc?.body) return false
+      doc.body.focus()
+      const selection = doc.getSelection()
+      if (savedVisualRange && doc.body.contains(savedVisualRange.commonAncestorContainer)) {
+        selection.removeAllRanges()
+        selection.addRange(savedVisualRange)
+      }
+      return !!selection?.rangeCount
+    }
+
+    const formatVisualText = (command) => {
+      const doc = visualEditorFrame.value?.contentDocument
+      if (!doc?.body) return
+      restoreVisualSelection(doc)
+      doc.execCommand(command, false)
+      syncVisualHtml()
+    }
+
+    const alignVisualText = (alignment) => {
+      const doc = visualEditorFrame.value?.contentDocument
+      if (!restoreVisualSelection(doc)) return
+      doc.execCommand(`justify${alignment}`, false)
+      syncVisualHtml()
+    }
+
+    const setVisualFontSize = (size) => {
+      const doc = visualEditorFrame.value?.contentDocument
+      if (!restoreVisualSelection(doc)) return
+      const selection = doc.getSelection()
+      const range = selection.getRangeAt(0)
+      if (range.collapsed) return
+      const span = doc.createElement('span')
+      span.style.fontSize = `${Number(size) || 14}px`
+      span.append(range.extractContents())
+      range.insertNode(span)
+      const updatedRange = doc.createRange()
+      updatedRange.selectNodeContents(span)
+      selection.removeAllRanges()
+      selection.addRange(updatedRange)
+      savedVisualRange = updatedRange.cloneRange()
+      syncVisualHtml()
+    }
+
+    const insertVisualTable = () => {
+      const doc = visualEditorFrame.value?.contentDocument
+      if (!restoreVisualSelection(doc)) return
+      const rows = Math.max(1, Math.min(20, Number(tableRows.value) || 3))
+      const columns = Math.max(1, Math.min(12, Number(tableColumns.value) || 3))
+      const cells = Array.from({ length: columns }, () => '<td style="border:1px solid #9aa9ba;padding:7px;min-width:50px">&nbsp;</td>').join('')
+      const table = `<table style="border-collapse:collapse;width:100%;margin:8px 0"><tbody>${Array.from({ length: rows }, () => `<tr>${cells}</tr>`).join('')}</tbody></table><p><br></p>`
+      doc.execCommand('insertHTML', false, table)
+      syncVisualHtml()
+    }
+
     // Insert placeholder
     const insertPlaceholder = (placeholder) => {
-      form.value.html_content += placeholder
-      if (htmlEditor) htmlEditor.html.set(form.value.html_content)
+      if (editorMode.value === 'visual') {
+        const doc = visualEditorFrame.value?.contentDocument
+        if (doc?.body) {
+          doc.body.focus()
+          doc.execCommand('insertText', false, placeholder)
+          syncVisualHtml()
+          return
+        }
+      }
+      const current = form.value.html_content || ''
+      const textarea = editorElement.value
+      const start = textarea ? textarea.selectionStart : current.length
+      const end = textarea ? textarea.selectionEnd : current.length
+      form.value.html_content = `${current.slice(0, start)}${placeholder}${current.slice(end)}`
+      if (editorMode.value === 'visual') visualDocument.value = buildVisualDocument(form.value.html_content)
+      Vue.nextTick(() => {
+        if (!textarea || editorMode.value !== 'code') return
+        textarea.focus()
+        const cursor = start + placeholder.length
+        textarea.setSelectionRange(cursor, cursor)
+      })
     }
 
-    // Common placeholders
-    const placeholders = [
-      { text: 'Student Name', value: '{{student_name}}' },
-      { text: 'Roll Number', value: '{{roll_number}}' },
-      { text: 'Exam Name', value: '{{exam_name}}' },
-      { text: 'Course/Class', value: '{{class}}' },
-      { text: 'Academic Year', value: '{{session}}' },
-      { text: 'School Name', value: '{{school_name}}' },
-      { text: 'Current Date', value: '{{current_date}}' },
-      { text: 'School Logo', value: '{{school_logo}}' },
-      { text: 'Marks Matrix', value: '{{marks_matrix}}' },
-      { text: 'Remarks Matrix', value: '{{remarks_matrix}}' },
-      { text: 'Total Marks', value: '{{total_marks}}' },
-      { text: 'Maximum Marks', value: '{{max_marks}}' },
-      { text: 'Date', value: '{{date}}' }
-    ]
+    const isEntityFieldSelected = (entityKey, fieldKey) =>
+      form.value.entities.some(selection => selection.entity === entityKey && selection.fields.includes(fieldKey))
 
-    const insertSampleMarksheet = () => {
-      form.value.html_content = `
-<div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
-  <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #000; padding-bottom: 15px;">
-    <img src="{{school_logo}}" alt="School logo" style="max-height: 80px; max-width: 160px; object-fit: contain;" />
-    <h2 style="margin: 0;">{{school_name}}</h2>
-    <h3 style="margin: 5px 0 0 0; color: #666;">MARKSHEET</h3>
-  </div>
-
-  <div style="margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
-    <div><strong>Student Name:</strong> {{student_name}}</div>
-    <div><strong>Roll Number:</strong> {{roll_number}}</div>
-    <div><strong>Class:</strong> {{class}}</div>
-    <div><strong>Academic Year:</strong> {{session}}</div>
-    <div><strong>Exam:</strong> {{exam_name}}</div>
-    <div><strong>Date:</strong> {{current_date}}</div>
-  </div>
-
-  <div style="margin: 20px 0;">{{marks_matrix}}</div>
-
-  <div style="margin: 20px 0; padding: 15px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 14px;">
-    <div><strong>Overall Total Marks:</strong> {{total_marks}} / {{max_marks}}</div>
-    <div style="margin-top: 10px;">{{remarks_matrix}}</div>
-  </div>
-
-  <div style="margin-top: 30px; display: flex; justify-content: space-between; font-size: 12px;">
-    <div>___________________<br/>Teacher Signature</div>
-    <div>___________________<br/>Principal Signature</div>
-  </div>
-</div>
-      `
-      if (htmlEditor) htmlEditor.html.set(form.value.html_content)
+    const insertEntityField = (entityKey, field) => {
+      let selection = form.value.entities.find(item => item.entity === entityKey)
+      if (!selection) {
+        selection = { entity: entityKey, fields: [] }
+        form.value.entities.push(selection)
+      }
+      if (!selection.fields.includes(field.key)) selection.fields.push(field.key)
+      insertPlaceholder(`{{${entityKey}.${field.key}}}`)
     }
+
+    const entityPlaceholder = (entityKey, fieldKey) => `{{${entityKey}.${fieldKey}}}`
 
     onMounted(async () => {
-      if (isEdit.value) await fetchTemplate()
-      await Vue.nextTick()
-      htmlEditor = new FroalaEditor('#html_editor', {
-          heightMin: 420,
-          heightMax: 560,
-          toolbarButtons: [
-            'bold', 'italic', 'underline', 'strikethrough', '|',
-            'formatOL', 'formatUL', '|',
-            'align', 'indent', 'outdent', '|',
-            'insertTable', '|',
-            'createLink', 'insertImage', '|',
-            'undo', 'redo', '|',
-            'html'
-          ],
-          codeMirror: true,
-          codeMirrorOptions: {
-            indentType: 'tab',
-            tabSize: 2
-          }
-        })
-        if (form.value.html_content) htmlEditor.html.set(form.value.html_content)
-        htmlEditor.events.on('contentChanged', function() {
-          form.value.html_content = this.html.get()
-        })
+      await Promise.all([fetchEntityCatalog(), isEdit.value ? fetchTemplate() : Promise.resolve()])
+      if (editorMode.value === 'visual') visualDocument.value = buildVisualDocument(form.value.html_content)
     })
-
-    onUnmounted(() => { if (htmlEditor) { htmlEditor.destroy(); htmlEditor = null } })
 
     return {
       form,
+      entityCatalog,
+      selectedEntity,
+      selectedEntityDefinition,
+      entityFields,
+      editorElement,
+      visualEditorFrame,
+      visualDocument,
+      visualFontSize,
+      tableRows,
+      tableColumns,
+      enableVisualEditing,
+      formatVisualText,
+      alignVisualText,
+      setVisualFontSize,
+      insertVisualTable,
+      isEntityFieldSelected,
+      insertEntityField,
+      entityPlaceholder,
       loading,
       saving,
-      showPreview,
       editorMode,
       isEdit,
       saveTemplate,
+      setEditorMode,
       insertPlaceholder,
-      placeholders,
-      insertSampleMarksheet,
       router
     }
   }

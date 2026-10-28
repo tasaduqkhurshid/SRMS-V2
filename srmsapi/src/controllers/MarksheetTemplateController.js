@@ -6,6 +6,12 @@ const { ValidationError, NotFoundError } = require("../utils/applicationErrors")
 const { asyncHandler } = require("../middleware/errorHandler");
 const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
 
+const listMarksheetEntities = asyncHandler(async (req, res, next) => {
+  const result = MarksheetTemplateService.getMarksheetEntityCatalog();
+  if (result.error) return next(result.error);
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "Available marksheet entities", data: result.data });
+});
+
 const listMarksheetTemplates = asyncHandler(async (req, res, next) => {
   const { page, limit, q } = req.query;
   const result = await MarksheetTemplateService.listMarksheetTemplates({ page, limit, query: q });
@@ -48,4 +54,4 @@ const deleteMarksheetTemplate = asyncHandler(async (req, res, next) => {
   return sendSuccessJsonResponse(res, { statusCode: 200, message: "Template deleted" });
 });
 
-module.exports = { listMarksheetTemplates, getMarksheetTemplate, saveMarksheetTemplate, deleteMarksheetTemplate };
+module.exports = { listMarksheetEntities, listMarksheetTemplates, getMarksheetTemplate, saveMarksheetTemplate, deleteMarksheetTemplate };

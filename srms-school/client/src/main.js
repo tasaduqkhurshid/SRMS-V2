@@ -4,12 +4,9 @@ import axios from "axios";
 import * as bootstrap from "bootstrap";
 import JustValidate from "just-validate";
 import * as XLSX from "xlsx";
-import FroalaEditor from "froala-editor";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
-import "froala-editor/css/froala_editor.pkgd.min.css";
-import "froala-editor/css/froala_style.min.css";
 import "../public/assets/css/global.css";
 
 window.Vue = Vue;
@@ -18,7 +15,6 @@ window.axios = axios;
 window.bootstrap = bootstrap;
 window.JustValidate = JustValidate;
 window.XLSX = XLSX;
-window.FroalaEditor = FroalaEditor;
 
 async function bootstrapApp() {
   await import("./utils/toasty.js");

@@ -309,7 +309,7 @@ const setStudentSubjects = asyncHandler(async (req, res, next) => {
       req.user.schoolId ||
       null;
 
-  const result = await StudentService.setStudentSubjects(
+  const result = await StudentService.replaceStudentSubjects(
     id,
     subjectIds,
     schoolId
@@ -349,6 +349,23 @@ const setStudentCourse = asyncHandler(async (req, res, next) => {
   if (result.error) return next(result.error);
 
   return sendSuccessJsonResponse(res, { statusCode: STATUS.OK, message: "Course assigned to student", data: result.data });
+});
+
+const promoteStudents = asyncHandler(async (req, res, next) => {
+  const schoolId = req.user?.school_id || req.user?.SchoolId || req.user?.schoolId || null;
+  const result = await StudentService.promoteStudents({
+    studentIds: req.body?.student_ids,
+    targetCourseId: req.body?.target_course_id,
+    academicYearId: req.body?.academic_year_id || null,
+    schoolId,
+  });
+  if (result.error) return next(result.error);
+
+  return sendSuccessJsonResponse(res, {
+    statusCode: STATUS.OK,
+    message: result.data.failed.length ? "Promotion completed with some failures" : "Students promoted successfully",
+    data: result.data,
+  });
 });
 
 const uploadStudentImage = asyncHandler(async (req, res, next) => {
@@ -451,6 +468,7 @@ module.exports = {
   uploadStudentImage,
   setStudentPassword,
   setStudentCourse,
+  promoteStudents,
   bulkImportStudents,
   getStudentImage,
 };

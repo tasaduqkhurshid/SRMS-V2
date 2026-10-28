@@ -15,7 +15,7 @@ export default {
       default: null,
     },
   },
-  emits: ["edit", "close"],
+  emits: ["edit", "close", "assign-subjects"],
   setup(props, { emit }) {
     // state
     const loading = ref(false);
@@ -126,7 +126,9 @@ export default {
           try {
             const subRes = await api.get(`/students/${props.studentId}/subjects`);
             if (subRes?.data?.status === "success") {
-              assignedSubjects.value = subRes.data.data || [];
+              assignedSubjects.value = (subRes.data.data || [])
+                .map(row => row.subject_id || row.subject || row)
+                .filter(subject => subject && subject.subject_name);
             } else {
               assignedSubjects.value = [];
             }
@@ -162,6 +164,8 @@ export default {
       emit("edit", studentId);
     };
 
+    const assignSubjects = () => emit("assign-subjects", props.studentId);
+
     onMounted(() => {
       if (props.open && props.studentId) {
          getStudentDetails();
@@ -181,6 +185,7 @@ export default {
       getStudentDetails,
       reload,
       editStudent,
+      assignSubjects,
       applyImageData, // exported in case parent wants to update image preview manually
     };
     

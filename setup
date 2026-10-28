@@ -4,11 +4,42 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
+environment="${ENVIRONMENT:-local}"
+command="help"
+args=()
+while (($#)); do
+  case "$1" in
+    -e|--env)
+      (($# >= 2)) || { echo "Missing value for $1" >&2; exit 2; }
+      environment="$2"
+      shift 2
+      ;;
+    *) args+=("$1"); shift ;;
+  esac
+done
+if [[ "${#args[@]}" -gt 0 ]]; then
+  command="${args[0]}"
+  args=("${args[@]:1}")
+fi
+if [[ "$environment" != local && "$environment" != docker ]]; then
+  printf 'Invalid environment %q; choose local or docker.\n' "$environment" >&2
+  exit 2
+fi
+
+environment_file="$ROOT_DIR/.env.local"
+API_SERVICE=sms-api-local
+if [[ "$environment" == docker ]]; then
+  environment_file="$ROOT_DIR/.env.production"
+  API_SERVICE=sms-api
+fi
+[[ -f "$ROOT_DIR/.env" ]] || { echo 'Missing .env. Copy .env.example to .env and configure local credentials.' >&2; exit 2; }
+[[ -f "$environment_file" ]] || { echo "Missing environment config: $environment_file" >&2; exit 2; }
+
 compose_env_value() {
   local name="$1" value
   value="${!name:-}"
   if [[ -z "$value" ]]; then
-    value="$(docker compose --env-file "$ROOT_DIR/.env" --env-file "$ROOT_DIR/.env.production" config --environment | sed -n "s/^${name}=//p" | head -n 1)"
+    value="$(docker compose --env-file "$ROOT_DIR/.env" --env-file "$environment_file" config --environment | sed -n "s/^${name}=//p" | head -n 1)"
   fi
   printf '%s' "$value"
 }
@@ -21,19 +52,16 @@ if [[ "$DB_TYPE" != docker && "$DB_TYPE" != local ]]; then
 fi
 
 compose() {
+  local profiles=()
   if [[ "$DB_TYPE" == docker ]]; then
-    docker compose --env-file "$ROOT_DIR/.env" --env-file "$ROOT_DIR/.env.production" --profile docker "$@"
-  else
-    docker compose --env-file "$ROOT_DIR/.env" --env-file "$ROOT_DIR/.env.production" "$@"
+    profiles+=(--profile docker)
   fi
+  if [[ "$environment" == local ]]; then profiles+=(--profile local); fi
+  docker compose --env-file "$ROOT_DIR/.env" --env-file "$environment_file" "${profiles[@]}" "$@"
 }
 
 compose_with_local_profile() {
-  if [[ "$DB_TYPE" == docker ]]; then
-    docker compose --env-file "$ROOT_DIR/.env" --env-file "$ROOT_DIR/.env.production" --profile docker --profile local "$@"
-  else
-    docker compose --env-file "$ROOT_DIR/.env" --env-file "$ROOT_DIR/.env.production" --profile local "$@"
-  fi
+  compose "$@"
 }
 
 db_value() {
@@ -85,7 +113,7 @@ usage() {
   cat <<'EOF'
 SMS database and Docker setup
 
-Usage: ./setup <command>
+Usage: ./setup [-e local|docker] <command>
 
   db          Run migrations, then environment-safe seeders
   migrate     Run only MongoDB migrations
@@ -93,23 +121,22 @@ Usage: ./setup <command>
   reset       Reset the selected database after displaying it and confirming
   status      Show container status
   logs [service]  Follow all logs, or only the named Compose service
-  shell       Open a shell in sms-api
+  shell       Open a shell in the selected API service
   mongo       Open mongosh against the selected database
   db-export   Export the selected database under ./sms-db/<timestamp>
   db-import   Restore an archive to the selected database (requires confirmation)
   help        Show this help
 
-Set DB_TYPE=docker or DB_TYPE=local in .env. Local mode expects MongoDB on the host;
-the API container connects via host.docker.internal, while host tools use 127.0.0.1.
+The runtime defaults to local, matching ./start-all.sh. Use -e docker for the
+production-style stack. DB_TYPE selects Docker MongoDB or host MongoDB separately.
 EOF
 }
 
 run_api_npm() {
-  require_running sms-api
-  compose exec sms-api npm "$@"
+  require_running "$API_SERVICE"
+  compose exec "$API_SERVICE" npm "$@"
 }
 
-command="${1:-help}"
 case "$command" in
   db)
     run_api_npm run migrate
@@ -123,11 +150,11 @@ case "$command" in
     read -r confirmation
     [[ "$confirmation" == RESET ]] || { echo 'Reset cancelled.'; exit 1; }
     if [[ "$DB_TYPE" == docker ]]; then compose up -d --wait mongodb; fi
-    compose stop sms-api >/dev/null 2>&1 || true
-    compose run --rm --no-deps sms-api npm run db:reset
-    compose run --rm --no-deps sms-api npm run migrate
-    compose run --rm --no-deps sms-api npm run seed
-    compose up -d --build --wait sms-api
+    compose stop "$API_SERVICE" >/dev/null 2>&1 || true
+    compose run --rm --no-deps "$API_SERVICE" npm run db:reset
+    compose run --rm --no-deps "$API_SERVICE" npm run migrate
+    compose run --rm --no-deps "$API_SERVICE" npm run seed
+    compose up -d --build --wait "$API_SERVICE"
     ;;
   status) compose ps ;;
   logs)
@@ -141,7 +168,7 @@ case "$command" in
       compose logs -f --tail=200
     fi
     ;;
-  shell) require_running sms-api; compose exec sms-api sh ;;
+  shell) require_running "$API_SERVICE"; compose exec "$API_SERVICE" sh ;;
   mongo)
     if [[ "$DB_TYPE" == docker ]]; then
       require_running mongodb

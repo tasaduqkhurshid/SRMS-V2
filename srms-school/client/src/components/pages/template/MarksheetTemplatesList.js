@@ -1,5 +1,6 @@
 import { api } from '../../../Services/api.js';
 import template from './MarksheetTemplatesListTemplate.js'
+import { renderMarksheetTemplatePreview } from './marksheetPreview.js'
 const { ref, onMounted } = Vue
 const { useRouter } = VueRouter
 
@@ -15,6 +16,9 @@ export default {
     const limit = ref(50)
     const totalRecords = ref(0)
     const loading = ref(false)
+    const previewing = ref(false)
+    const previewName = ref('')
+    const previewHtml = ref('')
 
     // Fetch templates
     const fetchTemplates = async () => {
@@ -57,6 +61,22 @@ export default {
     // Edit template
     const editTemplate = (id) => {
       router.push(`/templates/marksheets/${id}/edit`)
+    }
+
+    const viewTemplate = async (id) => {
+      previewing.value = true
+      previewName.value = 'Loading template…'
+      previewHtml.value = ''
+      try {
+        const response = await api.get(`/marksheet-templates/${id}`)
+        const savedTemplate = response.data?.data
+        if (!savedTemplate?.html_content) throw new Error('Template HTML is empty')
+        previewName.value = savedTemplate.name || 'Marksheet template'
+        previewHtml.value = renderMarksheetTemplatePreview(savedTemplate.html_content)
+      } catch (error) {
+        previewing.value = false
+        toast?.error?.(error.response?.data?.message || error.message || 'Could not load template preview')
+      }
     }
 
     // Add new template
@@ -113,6 +133,10 @@ export default {
       fetchTemplates,
       deleteTemplate,
       editTemplate,
+      viewTemplate,
+      previewing,
+      previewName,
+      previewHtml,
       addTemplate,
       searchTemplates,
       resetSearch,

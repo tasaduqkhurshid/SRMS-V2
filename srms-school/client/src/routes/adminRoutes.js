@@ -13,6 +13,7 @@ import GenerateMarksheet from '../components/pages/result/GenerateMarksheet.js';
 import MarksheetTemplatesList from '../components/pages/template/MarksheetTemplatesList.js';
 import AddEditMarksheetTemplate from '../components/pages/template/AddEditMarksheetTemplate.js';
 import StudentImport from '../components/pages/import/StudentImport.js';
+import StudentPromotion from '../components/pages/student/StudentPromotion.js';
 import ResultBook from '../components/pages/resultbook/ResultBook.js';
 import SchoolProfile from '../components/pages/school/SchoolProfile.js';
 import FeeManagement from '../components/pages/fees/FeeManagement.js';
@@ -29,6 +30,7 @@ const routes = [
   // student routes
   { path: "/students", component: StudentsIndex },
   { path: "/students/import", component: StudentImport },
+  { path: "/students/promote", component: StudentPromotion },
   // subjects
   { path: "/subjects", component: SubjectsIndex },
   // courses

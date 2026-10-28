@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 const tableNames = require("../tableNames");
 
+const MarksheetTemplateEntitySchema = new mongoose.Schema({
+  entity: { type: String, required: true },
+  fields: { type: [String], default: [] },
+}, { _id: false });
+
 const MarksheetTemplateSchema = new mongoose.Schema(
   {
     name: {
@@ -11,6 +16,10 @@ const MarksheetTemplateSchema = new mongoose.Schema(
       type: String,
       required: true
     }, // HTML template with placeholders like {{student_name}}, {{marks}}, etc.
+    entities: {
+      type: [MarksheetTemplateEntitySchema],
+      default: [],
+    },
     is_active: {
       type: Boolean,
       default: true

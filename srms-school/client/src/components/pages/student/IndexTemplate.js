@@ -27,9 +27,11 @@ export default `
 
   <!-- View Modal -->
   <StudentProfile v-if="isView"
+    ref="studentProfile"
     :open="isView"
     :studentId="selectedStudentId"
     @edit="handleEdit"
+    @assign-subjects="handleAssign"
     @close="closeStudent"
   />  
 

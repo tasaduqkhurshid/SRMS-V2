@@ -26,6 +26,7 @@ router.post("/import", upload.single("file"), StudentController.bulkImportStuden
 
 // Create
 router.post("/save", StudentController.saveStudentDetails);
+router.post("/promote", StudentController.promoteStudents);
 router.put("/:id/password", StudentController.setStudentPassword);
 
 // Student details + image (base64)

@@ -36,7 +36,7 @@ export default `
 
         <section class="profile-detail-panel profile-other-panel">
           <div class="profile-other-heading"><h3><i class="fa-solid fa-book-open"></i> Other Information</h3><div class="profile-actions"><button type="button" class="profile-back-button" @click="$emit('close')"><i class="fa-solid fa-arrow-left"></i> Back to list</button><button type="button" class="profile-edit-button" @click="editStudent(student._id)"><i class="fa-solid fa-pen"></i> Edit Student</button></div></div>
-          <div class="profile-extra-row"><h4><i class="fa-solid fa-book-open"></i> Subjects</h4><div v-if="assignedSubjects && assignedSubjects.length" class="profile-subjects"><span v-for="s in assignedSubjects" :key="s._id">{{ s.subject_name }}</span></div><p v-else>No subjects assigned</p></div>
+          <div class="profile-extra-row"><div class="profile-subjects-heading"><h4><i class="fa-solid fa-book-open"></i> Subjects</h4><button type="button" class="profile-edit-button" @click="assignSubjects"><i class="fa-solid fa-plus"></i> Assign Subjects</button></div><div v-if="assignedSubjects && assignedSubjects.length" class="profile-subjects"><span v-for="s in assignedSubjects" :key="s._id">{{ s.subject_name }}</span></div><p v-else>No subjects assigned</p></div>
           <div class="profile-extra-row profile-notes-row"><h4><i class="fa-regular fa-file-lines"></i> Notes</h4><p v-if="student?.notes">{{ student.notes }}</p><p v-else>No additional notes.</p></div>
         </section>
       </div>

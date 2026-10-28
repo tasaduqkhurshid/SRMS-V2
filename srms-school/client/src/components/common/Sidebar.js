@@ -131,6 +131,9 @@ export default {
         if (path === '/students/import') {
           return route.path === '/students/import'
         }
+        if (path === '/students/promote') {
+          return route.path === '/students/promote'
+        }
         if (path === '/subjects') {
           return route.path === '/subjects'
         }

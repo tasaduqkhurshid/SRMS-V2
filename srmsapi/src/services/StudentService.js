@@ -8,7 +8,7 @@ const logger = require("../utils/logger");
 const PwpConstants = require("../constants/PwpConstants");
 const ImageService = require("./ImageService");
 const storage = require("./storage/storage.service");
-const { Student, School, Image, Subject, StudentSubject, AcademicYear, Course } = require("../db/models");
+const { Student, School, Image, Subject, StudentSubject, AcademicYear, Course, CourseSubject } = require("../db/models");
 const { ValidationError, NotFoundError, DatabaseError } = require("../utils/applicationErrors");
 const { success, failure } = require("../utils/serviceResult");
 
@@ -102,6 +102,88 @@ const updateStudent = async (id, payload) => {
 
     const fresh = await ModelUtils.findOne(Student, { _id: id });
     return success(fresh || null);
+  } catch (error) {
+    return failure(error);
+  }
+};
+
+const courseProgressionRank = (course) => {
+  const text = `${course?.course_name || ""} ${course?.course_code || ""}`.toLowerCase().replace(/[._-]+/g, " ");
+  if (/pre\s*nursery/.test(text)) return 0;
+  if (/\bnursery\b/.test(text)) return 1;
+  if (/\b(?:l\s*k\s*g|lower kindergarten)\b/.test(text)) return 2;
+  if (/\b(?:u\s*k\s*g|upper kindergarten)\b/.test(text)) return 3;
+  const grade = text.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b/);
+  return grade ? 3 + Number(grade[1]) : null;
+};
+
+const promoteStudents = async ({ studentIds = [], targetCourseId, academicYearId = null, schoolId } = {}) => {
+  try {
+    const ids = [...new Set((Array.isArray(studentIds) ? studentIds : []).map(String).filter(Boolean))];
+    if (!ids.length) throw new ValidationError("Select at least one student");
+    if (!targetCourseId) throw new ValidationError("Select a target course");
+    if (!schoolId) throw new ValidationError("School context is required");
+
+    const promoteToNext = targetCourseId === "__NEXT__";
+    const targetCourse = promoteToNext ? null : await ModelUtils.findOne(Course, { _id: targetCourseId, school_id: schoolId });
+    if (!promoteToNext && !targetCourse) throw new NotFoundError("Target course");
+    const schoolCourses = promoteToNext ? await ModelUtils.findAll(Course, { school_id: schoolId }) : [];
+    if (academicYearId) {
+      const academicYear = await ModelUtils.findOne(AcademicYear, { _id: academicYearId, school_id: schoolId });
+      if (!academicYear) throw new NotFoundError("Academic year");
+    }
+
+    const students = await ModelUtils.findAll(Student, { _id: { $in: ids }, school_id: schoolId });
+    if (students.length !== ids.length) throw new ValidationError("One or more selected students do not belong to this school");
+
+    const promoted = [];
+    const failed = [];
+
+    for (const student of students) {
+      const studentId = String(student._id);
+      try {
+        const oldCourseId = await getStudentCourseId(student);
+        let studentTargetCourse = targetCourse;
+        if (promoteToNext) {
+          const currentCourse = schoolCourses.find(course => String(course._id) === String(oldCourseId));
+          const currentRank = courseProgressionRank(currentCourse);
+          if (currentRank === null) throw new ValidationError(`Could not determine the next course for ${student.name}; choose a destination course manually`);
+          const nextRank = Math.min(...schoolCourses.map(courseProgressionRank).filter(rank => rank !== null && rank > currentRank));
+          const nextCourses = schoolCourses.filter(course => courseProgressionRank(course) === nextRank);
+          if (!Number.isFinite(nextRank) || nextCourses.length !== 1) throw new ValidationError(`Could not determine one next course for ${student.name}; choose a destination course manually`);
+          studentTargetCourse = nextCourses[0];
+        }
+        const targetCourseSubjects = await ModelUtils.findAll(CourseSubject, { course_id: studentTargetCourse._id });
+        const targetSubjectIds = (targetCourseSubjects || []).map(row => String(row.subject_id)).filter(Boolean);
+        const oldCourseSubjects = oldCourseId
+          ? await ModelUtils.findAll(CourseSubject, { course_id: oldCourseId })
+          : [];
+        const oldSubjectIds = (oldCourseSubjects || [])
+          .map(row => String(row.subject_id))
+          .filter(id => id && !targetSubjectIds.includes(id));
+
+        if (oldSubjectIds.length) {
+          await ModelUtils.remove(StudentSubject, {
+            student_id: studentId,
+            subject_id: { $in: oldSubjectIds },
+          });
+        }
+
+        const updated = await updateStudent(studentId, {
+          class: String(studentTargetCourse._id),
+          ...(academicYearId ? { academic_year_id: academicYearId } : {}),
+        });
+        if (updated.error || !updated.data) throw updated.error || new NotFoundError("Student");
+
+        const assigned = await assignCourseToStudent(studentId, String(studentTargetCourse._id), schoolId);
+        if (assigned.error) logger.warn("Could not materialize all target course subjects during promotion:", assigned.error.message);
+        promoted.push({ student_id: studentId, name: student.name, target_course: studentTargetCourse.course_name });
+      } catch (error) {
+        failed.push({ student_id: studentId, name: student.name, message: error.message || "Promotion failed" });
+      }
+    }
+
+    return success({ promoted, failed, target_course: promoteToNext ? "next course" : targetCourse.course_name });
   } catch (error) {
     return failure(error);
   }
@@ -219,10 +301,20 @@ const deleteStudent = async (id) => {
   }
 };
 
+const getStudentCourseId = async (student) => {
+  const classValue = String(student?.class || "");
+  if (/^[a-f\d]{24}$/i.test(classValue)) return classValue;
+  if (!classValue || !student?.school_id) return null;
+  const course = await ModelUtils.findOne(Course, { course_name: classValue, school_id: student.school_id });
+  return course?._id ? String(course._id) : null;
+};
+
 const getStudentSubjects = async (studentId) => {
   try {
     if (!studentId) throw new ValidationError("studentId is required");
-    const studentSubjects = await ModelUtils.findAll(StudentSubject, {
+    const [student, studentSubjects] = await Promise.all([
+      ModelUtils.findOne(Student, { _id: studentId }),
+      ModelUtils.findAll(StudentSubject, {
       student_id: studentId
     }, {
       populate: {
@@ -230,9 +322,28 @@ const getStudentSubjects = async (studentId) => {
         select: "subject_name subject_code"
       },
       sort: { "subject_id._id": 1, "subject_id.subject_name": 1 }
-    });
+      })
+    ]);
 
-    return success(studentSubjects || []);
+    // Class subjects are defaults for every student in that class. Include them
+    // at read time as well as explicit student assignments so older records
+    // and newly assigned class subjects appear consistently in the profile.
+    let courseSubjects = [];
+    const courseId = await getStudentCourseId(student);
+    if (courseId) {
+      const CourseService = require("./CourseService");
+      const result = await CourseService.getCourseSubjects(courseId);
+      if (result.error) return failure(result.error);
+      courseSubjects = (result.data || []).map(row => ({ ...row, assignment_source: "course" }));
+    }
+
+    const merged = new Map();
+    for (const row of [...courseSubjects, ...(studentSubjects || []).map(item => ({ ...item, assignment_source: "student" }))]) {
+      const subjectId = String(row?.subject_id?._id || row?.subject?._id || row?.subject_id || "");
+      if (subjectId && !merged.has(subjectId)) merged.set(subjectId, row);
+    }
+
+    return success([...merged.values()]);
   } catch (error) {
     return failure(error);
   }
@@ -266,6 +377,40 @@ const setStudentSubjects = async (studentId, subjectIds = [], schoolId = null) =
       }
     }
     return success(savedSubjects);
+  } catch (error) {
+    return failure(error);
+  }
+};
+
+const replaceStudentSubjects = async (studentId, subjectIds = [], schoolId = null) => {
+  try {
+    if (!studentId) throw new ValidationError("studentId is required");
+    const student = await ModelUtils.findOne(Student, { _id: studentId });
+    if (!student) throw new NotFoundError("Student");
+
+    const requestedIds = getKeysFromArray(subjectIds, "id");
+    const classSubjectIds = [];
+    const courseId = await getStudentCourseId(student);
+    if (courseId) {
+      const CourseService = require("./CourseService");
+      const courseResult = await CourseService.getCourseSubjects(courseId);
+      if (courseResult.error) return failure(courseResult.error);
+      for (const row of courseResult.data || []) {
+        const id = row?.subject_id?._id || row?.subject?._id || row?.subject_id;
+        if (id) classSubjectIds.push(String(id));
+      }
+    }
+
+    // Class subjects remain assigned by default; the submitted list controls
+    // student-specific additions and removals.
+    const effectiveIds = [...new Set([...classSubjectIds, ...requestedIds])];
+    await ModelUtils.remove(StudentSubject, {
+      student_id: studentId,
+      ...(effectiveIds.length ? { subject_id: { $nin: effectiveIds } } : {}),
+    });
+    const added = await setStudentSubjects(studentId, effectiveIds, schoolId || student.school_id);
+    if (added.error) return added;
+    return getStudentSubjects(studentId);
   } catch (error) {
     return failure(error);
   }
@@ -447,10 +592,12 @@ const bulkImportStudents = async (students, courseId, schoolId) => {
 module.exports = {
   createStudent,
   updateStudent,
+  promoteStudents,
   getStudentDetails,
   getStudentImage,
   getStudentSubjects,
   setStudentSubjects,
+  replaceStudentSubjects,
   assignCourseToStudent,
   listStudents,
   deleteStudent,

@@ -10,7 +10,10 @@ export default `
   <section class="marksheet-config-card">
     <header class="marksheet-config-heading">
       <div><span class="marksheet-step">01</span><div><h2>Marksheet configuration</h2><p>Select who and what to include in this marksheet.</p></div></div>
-      <span class="marksheet-selected-count"><i class="fa-solid fa-circle-check"></i>{{ selectedExams.length }} exam{{ selectedExams.length === 1 ? '' : 's' }} selected</span>
+      <div class="marksheet-config-header-controls">
+        <label class="marksheet-year-header" for="marksheetYear"><span>Academic year</span><div class="marksheet-select-wrap"><i class="fa-regular fa-calendar"></i><select id="marksheetYear" v-model="selectedAcademicYear" class="form-select"><option :value="null">All academic years</option><option v-for="year in academicYears" :key="year._id" :value="year._id">{{ year.name }}</option></select></div></label>
+        <span class="marksheet-selected-count"><i class="fa-solid fa-circle-check"></i>{{ selectedExams.length }} exam{{ selectedExams.length === 1 ? '' : 's' }} selected</span>
+      </div>
     </header>
 
     <div class="marksheet-generator-grid">
@@ -26,50 +29,45 @@ export default `
       </div>
 
       <div class="marksheet-generator-field">
+        <label for="marksheetCourse">Class / course</label>
+        <div class="marksheet-select-wrap"><i class="fa-solid fa-school"></i>
+          <select id="marksheetCourse" v-model="selectedCourse" class="form-select">
+            <option :value="null">All courses</option>
+            <option v-for="course in courses" :key="course._id" :value="course._id">{{ course.course_name || course.name }}</option>
+          </select>
+        </div>
+        <small>{{ selectedCourseRecord ? 'Students will be limited to ' + (selectedCourseRecord.course_name || selectedCourseRecord.name) + '.' : 'All courses are included.' }}</small>
+      </div>
+
+      <div class="marksheet-generator-field">
         <label for="marksheetStudent">Students <span>*</span></label>
         <div class="marksheet-select-wrap"><i class="fa-solid fa-user-graduate"></i>
           <select id="marksheetStudent" v-model="selectedStudent" class="form-select">
             <option :value="null">Select a student</option>
-            <option value="__ALL__">All students ({{ visibleStudents.length }})</option>
+            <option value="__ALL__" :disabled="!visibleStudents.length">All students ({{ visibleStudents.length }})</option>
             <option v-for="student in visibleStudents" :key="student._id" :value="student._id">{{ student.name }} · {{ student.roll_number || 'No roll number' }}</option>
           </select>
         </div>
-        <small>{{ isAllStudentsSelected ? selectedStudentIds.length + ' students will be included' : 'Choose one student or generate for the full class.' }}</small>
+        <small>{{ isAllStudentsSelected ? selectedStudentIds.length + ' students will be included' : 'Choose one student or include all students in the selected course.' }}</small>
+      </div>
+
+      <div class="marksheet-generator-field marksheet-promotion-field">
+        <label>Promotion status</label>
+        <label class="marksheet-promotion-checkbox"><input v-model="isPromoted" type="checkbox" /><span>Mark as promoted on the marksheet</span></label>
+        <small>This sets the printed status. Use Promote Students to change course enrollment.</small>
       </div>
 
       <div class="marksheet-generator-field marksheet-exam-field">
-        <div class="marksheet-exam-heading"><label>Exams <span>*</span></label><div><button type="button" @click="selectAllExams" :disabled="!exams.length">Select all</button><button type="button" @click="clearSelectedExams" :disabled="!selectedExams.length">Clear</button></div></div>
+        <div class="marksheet-exam-heading"><label>Exams <span>*</span></label><div><button type="button" @click="selectAllExams" :disabled="!visibleExams.length">Select all</button><button type="button" @click="clearSelectedExams" :disabled="!selectedExams.length">Clear</button></div></div>
         <div class="marksheet-exam-list" role="group" aria-label="Select exams">
-          <p v-if="!exams.length" class="marksheet-exam-empty"><i class="fa-regular fa-calendar-xmark"></i>No exams are available.</p>
-          <label v-for="exam in exams" :key="exam._id" class="marksheet-exam-option" :class="{ selected: isExamSelected(exam._id) }" :for="'exam-' + exam._id">
+          <p v-if="!visibleExams.length" class="marksheet-exam-empty"><i class="fa-regular fa-calendar-xmark"></i>{{ selectedAcademicYear ? 'No exams are available for this academic year.' : 'No exams are available.' }}</p>
+          <label v-for="exam in visibleExams" :key="exam._id" class="marksheet-exam-option" :class="{ selected: isExamSelected(exam._id) }" :for="'exam-' + exam._id">
             <input type="checkbox" :id="'exam-' + exam._id" :checked="isExamSelected(exam._id)" @change="toggleExam(exam._id)" />
             <span class="marksheet-exam-check"><i class="fa-solid fa-check"></i></span>
             <span><strong>{{ exam.exam_name || exam.name }}</strong><small>{{ exam.academic_year_id?.name || 'Exam record' }}</small></span>
           </label>
         </div>
         <small>Select one or more exams to include in the preview.</small>
-      </div>
-
-      <div class="marksheet-generator-field">
-        <label for="marksheetCourse">Class / course</label>
-        <div class="marksheet-select-wrap"><i class="fa-solid fa-school"></i>
-          <select id="marksheetCourse" v-model="selectedCourse" class="form-select">
-            <option :value="null">All classes</option>
-            <option v-for="course in courses" :key="course._id" :value="course._id">{{ course.course_name || course.name }}</option>
-          </select>
-        </div>
-        <small>Filter the student list by class.</small>
-      </div>
-
-      <div class="marksheet-generator-field">
-        <label for="marksheetYear">Academic year</label>
-        <div class="marksheet-select-wrap"><i class="fa-regular fa-calendar"></i>
-          <select id="marksheetYear" v-model="selectedAcademicYear" class="form-select">
-            <option :value="null">All academic years</option>
-            <option v-for="year in academicYears" :key="year._id" :value="year._id">{{ year.name }}</option>
-          </select>
-        </div>
-        <small>Optionally narrow students to an academic year.</small>
       </div>
     </div>
 

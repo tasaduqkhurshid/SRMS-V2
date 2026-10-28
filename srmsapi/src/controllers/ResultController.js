@@ -83,7 +83,7 @@ const deleteResult = asyncHandler(async (req, res, next) => {
 });
 
 const generateMarksheet = asyncHandler(async (req, res, next) => {
-  const { student_id, exam_ids, template_id, academic_year_id } = req.body;
+  const { student_id, exam_ids, template_id, academic_year_id, promoted = false } = req.body;
 
   if (!student_id || !exam_ids || !Array.isArray(exam_ids) || exam_ids.length === 0 || !template_id) {
     throw new ValidationError("Required fields missing: student_id, exam_ids (array), template_id");
@@ -93,7 +93,8 @@ const generateMarksheet = asyncHandler(async (req, res, next) => {
     student_id,
     exam_ids,
     template_id,
-    academic_year_id || null
+    academic_year_id || null,
+    promoted === true
   );
   if (result.error) return next(result.error);
 

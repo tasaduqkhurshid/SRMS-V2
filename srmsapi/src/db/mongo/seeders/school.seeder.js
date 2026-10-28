@@ -1,8 +1,9 @@
 "use strict";
 
 const bcrypt = require("bcryptjs");
-const { School, AcademicYear, User, Course, Subject, Exam } = require("../../models");
+const { School, AcademicYear, User, Course, Subject, Exam, MarksheetTemplate } = require("../../models");
 const { ValidationError, ConflictError, DatabaseError } = require("../../../utils/applicationErrors");
+const { seedMarksheetTemplates } = require("./20261028154640066-marksheet-templates.seeder");
 
 const DEFAULT_TAGLINE = "A place to learn, grow, and succeed.";
 const DEFAULT_DESCRIPTION = "A welcoming place to support learning, academic progress, and student success.";
@@ -175,6 +176,8 @@ const seedNewSchool = async ({ schoolId, slug, name, admin } = {}) => {
       }
     );
   }
+
+  await seedMarksheetTemplates({ MarksheetTemplate }, schoolId);
 
   if (admin) {
     const username = String(admin.username || "").trim();

@@ -21,6 +21,7 @@ export default {
     const selectedExams = ref([]) // Changed to array for multiple exams
     const selectedCourse = ref(null)
     const selectedAcademicYear = ref(null)
+    const isPromoted = ref(false)
 
     const previewHTML = ref('')
     const showPreview = ref(false)
@@ -32,6 +33,10 @@ export default {
       return selectedStudent.value === '__ALL__'
     })
 
+    const selectedCourseRecord = computed(() =>
+      courses.value.find(course => String(course._id) === String(selectedCourse.value)) || null
+    )
+
     const selectedStudentIds = computed(() => {
       if (isAllStudentsSelected.value) {
         return visibleStudents.value.map(s => s._id)
@@ -39,10 +44,23 @@ export default {
       return selectedStudent.value ? [selectedStudent.value] : []
     })
 
+    const visibleExams = computed(() => {
+      if (!selectedAcademicYear.value) return exams.value
+      return exams.value.filter(exam => {
+        const examYear = exam.academic_year_id?._id || exam.academic_year_id
+        return !examYear || String(examYear) === String(selectedAcademicYear.value)
+      })
+    })
+
     const visibleStudents = computed(() => students.value.filter(student => {
       const studentCourse = student.class?._id || student.class
+      const studentCourseName = typeof student.class === 'object'
+        ? student.class.course_name || student.class.name
+        : student.class
       const studentYear = student.academic_year_id?._id || student.academic_year_id
-      const matchesCourse = !selectedCourse.value || String(studentCourse || '') === String(selectedCourse.value)
+      const matchesCourse = !selectedCourse.value ||
+        String(studentCourse || '') === String(selectedCourse.value) ||
+        String(studentCourseName || '').trim().toLowerCase() === String(selectedCourseRecord.value?.course_name || selectedCourseRecord.value?.name || '').trim().toLowerCase()
       const matchesYear = !selectedAcademicYear.value || !studentYear || String(studentYear) === String(selectedAcademicYear.value)
       return matchesCourse && matchesYear
     }))
@@ -51,6 +69,8 @@ export default {
       if (selectedStudent.value && selectedStudent.value !== '__ALL__' && !visibleStudents.value.some(student => String(student._id) === String(selectedStudent.value))) {
         selectedStudent.value = null
       }
+      const visibleExamIds = new Set(visibleExams.value.map(exam => String(exam._id)))
+      selectedExams.value = selectedExams.value.filter(id => visibleExamIds.has(String(id)))
     })
 
     // Track which exams are selected
@@ -68,7 +88,7 @@ export default {
     }
 
     const selectAllExams = () => {
-      selectedExams.value = exams.value.map(exam => exam._id)
+      selectedExams.value = visibleExams.value.map(exam => exam._id)
     }
 
     const clearSelectedExams = () => {
@@ -166,7 +186,8 @@ export default {
                 student_id: studentId,
                 exam_ids: selectedExams.value,
                 template_id: selectedTemplate.value,
-                academic_year_id: selectedAcademicYear.value || null
+                academic_year_id: selectedAcademicYear.value || null,
+                promoted: isPromoted.value
               }
               const response = await api.post('/results/generate-marksheet', payload)
               if (response.data.success && response.data.data?.html) {
@@ -203,7 +224,8 @@ export default {
             student_id: selectedStudent.value,
             exam_ids: selectedExams.value,
             template_id: selectedTemplate.value,
-            academic_year_id: selectedAcademicYear.value || null
+            academic_year_id: selectedAcademicYear.value || null,
+            promoted: isPromoted.value
           }
 
           const response = await api.post('/results/generate-marksheet', payload)
@@ -233,7 +255,7 @@ export default {
       }
     }
 
-    const printMarksheet = () => {
+    const printMarksheet = async () => {
       const sheets = Array.isArray(previewHTML.value) ? previewHTML.value : [{ html: previewHTML.value }]
       const printWindow = window.open('', '_blank')
       if (!printWindow) {
@@ -243,6 +265,20 @@ export default {
       printWindow.opener = null
       printWindow.document.write(`<!doctype html><html><head><title>Student Marksheet</title><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;margin:20px}.sheet{page-break-after:always}.sheet:last-child{page-break-after:auto}@media print{body{margin:0}}</style></head><body>${sheets.map(sheet => `<section class="sheet">${sheet.html || ''}</section>`).join('')}</body></html>`)
       printWindow.document.close()
+      const waitForImage = (image) => {
+        if (image.complete) return Promise.resolve()
+        return new Promise(resolve => {
+          const finish = () => {
+            clearTimeout(timeout)
+            resolve()
+          }
+          const timeout = setTimeout(finish, 5000)
+          image.addEventListener('load', finish, { once: true })
+          image.addEventListener('error', finish, { once: true })
+        })
+      }
+      await Promise.all([...printWindow.document.images].map(waitForImage))
+      await printWindow.document.fonts?.ready
       printWindow.focus()
       printWindow.print()
     }
@@ -295,7 +331,7 @@ export default {
     }
 
     const canGenerate = computed(() => {
-      return selectedTemplate.value && selectedStudent.value && selectedExams.value.length > 0
+      return selectedTemplate.value && selectedStudent.value && selectedStudentIds.value.length > 0 && selectedExams.value.length > 0
     })
 
     onMounted(() => {
@@ -311,13 +347,16 @@ export default {
       students,
       visibleStudents,
       exams,
+      visibleExams,
       courses,
       academicYears,
       selectedTemplate,
       selectedStudent,
       selectedExams,
       selectedCourse,
+      selectedCourseRecord,
       selectedAcademicYear,
+      isPromoted,
       previewHTML,
       showPreview,
       loading,

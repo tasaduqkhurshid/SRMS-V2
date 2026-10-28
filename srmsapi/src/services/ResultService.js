@@ -1,11 +1,13 @@
 "use strict";
 
 const ModelUtils = require("../utils/ModelUtils");
-const { Result, Student, Subject, Exam, AcademicYear, MarksheetTemplate, School, CourseSubject } = require("../db/models");
+const { Result, Student, Subject, Exam, AcademicYear, MarksheetTemplate, School, CourseSubject, Course } = require("../db/models");
 const { getKeysFromArray } = require("../helpers/helper");
 const logger = require("../utils/logger");
 const { ValidationError, NotFoundError } = require("../utils/applicationErrors");
 const { success, failure } = require("../utils/serviceResult");
+const { brandingAssetUrl } = require("../utils/brandingUrls");
+const { resolveTemplateEntityField } = require("./marksheetTemplateEntities");
 
 const markFields = ["theory_marks", "lab_marks", "attendance_marks", "activity_marks"];
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -360,7 +362,88 @@ const generateMarksMatrix = (results = [], exams = [], courseSubjects = []) => {
   return html;
 };
 
-const generateCompleteMarksheet = async (studentId, examIds = [], templateId, academicYearId) => {
+const gradeForPercentage = (percentage) => {
+  if (percentage >= 91) return "A+";
+  if (percentage >= 81) return "A";
+  if (percentage >= 71) return "B+";
+  if (percentage >= 61) return "B";
+  if (percentage >= 51) return "C";
+  if (percentage >= 41) return "D";
+  return "E";
+};
+
+const generateDetailedMarksTable = (results = [], exams = [], courseSubjects = []) => {
+  const subjectMap = new Map();
+  courseSubjects.forEach((row) => {
+    const subject = row?.subject_id || row?.subject || row;
+    const id = String(subject?._id || "");
+    if (id) subjectMap.set(id, { name: subject.subject_name || "Subject", marks: new Map() });
+  });
+  results.forEach((result) => {
+    const subject = result.subject_id && typeof result.subject_id === "object" ? result.subject_id : null;
+    const subjectId = String(subject?._id || result.subject_id || "");
+    const exam = result.exam_id && typeof result.exam_id === "object" ? result.exam_id : null;
+    const examId = String(exam?._id || result.exam_id || "");
+    if (!subjectId || !examId) return;
+    if (!subjectMap.has(subjectId)) subjectMap.set(subjectId, { name: subject?.subject_name || "Subject", marks: new Map() });
+    const raw = result.total_marks !== null && result.total_marks !== undefined
+      ? Number(result.total_marks)
+      : markFields.reduce((sum, field) => sum + (Number(result[field]) || 0), 0);
+    const hasMarks = result.total_marks !== null && result.total_marks !== undefined || markFields.some((field) => result[field] !== null && result[field] !== undefined);
+    subjectMap.get(subjectId).marks.set(examId, hasMarks && Number.isFinite(raw) ? raw : null);
+  });
+  if (!exams.length) return "<p>No exams found</p>";
+
+  const totals = new Map(exams.map((exam) => [String(exam._id || exam.id), { marks: 0, maximum: 0, hasMarks: false }]));
+  let grandTotal = 0;
+  let grandMaximum = 0;
+  const examHeaders = exams.map((exam) => `<th class="exam-head" colspan="2">${escapeHtml(exam.exam_name || "Exam")}<br>(${escapeHtml(exam.max_marks || 100)} Marks)</th>`).join("");
+  let body = "";
+  for (const subject of subjectMap.values()) {
+    let subjectTotal = 0;
+    let subjectMaximum = 0;
+    let subjectHasMarks = false;
+    let cells = "";
+    for (const exam of exams) {
+      const id = String(exam._id || exam.id);
+      const maximum = Number(exam.max_marks || 100);
+      const mark = subject.marks.get(id);
+      const percent = mark === null || mark === undefined ? null : Math.round((mark / maximum) * 100);
+      cells += `<td>${mark === null || mark === undefined ? "—" : escapeHtml(mark)}</td><td>${percent === null ? "—" : `${percent}%`}</td>`;
+      subjectMaximum += maximum;
+      totals.get(id).maximum += maximum;
+      if (mark !== null && mark !== undefined) {
+        subjectTotal += mark;
+        subjectHasMarks = true;
+        const examTotal = totals.get(id);
+        examTotal.marks += mark;
+        examTotal.hasMarks = true;
+      }
+    }
+    const subjectPercent = subjectMaximum ? `${Math.round((subjectTotal / subjectMaximum) * 100)}%` : "—";
+    body += `<tr><td>${escapeHtml(subject.name)}</td>${cells}<td><b>${subjectHasMarks ? escapeHtml(subjectTotal) : "—"}</b></td><td>${subjectPercent}</td><td class="grade-cell">${subjectMaximum ? gradeForPercentage(subjectTotal / subjectMaximum * 100) : "—"}</td></tr>`;
+    grandMaximum += subjectMaximum;
+    if (subjectHasMarks) grandTotal += subjectTotal;
+  }
+
+  let examTotalCells = "";
+  let examPercentCells = "";
+  let examGradeCells = "";
+  for (const exam of exams) {
+    const total = totals.get(String(exam._id || exam.id));
+    examTotalCells += `<td colspan="2">${total.hasMarks ? `${escapeHtml(total.marks)} / ${escapeHtml(total.maximum)}` : "—"}</td>`;
+    const percent = total.maximum ? total.marks / total.maximum * 100 : 0;
+    examPercentCells += `<td colspan="2">${total.hasMarks ? `${percent.toFixed(2)}%` : "—"}</td>`;
+    examGradeCells += `<td colspan="2" class="grade-cell">${total.hasMarks ? gradeForPercentage(percent) : "—"}</td>`;
+  }
+  const overallPercent = grandMaximum ? grandTotal / grandMaximum * 100 : 0;
+  body += `<tr><td class="summary-label">Total Marks Obtained</td>${examTotalCells}<td class="grand-total">${grandTotal} / ${grandMaximum}</td><td></td><td></td></tr>`;
+  body += `<tr><td class="summary-label">Percentage</td>${examPercentCells}<td class="grand-total">${grandMaximum ? `${overallPercent.toFixed(2)}%` : "—"}</td><td></td><td></td></tr>`;
+  body += `<tr><td class="summary-label">Grade</td>${examGradeCells}<td colspan="2" class="grade-cell">${grandMaximum ? gradeForPercentage(overallPercent) : "—"}</td></tr>`;
+  return `<table class="marks-table"><thead><tr><th rowspan="2">Subject</th>${examHeaders}<th rowspan="2">Total</th><th rowspan="2">%</th><th rowspan="2">Grade</th></tr><tr>${exams.map(() => "<th>Obt.</th><th>%</th>").join("")}</tr></thead><tbody>${body}</tbody></table>`;
+};
+
+const generateCompleteMarksheet = async (studentId, examIds = [], templateId, academicYearId, promoted = false) => {
   try {
     if (!studentId || !examIds.length || !templateId) {
       throw new ValidationError("Missing required inputs: studentId, examIds (array), templateId");
@@ -395,19 +478,27 @@ const generateCompleteMarksheet = async (studentId, examIds = [], templateId, ac
     }
 
     const template = await ModelUtils.findOne(MarksheetTemplate, { _id: templateId }, {
-      select: "id name html_content is_active",
+      select: "id name html_content is_active entities",
     });
     if (!template) throw new NotFoundError("Template");
     if (template.is_active === false) throw new ValidationError("This marksheet template is inactive");
     if (!template.html_content) throw new ValidationError("Template HTML content is empty");
 
-    const academicYear = academicYearId
-      ? await ModelUtils.findOne(AcademicYear, { _id: academicYearId })
+    const resolvedAcademicYearId = academicYearId || results[0]?.academic_year_id || student.academic_year_id;
+    const academicYear = resolvedAcademicYearId
+      ? await ModelUtils.findOne(AcademicYear, { _id: resolvedAcademicYearId, school_id: student.school_id })
       : null;
 
-    const school = student.school_id ? await ModelUtils.findOne(School, { _id: student.school_id }, { select: "school_name name logo_url logo_path" }) : null;
+    const school = student.school_id ? await ModelUtils.findOne(School, { _id: student.school_id }) : null;
+    const classIsCourseId = /^[a-f\d]{24}$/i.test(String(student.class || ""));
+    const course = student.class
+      ? await ModelUtils.findOne(Course, {
+          school_id: student.school_id,
+          ...(classIsCourseId ? { _id: student.class } : { course_name: student.class }),
+        }, { select: "course_name course_code" })
+      : null;
 
-    const courseSubjects = student.class
+    const courseSubjects = classIsCourseId
       ? await ModelUtils.findAll(CourseSubject, { course_id: student.class }, {
           populate: { path: "subject_id", select: "subject_name subject_code" },
         })
@@ -417,6 +508,7 @@ const generateCompleteMarksheet = async (studentId, examIds = [], templateId, ac
 
     const subjectCount = validCourseSubjects.length || new Set(results.map((r) => String(r.subject_id?._id || r.subject_id))).size;
     const maxTotal = subjectCount * exams.reduce((sum, exam) => sum + Number(exam.max_marks || 100), 0);
+    const marksTable = generateDetailedMarksTable(results, exams, validCourseSubjects);
 
     let totalMarks = 0;
     const hasRecordedMarks = results.some(result => result.total_marks !== null && result.total_marks !== undefined || markFields.some(field => result[field] !== null && result[field] !== undefined));
@@ -429,28 +521,119 @@ const generateCompleteMarksheet = async (studentId, examIds = [], templateId, ac
     const remarksMatrix = hasRecordedMarks
       ? generateRemarksMatrix({ total: totalMarks, maxTotal })
       : "<p>No marks recorded</p>";
+    const percentage = maxTotal > 0 ? (totalMarks / maxTotal) * 100 : 0;
+    const attendanceMarks = results.reduce((sum, result) => sum + (Number(result.attendance_marks) || 0), 0);
+    const gradeScale = `<table class="scale-table"><tbody>${[["91–100", "A+"], ["81–90", "A"], ["71–80", "B+"], ["61–70", "B"], ["51–60", "C"], ["41–50", "D"], ["Below 41", "E"]].map(([range, grade]) => `<tr><td>${range}</td><td>${grade}</td></tr>`).join("")}</tbody></table>`;
+    const performanceRating = !hasRecordedMarks ? "Not Rated" : percentage >= 75 ? "Excellent" : percentage >= 50 ? "Good" : "Average";
+    const performanceStarCount = !hasRecordedMarks ? 0 : percentage >= 90 ? 5 : percentage >= 75 ? 4 : percentage >= 60 ? 3 : percentage >= 40 ? 2 : 1;
+    const performanceStars = `${"★".repeat(performanceStarCount)}${"☆".repeat(5 - performanceStarCount)}`;
+    const promotionStatus = promoted ? "Promoted" : "Not Promoted";
+    const overallRemarks = !hasRecordedMarks
+      ? "No marks have been recorded; performance is not rated."
+      : `Performance: ${performanceRating}. ${percentage >= 91 ? "Outstanding academic work." : percentage >= 75 ? "Strong academic work." : percentage >= 50 ? "Steady academic progress." : "Continue working consistently to improve academic progress."}`;
+    const issueDate = new Date().toLocaleDateString("en-GB");
+    let studentPhoto = "";
+    try {
+      const photoResult = await require("./StudentService").getStudentImage(student._id, student.school_id);
+      const photo = photoResult?.data;
+      if (photo?.buffer?.length) {
+        const mimeType = /^image\/(png|jpeg|webp|gif)$/i.test(photo.mimeType || "") ? photo.mimeType : "image/jpeg";
+        studentPhoto = `<img src="data:${mimeType};base64,${photo.buffer.toString("base64")}" alt="Student photo">`;
+      }
+    } catch (photoError) {
+      logger.warn("Could not load student photo for marksheet", { studentId: String(student._id), message: photoError.message });
+    }
 
     let html = template.html_content;
 
     const replacements = {
       "{{student_name}}": escapeHtml(student.name || "N/A"),
       "{{roll_number}}": escapeHtml(student.roll_number || "N/A"),
-      "{{class}}": escapeHtml(student.class || "N/A"),
+      "{{class}}": escapeHtml(course?.course_name || student.class || "N/A"),
       "{{marks_matrix}}": marksMatrix,
+      "{{marks_table}}": marksTable,
       "{{remarks_matrix}}": remarksMatrix,
       "{{exam_name}}": escapeHtml(examIds.length > 1 ? "Multiple Exams" : (exams[0]?.exam_name || "N/A")),
       "{{session}}": escapeHtml(academicYear?.name || "N/A"),
       "{{date}}": escapeHtml(new Date().toLocaleDateString()),
       "{{school_name}}": escapeHtml(school?.school_name || school?.name || ""),
-      "{{school_logo}}": escapeHtml(school?.logo_url || school?.logo_path || ""),
+      "{{school_logo}}": escapeHtml(brandingAssetUrl(school, "logo") || school?.logo_url || school?.logo_path || ""),
       "{{current_date}}": escapeHtml(new Date().toLocaleDateString()),
       "{{total_marks}}": hasRecordedMarks ? escapeHtml(totalMarks) : "—",
       "{{max_marks}}": escapeHtml(maxTotal),
+      "{{school_address}}": escapeHtml([school?.address, school?.city, school?.state, school?.pincode].filter(Boolean).join(", ")),
+      "{{school_tagline}}": escapeHtml(school?.branding?.tagline || ""),
+      "{{school_initials}}": escapeHtml(String(school?.school_name || school?.name || "S").split(/[^\p{L}\p{N}]+/u).filter(Boolean).map((word) => Array.from(word)[0]).join("").slice(0, 4) || "S"),
+      "{{student_photo}}": studentPhoto,
+      "{{father_name}}": escapeHtml(student.father_name || "N/A"),
+      "{{mother_name}}": escapeHtml(student.mother_name || "N/A"),
+      "{{admission_number}}": escapeHtml(student.admission_number || "N/A"),
+      "{{date_of_birth}}": escapeHtml(student.dob ? new Date(student.dob).toLocaleDateString("en-GB") : "N/A"),
+      "{{section}}": escapeHtml(student.section || "N/A"),
+      "{{overall_percentage}}": hasRecordedMarks ? percentage.toFixed(2) : "0.00",
+      "{{overall_grade}}": hasRecordedMarks ? gradeForPercentage(percentage) : "—",
+      "{{result_status}}": escapeHtml(promotionStatus),
+      "{{promotion_status}}": escapeHtml(promotionStatus),
+      "{{performance_rating}}": escapeHtml(performanceRating),
+      "{{performance_stars}}": escapeHtml(performanceStars),
+      "{{attendance_marks}}": attendanceMarks,
+      "{{exam_count}}": exams.length,
+      "{{grade_scale}}": gradeScale,
+      "{{overall_remarks}}": escapeHtml(overallRemarks),
+      "{{issue_date}}": escapeHtml(issueDate),
+      "{{marksheet_reference}}": escapeHtml(String(student._id)),
+      "{{principal_name}}": escapeHtml(school?.principal_name || "Principal"),
     };
 
     Object.entries(replacements).forEach(([key, value]) => {
       html = html.replaceAll(key, String(value ?? "N/A"));
     });
+
+    if (!template.html_content.includes("{{performance_stars}}")) {
+      const starsHtml = `<div class="performance-stars" aria-label="${performanceStarCount} out of 5 stars">${performanceStars}</div>`;
+      const ratingRow = html.match(/<div class=["']performance-rating["'][^>]*>[\s\S]*?<\/div>/i);
+      const percentageRow = html.match(/<div class=["']overall-percent["'][^>]*>[\s\S]*?<\/div>/i);
+      const anchor = ratingRow || percentageRow;
+      if (anchor) html = html.replace(anchor[0], `${anchor[0]}${starsHtml}`);
+    }
+
+    const fallbackSubjects = [...new Map(results.map((result) => {
+      const subject = result.subject_id && typeof result.subject_id === "object" ? result.subject_id : null;
+      return [String(subject?._id || result.subject_id), { subject_id: subject }];
+    })).values()].filter((row) => row.subject_id);
+    const entityContext = {
+      student,
+      school,
+      course,
+      academicYear,
+      exams,
+      subjects: validCourseSubjects.length ? validCourseSubjects : fallbackSubjects,
+      results,
+      totalMarks,
+      maxTotal,
+    };
+    for (const selection of template.entities || []) {
+      for (const field of selection.fields || []) {
+        const placeholder = `{{${selection.entity}.${field}}}`;
+        const value = resolveTemplateEntityField(selection.entity, field, entityContext);
+        html = html.replaceAll(placeholder, escapeHtml(value ?? ""));
+      }
+    }
+
+    // Keep logo sizing/fallback consistent for older saved templates as well
+    // as templates created from the current seed.
+    const logoLayoutStyle = '<style>.school-crest{position:relative!important;overflow:hidden!important}.school-crest img{display:block!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;padding:5px!important;object-fit:contain!important;background:#fff!important}.school-crest span{position:absolute!important;inset:0!important;display:flex!important;align-items:center!important;justify-content:center!important;pointer-events:none!important;z-index:0!important}.school-crest img{position:relative!important;z-index:1!important}.performance-stars{margin:3px 0;color:#d49a1e;font-size:13px;letter-spacing:2px;line-height:1}</style>';
+    const a4PageLayoutStyle = /class=["'][^"']*\bannual-sheet\b/i.test(html)
+      ? '<style>@page{size:A4 portrait;margin:10mm}.annual-sheet{box-sizing:border-box!important;width:190mm!important;max-width:190mm!important;height:277mm!important;min-height:277mm!important;display:flex!important;flex-direction:column!important;font-size:11px!important}.student-panel{min-height:35mm!important}.marks-area{flex:1 1 auto!important;min-height:0!important;display:flex!important;flex-direction:column!important}.marks-area .marks-table{flex:1 1 auto!important;height:100%!important}.summary-grid{min-height:48mm!important}.summary-card{height:100%!important}.signature-row{margin-top:auto!important;min-height:25mm!important}.school-heading h1{font-size:25px!important}.school-address,.school-tagline{font-size:10px!important}.session-box small{font-size:9px!important}.session-box strong{font-size:18px!important}.session-box span{font-size:7px!important}.title-ribbon{font-size:17px!important}.class-line{font-size:14px!important}.student-field{font-size:10px!important}.student-field strong{font-size:10px!important}.marks-table,.marks-table th,.marks-table td,.marks-table thead th{font-size:9px!important}.summary-card h3{font-size:10px!important}.overall-body .label{font-size:9px!important}.overall-score{font-size:15px!important}.overall-percent{font-size:22px!important}.overall-grade{font-size:16px!important}.performance-rating{font-size:11px!important}.performance-stars{font-size:14px!important}.result-pill{font-size:9px!important}.attendance-row{font-size:9px!important}.attendance-note{font-size:8px!important}.scale-table{font-size:9px!important}.scale-table td{padding:4px 7px!important}.remarks-body{font-size:9px!important}.remarks-status{font-size:8px!important}.issue-row,.school-motto,.signature{font-size:9px!important}.signature strong{font-size:9px!important}</style>'
+      : '';
+    const renderLayoutStyle = `${a4PageLayoutStyle}${logoLayoutStyle}`;
+    if (/<\/head\s*>/i.test(html)) {
+      html = html.replace(/<\/head\s*>/i, `${renderLayoutStyle}</head>`);
+    } else if (/<\/style\s*>/i.test(html)) {
+      html = html.replace(/<\/style\s*>/i, (closeStyle) => `${closeStyle}${renderLayoutStyle}`);
+    } else {
+      html = `${renderLayoutStyle}${html}`;
+    }
 
     return success({
       html,
