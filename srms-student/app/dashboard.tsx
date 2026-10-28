@@ -9,10 +9,10 @@ import { palette } from '../src/theme/theme';
 
 export default function DashboardScreen() {
   const authMode = useAppStore((state) => state.authMode);
-  if (authMode === 'parent') return <Redirect href="/(tabs)/fees" />;
   const selectedChild = useAppStore((state) => state.selectedChild());
   const setSelectedChild = useAppStore((state) => state.setSelectedChild);
   const parent = useAppStore((state) => state.parent);
+  if (authMode === 'parent') return <Redirect href="/(tabs)/fees" />;
 
   return (
     <ScreenShell title="Dashboard" subtitle="Good morning, Ali 👋">

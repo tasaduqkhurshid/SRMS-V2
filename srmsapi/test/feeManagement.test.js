@@ -38,14 +38,20 @@ test("school scope casts ObjectId strings for native aggregation pipelines", () 
 
 test("payment credentials use authenticated encryption and fail closed without a key", () => {
   const original = process.env.PAYMENT_CREDENTIALS_ENCRYPTION_KEY;
-  process.env.PAYMENT_CREDENTIALS_ENCRYPTION_KEY = crypto.randomBytes(32).toString("base64");
-  const encrypted = CredentialCrypto.encrypt("school-secret");
-  assert.notEqual(encrypted, "school-secret");
-  assert.equal(CredentialCrypto.decrypt(encrypted), "school-secret");
-  assert.throws(() => CredentialCrypto.decrypt(encrypted.replace(/.$/, "x")), /cannot be decrypted/);
-  delete process.env.PAYMENT_CREDENTIALS_ENCRYPTION_KEY;
-  assert.throws(() => CredentialCrypto.encrypt("secret"), /encryption is unavailable/);
-  if (original !== undefined) process.env.PAYMENT_CREDENTIALS_ENCRYPTION_KEY = original;
+  try {
+    process.env.PAYMENT_CREDENTIALS_ENCRYPTION_KEY = crypto.randomBytes(32).toString("base64");
+    const encrypted = CredentialCrypto.encrypt("school-secret");
+    assert.notEqual(encrypted, "school-secret");
+    assert.equal(CredentialCrypto.decrypt(encrypted), "school-secret");
+    const [version, iv, tag, ciphertext] = encrypted.split(":");
+    const tampered = [version, iv, tag, `${ciphertext[0] === "A" ? "B" : "A"}${ciphertext.slice(1)}`].join(":");
+    assert.throws(() => CredentialCrypto.decrypt(tampered), /cannot be decrypted/);
+    delete process.env.PAYMENT_CREDENTIALS_ENCRYPTION_KEY;
+    assert.throws(() => CredentialCrypto.encrypt("secret"), /encryption is unavailable/);
+  } finally {
+    if (original === undefined) delete process.env.PAYMENT_CREDENTIALS_ENCRYPTION_KEY;
+    else process.env.PAYMENT_CREDENTIALS_ENCRYPTION_KEY = original;
+  }
 });
 
 test("Razorpay webhook signatures require the selected school's secret", () => {

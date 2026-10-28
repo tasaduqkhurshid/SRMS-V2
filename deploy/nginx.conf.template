@@ -3,9 +3,15 @@ map $http_upgrade $connection_upgrade {
   '' close;
 }
 
+# Resolve Docker service names when a request reaches an upstream. This lets
+# Nginx start when optional portals are intentionally stopped.
+resolver 127.0.0.11 valid=10s ipv6=off;
+
 server {
   listen ${NGINX_LISTEN_PORT};
   server_name admin.${ROOT_DOMAIN};
+  set $api_upstream ${API_UPSTREAM}:5000;
+  set $admin_upstream ${ADMIN_UPSTREAM};
 
   location = /health {
     access_log off;
@@ -14,12 +20,12 @@ server {
   }
 
   location ^~ /api/ {
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location / {
-    proxy_pass http://sms-admin;
+    proxy_pass http://$admin_upstream;
     include /etc/nginx/proxy_params;
   }
 }
@@ -28,6 +34,9 @@ server {
   listen ${NGINX_LISTEN_PORT} default_server;
   server_name _ *.${ROOT_DOMAIN};
   client_max_body_size 20m;
+  set $api_upstream ${API_UPSTREAM}:5000;
+  set $school_upstream ${SCHOOL_UPSTREAM};
+  set $student_upstream ${STUDENT_UPSTREAM}:8080;
 
   location = /health {
     access_log off;
@@ -40,23 +49,24 @@ server {
   }
 
   location ^~ /admin/ {
-    proxy_pass http://sms-school/;
+    rewrite ^/admin/(.*)$ /$1 break;
+    proxy_pass http://$school_upstream;
     include /etc/nginx/proxy_params;
   }
 
   # Explicit /api routes that Express mounts at /api/... level
   location = /api {
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location = /api/health {
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location ^~ /api/student/ {
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
@@ -64,89 +74,90 @@ server {
   # These are mounted at ROOT level in Express (no /api prefix)
   location ^~ /api/auth/ {
     rewrite ^/api/auth(/.*)$ /auth$1 break;
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location ^~ /api/options/ {
     rewrite ^/api/options(/.*)$ /options$1 break;
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location = /api/students {
     rewrite ^/api/students$ /students/ break;
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location ^~ /api/students/ {
     rewrite ^/api/students(/.*)$ /students$1 break;
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location ^~ /api/subjects/ {
     rewrite ^/api/subjects(/.*)$ /subjects$1 break;
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location ^~ /api/courses/ {
     rewrite ^/api/courses(/.*)$ /courses$1 break;
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location ^~ /api/exams/ {
     rewrite ^/api/exams(/.*)$ /exams$1 break;
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location ^~ /api/academic-years/ {
     rewrite ^/api/academic-years(/.*)$ /academic-years$1 break;
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location ^~ /api/results/ {
     rewrite ^/api/results(/.*)$ /results$1 break;
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location ^~ /api/fees/ {
     rewrite ^/api/fees(/.*)$ /fees$1 break;
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location ^~ /api/marksheet-templates/ {
     rewrite ^/api/marksheet-templates(/.*)$ /marksheet-templates$1 break;
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location ^~ /api/school/ {
     rewrite ^/api/school(/.*)$ /school$1 break;
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   # Fallback for any other /api/ paths - proxy to API (Express notFoundHandler will handle 404)
   location ^~ /api/ {
-    proxy_pass http://sms-api:5000;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location = /manifest.json {
-    proxy_pass http://sms-api:5000/api/student/manifest;
+    rewrite ^ /api/student/manifest break;
+    proxy_pass http://$api_upstream;
     include /etc/nginx/proxy_params;
   }
 
   location / {
-    proxy_pass http://sms-student:8080;
+    proxy_pass http://$student_upstream;
     include /etc/nginx/proxy_params;
   }
 }

@@ -4,7 +4,7 @@ This repository evolves the existing SRMS applications into a shared, multi-scho
 
 ## Audited application entry points
 
-- `srmsapi/server/server.js` starts the Express API; existing API logic remains in `srmsapi/server/src`.
+- `srmsapi/server.js` starts the Express API; API logic lives in `srmsapi/src`.
 - `srms-school/client` is the existing Vue 3/Vite/Vue Router School Admin Portal, now built with base `/admin/`.
 - `srms-student/web` is the Vue 3/Vite/Vue Router Student PWA. Existing Expo source remains under `srms-student/app` and `srms-student/src` for native development.
 - `srms-admin` is the active Vue 3/Vite/Vue Router 4 Super Admin Portal, deployed as its own container at `admin.<ROOT_DOMAIN>`.
@@ -152,11 +152,31 @@ docker compose --profile docker up -d --no-deps --force-recreate --wait sms-ngin
 
 The API waits for its selected database and Redis, runs tracked migrations and safe seeders, then starts. Demo data runs only when `SEED_DEMO_DATA=true` and `NODE_ENV` is not `production`. Compose health checks gate Nginx startup. After `up` or `restart`, the script prints the Super Admin URL using the configured domain and published HTTP port. `./start-all.sh status`, `./start-all.sh logs`, `./start-all.sh restart`, `./start-all.sh down`, `./start-all.sh config`, and `./start-all.sh services` are also available. Use `./stop-all.sh` as a shortcut to stop the stack. `start-all.sh` selects the database profile using `DB_TYPE` and removes services left behind when switching modes.
 
-The API logger reads `LOG_LEVEL` at startup. Supported values are `debug`, `info` (default), `warn`, and `error`; set the value in root `.env` and restart `sms-api` to apply it. For example, use `LOG_LEVEL=debug` for intentional application diagnostics. MongoDB query logging is controlled separately by `MONGO_DEBUG` and remains off by default; setting the application log level to `debug` does not enable query logging.
+The API logger reads `LOG_LEVEL` at startup. Supported values are `debug`, `info` (default), `warn`, and `error`; set the value in root `.env` and restart `sms-api` to apply it. For example, use `LOG_LEVEL=debug` for intentional application diagnostics. MongoDB query logging is controlled separately by `MONGO_DEBUG` and remains off by default; setting the application log level to `debug` does not enable query logging. `MONGO_DEBUG=false` does not silence MongoDB server logs. `./setup logs` follows every service; use `./setup logs sms-api` to see only API logs or `./setup logs mongodb` for MongoDB logs. In the legacy standalone development stack, MongoDB now runs with `--quiet` to suppress routine health-check connection metadata.
+
+## Local Docker development
+
+The same root `docker-compose.yml` supports local development. Production remains the default for `./start-all.sh`; pass `-e local` or `--env local` to select Vite and Nodemon containers. Individual runners start only the selected portal plus the API, MongoDB, Redis, and (for browser hostnames) Nginx as needed:
+
+The `-e local` switch selects the app runtime; `DB_TYPE` independently selects Docker MongoDB (`docker`, the default) or host MongoDB (`local`).
+
+```sh
+./start-server.sh -e local
+./start-client.sh -e local
+./start-admin.sh -e local       # optional, separate super-admin portal
+./start-student.sh -e local     # optional, separate student portal
+./start-all.sh -e local         # all local development portals
+```
+
+The school/API-only workflow is the first two commands. Neither the admin nor student portal starts unless requested. The local app containers use the existing Compose network and MongoDB/Redis volumes. The API uses Nodemon to reload watched `server.js` and `src` files; the three Vite apps bind to all container interfaces and use the existing hostname routing through Nginx. Linux bind mounts use polling by default (`VITE_USE_POLLING=false` disables it if native watching works better).
+
+Keep the existing hostnames. For a few local tenants, add each hostname to the hosts file, for example `127.0.0.1 hanfia.sms.local admin.sms.local`. `/etc/hosts` does not support wildcard subdomains; use a local wildcard DNS resolver (such as dnsmasq) if you need arbitrary tenant slugs. Do not change system DNS unless you choose that setup. Nginx forwards each school hostname to the school SPA at `/admin/`, sends `admin.<ROOT_DOMAIN>` to the separate admin SPA, and sends API paths to the API. Tenant identity continues to be resolved by the API from each request hostname and MongoDB school slug.
+
+Use `./start-client.sh -e local down`, `./start-admin.sh -e local down`, `./start-student.sh -e local down`, or `./start-server.sh -e local down` to stop one app without stopping database containers. `./start-all.sh -e local down` stops the full Compose project and preserves named database volumes. The default `./start-all.sh down` retains its existing production/default behavior.
 
 ## MongoDB modes
 
-Set `DB_TYPE` in the root `.env` to choose the one MongoDB target for the shared API. The default is `docker`. Mongo settings are centralized in `srmsapi/server/src/config/database.js`; the same models, migrations, seeders, and services are used in either mode.
+Set `DB_TYPE` in the root `.env` to choose the one MongoDB target for the shared API. The default is `docker`. Mongo settings are centralized in `srmsapi/src/config/database.js`; the same models, migrations, seeders, and services are used in either mode.
 
 ```dotenv
 DB_TYPE=docker
@@ -174,7 +194,7 @@ With `DB_TYPE=local`, Compose does not start the MongoDB service. The API contai
 
 To switch modes, change only `DB_TYPE` and restart with `./start-all.sh up`; the root `.env.example` sets `COMPOSE_PROFILES` from `DB_TYPE` so plain Compose commands also select the MongoDB profile. Set `DB_HOST` only when you need to override the mode's default host. The API reports the selected type, host, port, and database at startup without printing credentials. It does not fall back to the other mode if a connection fails.
 
-Database operations use the root `./setup` command and the selected mode. For local host-side npm commands, the server package is under `srmsapi/server`: the project root `srmsapi/` has no `package.json`. `./setup migrate` and `./setup seed` use the API container and selected target; `./setup mongo`, `db-export`, and `db-import` use host MongoDB tools in local mode.
+Database operations use the root `./setup` command and the selected mode. The API package is at `srmsapi/`, so run host-side API commands there (for example, `npm install` or `npm test`). `./setup migrate` and `./setup seed` use the API container and selected target; `./setup mongo`, `db-export`, and `db-import` use host MongoDB tools in local mode.
 
 ```sh
 ./setup migrate      # migrations only

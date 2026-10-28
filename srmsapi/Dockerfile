@@ -1,12 +1,14 @@
 FROM node:20-alpine
 
-WORKDIR /app/server
+WORKDIR /app
 
-COPY server/package*.json ./
+COPY package*.json ./
 RUN npm install --no-audit --no-fund
 
-COPY server/src ./src
-COPY server/server.js ./server.js
+COPY src ./src
+COPY test ./test
+COPY nodemon.json ./nodemon.json
+COPY server.js ./server.js
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 USER nodejs

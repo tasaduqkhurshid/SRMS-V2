@@ -42,7 +42,7 @@ Commands:
   seed     Run database seeders inside the server container.
   reset    Stop containers, remove database volumes, start fresh, migrate, and seed.
   status   Show Docker container status.
-  logs     Show live Docker logs.
+  logs [service]  Show live Docker logs; api/sms-api aliases to the legacy server service.
   shell    Open an interactive shell inside the server container.
   mongo    Open mongosh inside the MongoDB container.
   help     Show this help message.
@@ -177,7 +177,16 @@ run_status() {
 }
 
 run_logs() {
-  compose logs -f
+  local service="${2:-}"
+  case "$service" in
+    sms-api|api) service=server ;;
+  esac
+
+  if [[ -n "$service" ]]; then
+    compose logs -f "$service"
+  else
+    compose logs -f
+  fi
 }
 
 run_shell() {
@@ -210,7 +219,7 @@ main() {
         seed) run_seed ;;
         reset) run_reset ;;
         status) run_status ;;
-        logs) run_logs ;;
+        logs) run_logs "$@" ;;
         shell) run_shell ;;
         mongo) run_mongo ;;
       esac

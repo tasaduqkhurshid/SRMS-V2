@@ -4,43 +4,70 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
-configured_db_type="${DB_TYPE:-}"
-if [[ -z "$configured_db_type" ]]; then
-  configured_db_type="$(docker compose config --environment | sed -n 's/^DB_TYPE=//p' | head -n 1)"
-fi
-configured_db_type="${configured_db_type:-docker}"
-if [[ "$configured_db_type" != "docker" && "$configured_db_type" != "local" ]]; then
-  echo "Invalid DB_TYPE '$configured_db_type'; choose docker or local." >&2
+environment="${ENVIRONMENT:-docker}"
+command="up"
+while (($#)); do
+  case "$1" in
+    -e|--env)
+      (($# >= 2)) || { echo "Missing value for $1" >&2; exit 2; }
+      environment="$2"
+      shift 2
+      ;;
+    up|down|restart|status|logs|config|services|help|-h|--help)
+      command="$1"
+      shift
+      ;;
+    *) echo "Unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+if [[ "$environment" != docker && "$environment" != local ]]; then
+  echo "Invalid environment '$environment'; choose docker or local." >&2
   exit 2
 fi
+command -v docker >/dev/null 2>&1 || { echo 'Docker is required.' >&2; exit 1; }
+docker compose version >/dev/null 2>&1 || { echo 'Docker Compose v2 is required.' >&2; exit 1; }
+case "$command" in config|services|help|-h|--help) ;; *) docker info >/dev/null 2>&1 || { echo 'Docker is not running or your user cannot access the Docker daemon.' >&2; exit 1; } ;; esac
 
-compose() {
-  if [[ "$configured_db_type" == "docker" ]]; then
-    docker compose --profile docker "$@"
-  else
-    docker compose --profile local "$@"
-  fi
-}
+db_type="${DB_TYPE:-}"
+if [[ -z "$db_type" ]]; then
+  db_type="$(docker compose config --environment | sed -n 's/^DB_TYPE=//p' | head -n 1)"
+fi
+db_type="${db_type:-docker}"
+if [[ "$db_type" != docker && "$db_type" != local ]]; then
+  echo "Invalid DB_TYPE '$db_type'; choose docker or local." >&2
+  exit 2
+fi
+profiles=()
+if [[ "$db_type" == docker ]]; then profiles+=(--profile docker); fi
+if [[ "$environment" == local ]]; then profiles+=(--profile local); fi
+export SCHOOL_UPSTREAM=sms-school STUDENT_UPSTREAM=sms-student ADMIN_UPSTREAM=sms-admin API_UPSTREAM=sms-api
+if [[ "$environment" == local ]]; then
+  export SCHOOL_UPSTREAM=sms-school-local STUDENT_UPSTREAM=sms-student-local
+  export ADMIN_UPSTREAM=sms-admin-local API_UPSTREAM=sms-api-local
+fi
+compose() { docker compose "${profiles[@]}" "$@"; }
 
 usage() {
   cat <<'EOF'
 SRMS unified multi-portal stack
 
-Usage: ./start-all.sh [up|down|restart|status|logs|config]
+Usage: ./start-all.sh [-e|--env docker|local] [up|down|restart|status|logs|config]
 
-  up       Build and start all services; wait for health checks (default)
+  up       Build and start the selected stack; production is the default
   down     Stop containers, keep database volumes
   restart  Rebuild and restart all services
   status   Show service health
   logs     Follow all service logs
   config   Validate the merged Docker Compose configuration
-  services Print the active Docker Compose service names
+  services Print Compose service names
+
+Use -e local for Vite and Nodemon development mode.
 EOF
 }
 
 print_portal_urls() {
   local compose_environment root_domain mapped_port
-  compose_environment="$(docker compose config --environment)"
+  compose_environment="$(compose config --environment)"
   root_domain="$(printf '%s\n' "$compose_environment" | sed -n 's/^ROOT_DOMAIN=//p' | head -n 1)"
   root_domain="${root_domain:-sms.local}"
   mapped_port="$(compose port sms-nginx 80 2>/dev/null | sed -n '1s/.*://p')"
@@ -53,10 +80,13 @@ print_portal_urls() {
   fi
 }
 
-command="${1:-up}"
 case "$command" in
   up)
-    compose up --build -d --wait --remove-orphans
+    if [[ "$environment" == local ]]; then
+      compose up --build -d --wait --remove-orphans sms-api-local sms-school-local sms-admin-local sms-student-local sms-nginx
+    else
+      compose up --build -d --wait --remove-orphans mongodb redis sms-api sms-school sms-admin sms-student sms-nginx
+    fi
     # Nginx expands the mounted config template only when its container starts.
     # Recreate just the proxy so edits to that template take effect on every run.
     compose up -d --no-deps --force-recreate --wait sms-nginx
@@ -67,7 +97,11 @@ case "$command" in
     compose down --remove-orphans
     ;;
   restart)
-    compose up --build -d --force-recreate --wait --remove-orphans
+    if [[ "$environment" == local ]]; then
+      compose up --build -d --force-recreate --wait --remove-orphans sms-api-local sms-school-local sms-admin-local sms-student-local sms-nginx
+    else
+      compose up --build -d --force-recreate --wait --remove-orphans mongodb redis sms-api sms-school sms-admin sms-student sms-nginx
+    fi
     compose ps
     print_portal_urls
     ;;

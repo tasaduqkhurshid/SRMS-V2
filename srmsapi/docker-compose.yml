@@ -4,6 +4,9 @@ services:
     image: mongo:7.0
     container_name: srms-mongodb
     restart: unless-stopped
+    # This legacy standalone stack is for local development. Suppress routine
+    # health-check connection metadata from mongod's container output.
+    command: ["mongod", "--quiet"]
     ports:
       - "27017:27017"
     environment:
@@ -51,14 +54,24 @@ services:
     command: npm run dev
     environment:
       NODE_ENV: development
-      MONGO_URI: mongodb://admin:password@mongodb:27017/school-system?authSource=admin
+      DB_TYPE: docker
+      DB_HOST: mongodb
+      DB_PORT: 27017
+      DB_NAME: school-system
+      DB_USERNAME: admin
+      DB_PASSWORD: password
+      DB_AUTH_SOURCE: admin
+      MONGO_DEBUG: ${MONGO_DEBUG:-false}
+      SMS_API_IN_DOCKER: "true"
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0
       PORT: 5000
     volumes:
-      - ./server:/app/server
-      - /app/server/node_modules
+      - .:/app
+      # A named volume is initialized from the image's installed dependencies.
+      # This avoids reusing a stale empty anonymous volume after image rebuilds.
+      - server_node_modules:/app/node_modules
     depends_on:
       mongodb:
         condition: service_healthy
@@ -77,6 +90,7 @@ volumes:
   mongodb_data:
   mongodb_config:
   redis_data:
+  server_node_modules:
 
 networks:
   srms-network:

@@ -99,6 +99,62 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  # Local development counterparts share the production network and data volumes.
+  # They use distinct service names so selecting local mode never mutates production
+  # containers that may already be running.
+  sms-api-local:
+    profiles: [local]
+    build:
+      context: ./srmsapi
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["npm", "run", "dev"]
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PORT: 5000
+      DB_TYPE: ${DB_TYPE:-docker}
+      DB_HOST: ${DB_HOST:-}
+      DB_PORT: ${DB_PORT:-27017}
+      DB_NAME: ${DB_NAME:-school-system}
+      DB_USERNAME: ${DB_USERNAME:-${MONGO_ROOT_USER:-admin}}
+      DB_PASSWORD: ${DB_PASSWORD:-${MONGO_ROOT_PASSWORD:-password}}
+      DB_AUTH_SOURCE: ${DB_AUTH_SOURCE:-admin}
+      DB_REPLICA_SET: rs0
+      SMS_API_IN_DOCKER: "true"
+      ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
+      JWT_SECRET: ${JWT_SECRET:-dev_secret_change_me}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      PAYMENT_CREDENTIALS_ENCRYPTION_KEY: ${PAYMENT_CREDENTIALS_ENCRYPTION_KEY:-}
+      R2_ENABLED: ${R2_ENABLED:-false}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_PRIVATE_BUCKET_NAME: ${R2_PRIVATE_BUCKET_NAME:-}
+      R2_PUBLIC_BUCKET_NAME: ${R2_PUBLIC_BUCKET_NAME:-}
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
+      R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
+      TRUST_PROXY: "1"
+      DEFAULT_TENANT_SLUG: ${DEFAULT_TENANT_SLUG:-}
+    volumes:
+      - ./srmsapi:/app
+      - api_node_modules:/app/node_modules
+    depends_on:
+      mongodb:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    networks: [srms-internal]
+
   sms-school:
     build:
       context: ./srms-school
@@ -110,6 +166,29 @@ services:
       - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [srms-internal]
+
+  sms-school-local:
+    profiles: [local]
+    build:
+      context: ./srms-school
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      VITE_API_PROXY_TARGET: http://sms-api-local:5000
+      CHOKIDAR_USEPOLLING: ${VITE_USE_POLLING:-true}
+    volumes:
+      - ./srms-school/client:/app/client
+      - school_node_modules:/app/client/node_modules
+    depends_on:
+      sms-api-local:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5173/admin/"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -129,6 +208,29 @@ services:
       retries: 5
     networks: [srms-internal]
 
+  sms-student-local:
+    profiles: [local]
+    build:
+      context: ./srms-student
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      VITE_API_PROXY_TARGET: http://sms-api-local:5000
+      CHOKIDAR_USEPOLLING: ${VITE_USE_POLLING:-true}
+    volumes:
+      - ./srms-student:/app
+      - student_node_modules:/app/node_modules
+    depends_on:
+      sms-api-local:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [srms-internal]
+
   sms-admin:
     build:
       context: ./srms-admin
@@ -141,27 +243,45 @@ services:
       retries: 5
     networks: [srms-internal]
 
+  sms-admin-local:
+    profiles: [local]
+    build:
+      context: ./srms-admin
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      VITE_API_PROXY_TARGET: http://sms-api-local:5000
+      CHOKIDAR_USEPOLLING: ${VITE_USE_POLLING:-true}
+    volumes:
+      - ./srms-admin:/app
+      - admin_node_modules:/app/node_modules
+    depends_on:
+      sms-api-local:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5173/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [srms-internal]
+
   sms-nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
     environment:
       ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
       NGINX_LISTEN_PORT: 80
-      NGINX_ENVSUBST_FILTER: '^(ROOT_DOMAIN|NGINX_LISTEN_PORT)$'
+      SCHOOL_UPSTREAM: ${SCHOOL_UPSTREAM:-sms-school}
+      STUDENT_UPSTREAM: ${STUDENT_UPSTREAM:-sms-student}
+      ADMIN_UPSTREAM: ${ADMIN_UPSTREAM:-sms-admin}
+      API_UPSTREAM: ${API_UPSTREAM:-sms-api}
+      NGINX_ENVSUBST_FILTER: '^(ROOT_DOMAIN|NGINX_LISTEN_PORT|SCHOOL_UPSTREAM|STUDENT_UPSTREAM|ADMIN_UPSTREAM|API_UPSTREAM)$'
     ports:
       - "${HTTP_PORT:-80}:80"
     volumes:
       - ./deploy/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./deploy/proxy_params:/etc/nginx/proxy_params:ro
-    depends_on:
-      sms-school:
-        condition: service_healthy
-      sms-student:
-        condition: service_healthy
-      sms-admin:
-        condition: service_healthy
-      sms-api:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/health"]
       interval: 15s
@@ -173,6 +293,10 @@ volumes:
   mongodb_data:
   mongodb_config:
   redis_data:
+  api_node_modules:
+  school_node_modules:
+  student_node_modules:
+  admin_node_modules:
 
 networks:
   srms-internal:

@@ -7,7 +7,7 @@ The fee module uses the existing school tenant, user, student, course, and acade
 Run the API migration after deploying the new fee schemas:
 
 ```sh
-cd srmsapi/server
+cd srmsapi
 npm run migrate
 ```
 
@@ -48,4 +48,4 @@ Student and linked parent requests use `/api/student/fees`; parent logins use th
 
 ## Verification
 
-Backend financial math, tenant scoping, portal authorization, and webhook signature checks run with `npm test` in `srmsapi/server`. Frontend builds are run in each portal using its existing npm build script.
+Backend financial math, tenant scoping, portal authorization, and webhook signature checks run with `npm test` in `srmsapi`. Frontend builds are run in each portal using its existing npm build script.
