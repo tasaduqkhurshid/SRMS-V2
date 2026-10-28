@@ -7,7 +7,7 @@ import axios from "axios";
  * Defaults to the same-origin Nginx API proxy.
  */
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || "/api/admin/",
+  baseURL: import.meta.env.VITE_API_BASE || "/api/",
   // timeout: 10000, // optional
 });
 

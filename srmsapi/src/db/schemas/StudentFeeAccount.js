@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tableNames = require("../tableNames");
 
 const AccountLineSchema = new mongoose.Schema({
   fee_type_id: { type: mongoose.Schema.Types.ObjectId, ref: 'FeeType' },
@@ -48,6 +49,6 @@ const StudentFeeAccountSchema = new mongoose.Schema({
   status: { type: String, enum: ['ACTIVE', 'CLOSED'], default: 'ACTIVE', index: true },
   assigned_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   adjustments: { type: [AdjustmentSchema], default: [] },
-}, { timestamps: true, collection: 'student_fee_accounts' });
+}, { timestamps: true, collection: tableNames.studentFeeAccounts });
 
 module.exports = mongoose.model('StudentFeeAccount', StudentFeeAccountSchema);

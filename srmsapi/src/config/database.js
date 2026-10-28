@@ -36,13 +36,18 @@ const getDatabaseConfig = () => {
   }
 
   const authSource = String(process.env.DB_AUTH_SOURCE || 'admin').trim();
+  // Respect an explicit empty value for standalone MongoDB. If unset, the
+  // root Compose stack's Docker MongoDB uses rs0; host mode defaults to none.
+  const replicaSet = process.env.DB_REPLICA_SET !== undefined
+    ? String(process.env.DB_REPLICA_SET).trim()
+    : type === 'docker' ? 'rs0' : '';
   const credentials = username
     ? `${encodeURIComponent(username)}:${encodeURIComponent(password)}@`
     : '';
   const safeHost = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
   const queryParams = new URLSearchParams();
   if (username) queryParams.set('authSource', authSource);
-  if (process.env.DB_REPLICA_SET) queryParams.set('replicaSet', String(process.env.DB_REPLICA_SET).trim());
+  if (replicaSet) queryParams.set('replicaSet', replicaSet);
   const authQuery = queryParams.size ? `?${queryParams.toString()}` : '';
   const uri = `mongodb://${credentials}${safeHost}:${port}/${encodeURIComponent(name)}${authQuery}`;
 
@@ -54,6 +59,7 @@ const getDatabaseConfig = () => {
     username,
     password,
     authSource,
+    replicaSet,
     uri,
     summary: { type, host, port, database: name },
   });

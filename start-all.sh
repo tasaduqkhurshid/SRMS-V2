@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
-environment="${ENVIRONMENT:-docker}"
+environment="${ENVIRONMENT:-local}"
 command="up"
 while (($#)); do
   case "$1" in
@@ -24,14 +24,22 @@ if [[ "$environment" != docker && "$environment" != local ]]; then
   echo "Invalid environment '$environment'; choose docker or local." >&2
   exit 2
 fi
+environment_file="$ROOT_DIR/.env.production"
+if [[ "$environment" == local ]]; then environment_file="$ROOT_DIR/.env.local"; fi
+[[ -f "$ROOT_DIR/.env" ]] || { echo 'Missing .env. Copy .env.example to .env and configure local credentials.' >&2; exit 2; }
+[[ -f "$environment_file" ]] || { echo "Missing environment config: $environment_file" >&2; exit 2; }
 command -v docker >/dev/null 2>&1 || { echo 'Docker is required.' >&2; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo 'Docker Compose v2 is required.' >&2; exit 1; }
 case "$command" in config|services|help|-h|--help) ;; *) docker info >/dev/null 2>&1 || { echo 'Docker is not running or your user cannot access the Docker daemon.' >&2; exit 1; } ;; esac
 
-db_type="${DB_TYPE:-}"
-if [[ -z "$db_type" ]]; then
-  db_type="$(docker compose config --environment | sed -n 's/^DB_TYPE=//p' | head -n 1)"
-fi
+compose_base() { docker compose --env-file "$ROOT_DIR/.env" --env-file "$environment_file" "$@"; }
+compose_environment="$(compose_base config --environment)"
+compose_env_value() {
+  local name="$1"
+  printf '%s\n' "$compose_environment" | sed -n "s/^${name}=//p" | head -n 1
+}
+
+db_type="${DB_TYPE:-$(compose_env_value DB_TYPE)}"
 db_type="${db_type:-docker}"
 if [[ "$db_type" != docker && "$db_type" != local ]]; then
   echo "Invalid DB_TYPE '$db_type'; choose docker or local." >&2
@@ -39,13 +47,16 @@ if [[ "$db_type" != docker && "$db_type" != local ]]; then
 fi
 profiles=()
 if [[ "$db_type" == docker ]]; then profiles+=(--profile docker); fi
-if [[ "$environment" == local ]]; then profiles+=(--profile local); fi
-export SCHOOL_UPSTREAM=sms-school STUDENT_UPSTREAM=sms-student ADMIN_UPSTREAM=sms-admin API_UPSTREAM=sms-api
 if [[ "$environment" == local ]]; then
-  export SCHOOL_UPSTREAM=sms-school-local STUDENT_UPSTREAM=sms-student-local
-  export ADMIN_UPSTREAM=sms-admin-local API_UPSTREAM=sms-api-local
+  profiles+=(--profile local)
 fi
-compose() { docker compose "${profiles[@]}" "$@"; }
+for name in NGINX_SCHOOL_UPSTREAM NGINX_STUDENT_UPSTREAM NGINX_ADMIN_UPSTREAM NGINX_API_UPSTREAM NGINX_SCHOOL_STRIP_PREFIX; do
+  [[ -n "$(compose_env_value "$name")" ]] || {
+    echo "Missing $name in $environment_file." >&2
+    exit 2
+  }
+done
+compose() { compose_base "${profiles[@]}" "$@"; }
 
 usage() {
   cat <<'EOF'
@@ -53,7 +64,7 @@ SRMS unified multi-portal stack
 
 Usage: ./start-all.sh [-e|--env docker|local] [up|down|restart|status|logs|config]
 
-  up       Build and start the selected stack; production is the default
+  up       Build and start the selected stack; local development is the default
   down     Stop containers, keep database volumes
   restart  Rebuild and restart all services
   status   Show service health
@@ -61,7 +72,7 @@ Usage: ./start-all.sh [-e|--env docker|local] [up|down|restart|status|logs|confi
   config   Validate the merged Docker Compose configuration
   services Print Compose service names
 
-Use -e local for Vite and Nodemon development mode.
+Use -e docker for the production-style runtime. Local Vite and Nodemon mode is the default.
 EOF
 }
 

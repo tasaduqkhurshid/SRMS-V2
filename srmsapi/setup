@@ -39,6 +39,7 @@ Usage:
 Commands:
   db       Run Mongo migrations, then seeders.
   migrate  Run database migrations inside the server container.
+  rollback Roll back the latest migration only if it defines a safe down(db).
   seed     Run database seeders inside the server container.
   reset    Stop containers, remove database volumes, start fresh, migrate, and seed.
   status   Show Docker container status.
@@ -144,6 +145,12 @@ run_migrate() {
   success "Migrations completed."
 }
 
+run_rollback() {
+  ensure_services
+  info "Rolling back the latest Mongo migration if it is reversible..."
+  compose exec server npm run migrate:down
+}
+
 run_seed() {
   ensure_services
   info "Running Mongo seeders inside the server container..."
@@ -211,11 +218,12 @@ main() {
     help|-h|--help)
       usage
       ;;
-    db|migrate|seed|reset|status|logs|shell|mongo)
+    db|migrate|rollback|seed|reset|status|logs|shell|mongo)
       require_docker
       case "$command" in
         db) run_db ;;
         migrate) run_migrate ;;
+        rollback) run_rollback ;;
         seed) run_seed ;;
         reset) run_reset ;;
         status) run_status ;;

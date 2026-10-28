@@ -59,7 +59,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:-${MONGO_ROOT_USER:-admin}}
       DB_PASSWORD: ${DB_PASSWORD:-${MONGO_ROOT_PASSWORD:-password}}
       DB_AUTH_SOURCE: ${DB_AUTH_SOURCE:-admin}
-      DB_REPLICA_SET: rs0
+      DB_REPLICA_SET: ${DB_REPLICA_SET-rs0}
       PAYMENT_CREDENTIALS_ENCRYPTION_KEY: ${PAYMENT_CREDENTIALS_ENCRYPTION_KEY:-}
       SMS_API_IN_DOCKER: "true"
       ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
@@ -120,7 +120,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:-${MONGO_ROOT_USER:-admin}}
       DB_PASSWORD: ${DB_PASSWORD:-${MONGO_ROOT_PASSWORD:-password}}
       DB_AUTH_SOURCE: ${DB_AUTH_SOURCE:-admin}
-      DB_REPLICA_SET: rs0
+      DB_REPLICA_SET: ${DB_REPLICA_SET-rs0}
       SMS_API_IN_DOCKER: "true"
       ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
       JWT_SECRET: ${JWT_SECRET:-dev_secret_change_me}
@@ -179,7 +179,8 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: development
-      VITE_API_PROXY_TARGET: http://sms-api-local:5000
+      ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
+      VITE_API_PROXY_TARGET: http://${NGINX_API_UPSTREAM}
       CHOKIDAR_USEPOLLING: ${VITE_USE_POLLING:-true}
     volumes:
       - ./srms-school/client:/app/client
@@ -216,7 +217,8 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: development
-      VITE_API_PROXY_TARGET: http://sms-api-local:5000
+      ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
+      VITE_API_PROXY_TARGET: http://${NGINX_API_UPSTREAM}
       CHOKIDAR_USEPOLLING: ${VITE_USE_POLLING:-true}
     volumes:
       - ./srms-student:/app
@@ -251,7 +253,8 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: development
-      VITE_API_PROXY_TARGET: http://sms-api-local:5000
+      ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
+      VITE_API_PROXY_TARGET: http://${NGINX_API_UPSTREAM}
       CHOKIDAR_USEPOLLING: ${VITE_USE_POLLING:-true}
     volumes:
       - ./srms-admin:/app
@@ -272,11 +275,12 @@ services:
     environment:
       ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
       NGINX_LISTEN_PORT: 80
-      SCHOOL_UPSTREAM: ${SCHOOL_UPSTREAM:-sms-school}
-      STUDENT_UPSTREAM: ${STUDENT_UPSTREAM:-sms-student}
-      ADMIN_UPSTREAM: ${ADMIN_UPSTREAM:-sms-admin}
-      API_UPSTREAM: ${API_UPSTREAM:-sms-api}
-      NGINX_ENVSUBST_FILTER: '^(ROOT_DOMAIN|NGINX_LISTEN_PORT|SCHOOL_UPSTREAM|STUDENT_UPSTREAM|ADMIN_UPSTREAM|API_UPSTREAM)$'
+      NGINX_SCHOOL_UPSTREAM: ${NGINX_SCHOOL_UPSTREAM:?Set NGINX_SCHOOL_UPSTREAM in the selected environment file}
+      NGINX_SCHOOL_STRIP_PREFIX: ${NGINX_SCHOOL_STRIP_PREFIX:?Set NGINX_SCHOOL_STRIP_PREFIX in the selected environment file}
+      NGINX_STUDENT_UPSTREAM: ${NGINX_STUDENT_UPSTREAM:?Set NGINX_STUDENT_UPSTREAM in the selected environment file}
+      NGINX_ADMIN_UPSTREAM: ${NGINX_ADMIN_UPSTREAM:?Set NGINX_ADMIN_UPSTREAM in the selected environment file}
+      NGINX_API_UPSTREAM: ${NGINX_API_UPSTREAM:?Set NGINX_API_UPSTREAM in the selected environment file}
+      NGINX_ENVSUBST_FILTER: '^(ROOT_DOMAIN|NGINX_LISTEN_PORT|NGINX_SCHOOL_UPSTREAM|NGINX_SCHOOL_STRIP_PREFIX|NGINX_STUDENT_UPSTREAM|NGINX_ADMIN_UPSTREAM|NGINX_API_UPSTREAM)$'
     ports:
       - "${HTTP_PORT:-80}:80"
     volumes:

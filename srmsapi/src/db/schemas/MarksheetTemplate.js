@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tableNames = require("../tableNames");
 
 const MarksheetTemplateSchema = new mongoose.Schema(
   {
@@ -22,7 +23,7 @@ const MarksheetTemplateSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    collection: 'marksheet_templates'
+    collection: tableNames.marksheetTemplates
   }
 );
 

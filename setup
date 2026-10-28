@@ -8,7 +8,7 @@ compose_env_value() {
   local name="$1" value
   value="${!name:-}"
   if [[ -z "$value" ]]; then
-    value="$(docker compose config --environment | sed -n "s/^${name}=//p" | head -n 1)"
+    value="$(docker compose --env-file "$ROOT_DIR/.env" --env-file "$ROOT_DIR/.env.production" config --environment | sed -n "s/^${name}=//p" | head -n 1)"
   fi
   printf '%s' "$value"
 }
@@ -22,17 +22,17 @@ fi
 
 compose() {
   if [[ "$DB_TYPE" == docker ]]; then
-    docker compose --profile docker "$@"
+    docker compose --env-file "$ROOT_DIR/.env" --env-file "$ROOT_DIR/.env.production" --profile docker "$@"
   else
-    docker compose --profile local "$@"
+    docker compose --env-file "$ROOT_DIR/.env" --env-file "$ROOT_DIR/.env.production" "$@"
   fi
 }
 
 compose_with_local_profile() {
   if [[ "$DB_TYPE" == docker ]]; then
-    docker compose --profile docker --profile local "$@"
+    docker compose --env-file "$ROOT_DIR/.env" --env-file "$ROOT_DIR/.env.production" --profile docker --profile local "$@"
   else
-    docker compose --profile local "$@"
+    docker compose --env-file "$ROOT_DIR/.env" --env-file "$ROOT_DIR/.env.production" --profile local "$@"
   fi
 }
 

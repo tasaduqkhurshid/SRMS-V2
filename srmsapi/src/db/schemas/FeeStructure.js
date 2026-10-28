@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tableNames = require("../tableNames");
 
 const InstallmentSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 80 },
@@ -27,6 +28,6 @@ const FeeStructureSchema = new mongoose.Schema({
   active: { type: Boolean, default: true, index: true },
   created_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   updated_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-}, { timestamps: true, collection: 'fee_structures' });
+}, { timestamps: true, collection: tableNames.feeStructures });
 
 module.exports = mongoose.model('FeeStructure', FeeStructureSchema);

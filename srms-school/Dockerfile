@@ -13,7 +13,7 @@ RUN npm install --no-audit --no-fund
 COPY client/ .
 
 # Build the app
-ARG VITE_API_BASE=/api/admin/
+ARG VITE_API_BASE=/api/
 ENV VITE_API_BASE=${VITE_API_BASE}
 RUN npm run build
 

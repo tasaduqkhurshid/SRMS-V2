@@ -8,7 +8,7 @@ This repository evolves the existing SRMS applications into a shared, multi-scho
 - `srms-school/client` is the existing Vue 3/Vite/Vue Router School Admin Portal, now built with base `/admin/`.
 - `srms-student/web` is the Vue 3/Vite/Vue Router Student PWA. Existing Expo source remains under `srms-student/app` and `srms-student/src` for native development.
 - `srms-admin` is the active Vue 3/Vite/Vue Router 4 Super Admin Portal, deployed as its own container at `admin.<ROOT_DOMAIN>`.
-- Root `docker-compose.yml` starts `sms-nginx`, all three frontend services (`sms-school`, `sms-student`, `sms-admin`), `sms-api`, and Redis. MongoDB runs in Docker mode and is omitted in local mode.
+- Root `docker-compose.yml` starts `sms-nginx`, all three frontend services (`sms-school`, `sms-student`, `sms-admin`), `sms-api`, and Redis. MongoDB runs when `DB_TYPE=docker` and is omitted when `DB_TYPE=local`.
 
 ## Local hostnames
 
@@ -146,8 +146,8 @@ cp .env.example .env
 Equivalent direct Docker-mode commands:
 
 ```sh
-docker compose --profile docker up --build -d --wait --remove-orphans
-docker compose --profile docker up -d --no-deps --force-recreate --wait sms-nginx
+docker compose --env-file .env --env-file .env.production --profile docker up --build -d --wait --remove-orphans
+docker compose --env-file .env --env-file .env.production --profile docker up -d --no-deps --force-recreate --wait sms-nginx
 ```
 
 The API waits for its selected database and Redis, runs tracked migrations and safe seeders, then starts. Demo data runs only when `SEED_DEMO_DATA=true` and `NODE_ENV` is not `production`. Compose health checks gate Nginx startup. After `up` or `restart`, the script prints the Super Admin URL using the configured domain and published HTTP port. `./start-all.sh status`, `./start-all.sh logs`, `./start-all.sh restart`, `./start-all.sh down`, `./start-all.sh config`, and `./start-all.sh services` are also available. Use `./stop-all.sh` as a shortcut to stop the stack. `start-all.sh` selects the database profile using `DB_TYPE` and removes services left behind when switching modes.
@@ -156,16 +156,26 @@ The API logger reads `LOG_LEVEL` at startup. Supported values are `debug`, `info
 
 ## Local Docker development
 
-The same root `docker-compose.yml` supports local development. Production remains the default for `./start-all.sh`; pass `-e local` or `--env local` to select Vite and Nodemon containers. Individual runners start only the selected portal plus the API, MongoDB, Redis, and (for browser hostnames) Nginx as needed:
+The same root `docker-compose.yml` supports local development. Local is the default for `./start-all.sh` and individual runners; pass `-e docker` or `--env docker` to select the production-style app containers. Individual runners start only the selected portal plus the API, MongoDB, Redis, and (for browser hostnames) Nginx as needed:
 
-The `-e local` switch selects the app runtime; `DB_TYPE` independently selects Docker MongoDB (`docker`, the default) or host MongoDB (`local`).
+The app runtime defaults to `local`; `-e docker` selects the production-style runtime. `DB_TYPE` independently selects Docker MongoDB (`docker`, the default) or host MongoDB (`local`).
+
+The startup scripts accept `local` (default) or `docker` through `-e`/`--env` or `ENVIRONMENT`. They load shared credentials and application settings from `.env`, then load one routing file: `.env.local` for `local` or `.env.production` for `docker`. Both files use the same `NGINX_*` names. Update the selected file if a Compose service name or internal port changes. `DB_TYPE` is independent: `docker` uses the Compose MongoDB service, while `local` uses host MongoDB.
+
+| Variable | Purpose and valid values |
+| --- | --- |
+| `NGINX_SCHOOL_UPSTREAM` | Compose DNS name and port for the school portal, e.g. `sms-school:80`. |
+| `NGINX_STUDENT_UPSTREAM` | Compose DNS name and port for the student portal, e.g. `sms-student:8080`. |
+| `NGINX_ADMIN_UPSTREAM` | Compose DNS name and port for the admin portal, e.g. `sms-admin:80`. |
+| `NGINX_API_UPSTREAM` | Compose DNS name and port for the API, e.g. `sms-api:5000`. Local Vite proxying uses this same value. |
+| `NGINX_SCHOOL_STRIP_PREFIX` | `true` removes `/admin/` before the production static server; `false` preserves it for Vite's `/admin/` base path. |
 
 ```sh
-./start-server.sh -e local
-./start-client.sh -e local
-./start-admin.sh -e local       # optional, separate super-admin portal
-./start-student.sh -e local     # optional, separate student portal
-./start-all.sh -e local         # all local development portals
+./start-server.sh               # local mode is the default
+./start-client.sh
+./start-admin.sh                # optional, separate super-admin portal
+./start-student.sh              # optional, separate student portal
+./start-all.sh                  # all local development portals
 ```
 
 The school/API-only workflow is the first two commands. Neither the admin nor student portal starts unless requested. The local app containers use the existing Compose network and MongoDB/Redis volumes. The API uses Nodemon to reload watched `server.js` and `src` files; the three Vite apps bind to all container interfaces and use the existing hostname routing through Nginx. Linux bind mounts use polling by default (`VITE_USE_POLLING=false` disables it if native watching works better).
@@ -188,16 +198,20 @@ DB_PASSWORD=replace-this-password
 DB_AUTH_SOURCE=admin
 ```
 
-With `DB_TYPE=docker`, Compose activates the `docker` profile, starts the MongoDB service, and the API connects to `mongodb:27017`. The database port is not published to the host. Connect GUI tools to the Docker database only if you deliberately publish that port.
+With `DB_TYPE=docker`, the startup scripts activate the `docker` profile, start the MongoDB service, and the API connects to `mongodb:27017` as replica set `rs0`. The database port is not published to the host. Connect GUI tools to the Docker database only if you deliberately publish that port.
 
-With `DB_TYPE=local`, Compose does not start the MongoDB service. The API container connects to the host through `host.docker.internal`; the API running directly on the host uses `127.0.0.1`. On Linux, Compose maps `host.docker.internal` to the host gateway. The host MongoDB must listen on an address reachable from Docker's bridge as well as loopback, require authentication, and permit the Docker bridge through the host firewall. Keep GUI access direct at `127.0.0.1:27017` with the configured username, password, and auth database. The local database is not placed behind Docker or exposed by Compose.
+With `DB_TYPE=local`, the startup scripts do not start MongoDB. The API container connects to the host through `host.docker.internal`; the API running directly on the host uses `127.0.0.1`. On Docker Desktop for Windows, install MongoDB Community Server, start its Windows service, and make sure it listens on port `27017` (or set `DB_PORT`); create the configured user/database and match the `.env` credentials and auth source. On Linux, Compose maps `host.docker.internal` to the host gateway. The host MongoDB must listen on an address reachable from Docker's bridge and the host firewall must permit it. Fee and payment transactions require MongoDB replica-set mode; configure the host accordingly and set `DB_REPLICA_SET` to that set's name. MongoDB Compass can connect to the host instance at `mongodb://127.0.0.1:27017/school-system?authSource=admin` using the `.env` credentials. The local database is not placed behind Docker or exposed by Compose.
 
-To switch modes, change only `DB_TYPE` and restart with `./start-all.sh up`; the root `.env.example` sets `COMPOSE_PROFILES` from `DB_TYPE` so plain Compose commands also select the MongoDB profile. Set `DB_HOST` only when you need to override the mode's default host. The API reports the selected type, host, port, and database at startup without printing credentials. It does not fall back to the other mode if a connection fails.
+To verify the API target, run `./start-all.sh logs` and inspect the API's `Database configuration` log entry (type, host, port, database; no credentials). To switch databases, change only `DB_TYPE` and restart with `./start-all.sh up`; the scripts select the MongoDB profile from this value without changing the app runtime. Set `DB_HOST` only when you need to override the mode's default host. The API does not fall back to the other mode if a connection fails. Docker and Windows MongoDB are separate databases; data is not copied or synchronized when switching.
+
+Troubleshooting: if MongoDB is unavailable, check the Windows MongoDB service or run `./start-all.sh status` and `./start-all.sh logs`; confirm `DB_TYPE`, host, port, and credentials in `.env`. If Compose reports a missing profile, use the startup scripts; direct Compose commands need `--profile docker` when `DB_TYPE=docker` and `--profile local` for Vite/Nodemon services. For a `502`, inspect `./setup logs sms-nginx` and confirm the selected `.env.production`/`.env.local` upstreams match running services. For local HMR, confirm the requested hostname resolves to `127.0.0.1`, the local portal is healthy, and Vite WebSocket traffic passes through Nginx; `deploy/proxy_params` forwards the upgrade headers.
 
 Database operations use the root `./setup` command and the selected mode. The API package is at `srmsapi/`, so run host-side API commands there (for example, `npm install` or `npm test`). `./setup migrate` and `./setup seed` use the API container and selected target; `./setup mongo`, `db-export`, and `db-import` use host MongoDB tools in local mode.
 
 ```sh
 ./setup migrate      # migrations only
+./start-server.sh rollback # undo one latest migration, only when it exports down(db)
+# Legacy srms-server stack: ./srmsapi/setup rollback
 ./setup seed         # system seeder; local demo seeder only when enabled
 ./setup db            # migrate, then seed
 ./setup status
@@ -208,7 +222,28 @@ Database operations use the root `./setup` command and the selected mode. The AP
 ./setup db-import ./sms-db/<timestamp>/school-system.archive.gz
 ```
 
-Migrations run in numeric filename order and are recorded in the `_migrations` MongoDB collection. Migrations handle schema/index changes; run `./setup seed` to create missing tenant catalog data. `seedSystem()` creates the platform admin only if absent; `seedNewSchool()` provisions the default 14 courses, 9 subjects, 7 exams, academic year, and settings for a new tenant. The normal seed command also checks existing schools for these missing defaults without overwriting existing catalog records. Demo data is separate and disabled in production. `./setup reset` shows the selected database and requires typing `RESET` before dropping that database; it does not silently remove Docker volumes or touch a different DB mode. Exports use `mongodump` and imports use `mongorestore`; they operate on the selected live database rather than copying data files.
+Migrations run in numeric filename order and are recorded in the `_migrations` MongoDB collection. `./start-server.sh rollback` reverses one latest migration per invocation, only when that migration exports a safe `down(db)`; run it again to step back further. For the legacy `srms-server` stack, use `./srmsapi/setup rollback`. The runner keeps the tracking record if `down` fails. Current migrations other than the no-op 005 do not define `down`, and data migrations 001, 004, and 006–008 cannot be safely reversed without prior snapshots; rollback therefore stops at the latest such migration without changing data. New migrations must include a reviewed `down(db)` to support rollback. On the root `sms-api` service, startup automatically reapplies pending migrations, so first roll back the application release before restarting it. Migrations handle schema/index changes; run `./setup seed` to create missing tenant catalog data. `seedSystem()` creates the platform admin only if absent; `seedNewSchool()` provisions the default 14 courses, 9 subjects, 7 exams, academic year, and settings for a new tenant. The normal seed command also checks existing schools for these missing defaults without overwriting existing catalog records. Demo data is separate and disabled in production. `./setup reset` shows the selected database and requires typing `RESET` before dropping that database; it does not silently remove Docker volumes or touch a different DB mode. Exports use `mongodump` and imports use `mongorestore`; they operate on the selected live database rather than copying data files.
+
+Generate a new timestamped migration from the API package directory:
+
+```sh
+cd srmsapi
+npm run mongo:mig:gen -- add-school-index
+# or omit the name to use "new-migration"
+npm run mongo:mig:gen
+```
+
+The generator creates `YYYYMMDDHHmmssSSS-name.js` in `src/db/mongo/migrations/` using UTC time. Implement both `up(db)` and `down(db)` before applying it; the generated stubs throw until replaced. The runner continues to recognize the existing numbered migration filenames.
+
+Generate a timestamped seeder scaffold the same way:
+
+```sh
+npm run mongo:gen:seed -- fee-types
+# or omit the name to use "new-seeder"
+npm run mongo:gen:seed
+```
+
+This creates `YYYYMMDDHHmmssSSS-name.seeder.js` in `src/db/mongo/seeders/`. Implement it with idempotent operations, then explicitly import and call its exported function from `src/db/mongo/seedAll.js`; generating a file does not run it or change database contents.
 
 Only `sms-nginx` publishes a port (default HTTP port 80). Set `HTTP_PORT` if port 80 is unavailable. MongoDB, Redis, both frontends, and API stay on the internal Compose network.
 

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tableNames = require("../tableNames");
 
 const SchoolGatewaySchema = new mongoose.Schema({
   school_id: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'School' },
@@ -15,7 +16,7 @@ const SchoolGatewaySchema = new mongoose.Schema({
   validationMessage: { type: String, maxlength: 180, default: '' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-}, { timestamps: true, collection: 'school_gateways' });
+}, { timestamps: true, collection: tableNames.schoolGateways });
 
 SchoolGatewaySchema.index({ school_id: 1, gateway_id: 1 }, { unique: true, name: 'unique_school_gateway_provider' });
 SchoolGatewaySchema.index({ school_id: 1, isEnabled: 1, configurationStatus: 1 }, { name: 'school_gateway_readiness' });

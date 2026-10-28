@@ -61,6 +61,8 @@ services:
       DB_USERNAME: admin
       DB_PASSWORD: password
       DB_AUTH_SOURCE: admin
+      # This legacy stack runs MongoDB standalone (no --replSet flag).
+      DB_REPLICA_SET: ""
       MONGO_DEBUG: ${MONGO_DEBUG:-false}
       SMS_API_IN_DOCKER: "true"
       REDIS_HOST: redis

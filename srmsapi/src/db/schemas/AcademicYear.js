@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tableNames = require("../tableNames");
 
 const AcademicYearSchema = new mongoose.Schema(
   {
@@ -16,7 +17,7 @@ const AcademicYearSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    collection: 'academic_years'
+    collection: tableNames.academicYears
   }
 );
 

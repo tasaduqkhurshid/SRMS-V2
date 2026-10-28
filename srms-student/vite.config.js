@@ -6,6 +6,7 @@ export default defineConfig({
   base: '/',
   server: {
     host: '0.0.0.0',
+    allowedHosts: [`.${process.env.ROOT_DOMAIN || 'sms.local'}`],
     watch: { usePolling: process.env.CHOKIDAR_USEPOLLING === 'true' },
     port: 8080,
     proxy: {

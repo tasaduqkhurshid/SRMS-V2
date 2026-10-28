@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tableNames = require("../tableNames");
 
 const GatewaySchema = new mongoose.Schema({
   code: { type: String, required: true, unique: true, lowercase: true, trim: true, immutable: true },
@@ -42,6 +43,6 @@ const GatewaySchema = new mongoose.Schema({
   defaultConfiguration: { type: mongoose.Schema.Types.Mixed, default: {} },
   customizationPolicy: { type: [String], default: ['environment', 'paymentMethods'] },
   schemaVersion: { type: Number, min: 1, default: 1 },
-}, { timestamps: true, collection: 'gateways' });
+}, { timestamps: true, collection: tableNames.gateways });
 
 module.exports = mongoose.model('Gateway', GatewaySchema);

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tableNames = require("../tableNames");
 
 const FeePaymentSchema = new mongoose.Schema({
   school_id: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'School', index: true },
@@ -26,6 +27,6 @@ const FeePaymentSchema = new mongoose.Schema({
   related_payment_id: { type: mongoose.Schema.Types.ObjectId, ref: 'FeePayment' },
   notes: { type: String, trim: true, maxlength: 500, default: '' },
   confirmed_at: Date,
-}, { timestamps: true, collection: 'fee_payments' });
+}, { timestamps: true, collection: tableNames.feePayments });
 
 module.exports = mongoose.model('FeePayment', FeePaymentSchema);

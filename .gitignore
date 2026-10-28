@@ -33,6 +33,8 @@ srms-student/android/
 .env
 .env.*
 !.env.example
+!.env.production
+!.env.local
 !**/.env.example
 
 # Logs

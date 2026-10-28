@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tableNames = require("../tableNames");
 
 const ResultSchema = new mongoose.Schema(
   {
@@ -36,7 +37,7 @@ const ResultSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    collection: 'results'
+    collection: tableNames.results
   }
 );
 

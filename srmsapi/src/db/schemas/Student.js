@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tableNames = require("../tableNames");
 
 const StudentSchema = new mongoose.Schema(
   {
@@ -37,7 +38,7 @@ const StudentSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    collection: 'students'
+    collection: tableNames.students
   }
 );
 

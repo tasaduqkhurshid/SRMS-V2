@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const tableNames = require("../tableNames");
 
 const SubjectSchema = new mongoose.Schema(
   {
@@ -31,7 +32,7 @@ const SubjectSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    collection: 'subjects'
+    collection: tableNames.subjects
   }
 );
 
