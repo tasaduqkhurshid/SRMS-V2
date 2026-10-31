@@ -1,7 +1,7 @@
 // routes/student.routes.js
 const router = require("express").Router();
 const multer = require("multer");
-const PwpConstants = require("../constants/PwpConstants");
+const PwpConstants = require("../../constants/PwpConstants");
 
 // Use memory storage for BLOB saving
 // File size limit based on STUDENT image entity configuration from PwpConstants
@@ -12,7 +12,7 @@ const upload = multer({
 });
 
 // Import controller methods
-const StudentController = require("../controllers/StudentController");
+const StudentController = require("../../controllers/srms-school/StudentController");
 
 // ---------- Student Routes ----------
 

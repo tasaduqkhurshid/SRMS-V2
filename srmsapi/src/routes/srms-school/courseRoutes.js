@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const CourseController = require('../controllers/CourseController');
+const CourseController = require('../../controllers/srms-school/CourseController');
 
 // list & search (paginated)
 router.get('/', CourseController.listCourses);

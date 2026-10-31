@@ -1,10 +1,10 @@
 "use strict";
 
-const MarksheetTemplateService = require("../services/MarksheetTemplateService");
-const logger = require("../utils/logger");
-const { ValidationError, NotFoundError } = require("../utils/applicationErrors");
-const { asyncHandler } = require("../middleware/errorHandler");
-const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
+const MarksheetTemplateService = require("../../services/MarksheetTemplateService");
+const logger = require("../../utils/logger");
+const { ValidationError, NotFoundError } = require("../../utils/applicationErrors");
+const { asyncHandler } = require("../../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
 
 const listMarksheetEntities = asyncHandler(async (req, res, next) => {
   const result = MarksheetTemplateService.getMarksheetEntityCatalog();

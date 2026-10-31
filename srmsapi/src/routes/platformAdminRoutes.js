@@ -2,6 +2,7 @@ const router = require('express').Router();
 const GatewayController = require('../controllers/platformGatewayController');
 const controller = require('../controllers/platformSchoolController');
 const brandingController = require('../controllers/platformBrandingController');
+const FeeController = require('../controllers/srms-school/FeeController');
 const multer = require('multer');
 
 const allowedBrandingTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -29,8 +30,8 @@ router.get('/schools', controller.listSchools);
 router.post('/schools', controller.createSchool);
 router.get('/schools/:id', controller.getSchool);
 router.patch('/schools/:id', controller.updateSchool);
-router.get('/schools/:id/payment-settings', require('../controllers/FeeController').onlineSettings);
-router.patch('/schools/:id/payment-settings', require('../controllers/FeeController').updateOnlineSettings);
+router.get('/schools/:id/payment-settings', FeeController.onlineSettings);
+router.patch('/schools/:id/payment-settings', FeeController.updateOnlineSettings);
 router.get('/schools/:id/payment-gateways', GatewayController.schoolGateways);
 router.put('/schools/:id/payment-gateways/:code', GatewayController.configureSchoolGateway);
 router.patch('/schools/:id/payment-gateways/:code/enabled', GatewayController.setSchoolGatewayEnabled);

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const MarksheetTemplateController = require('../controllers/MarksheetTemplateController');
+const MarksheetTemplateController = require('../../controllers/srms-school/MarksheetTemplateController');
 
 router.get('/entities', MarksheetTemplateController.listMarksheetEntities);
 router.get('/', MarksheetTemplateController.listMarksheetTemplates);

@@ -1,6 +1,6 @@
 const router = require('express').Router();
-const FeeController = require('../controllers/FeeController');
-const GatewayController = require('../controllers/SchoolGatewayController');
+const FeeController = require('../../controllers/srms-school/FeeController');
+const GatewayController = require('../../controllers/srms-school/SchoolGatewayController');
 
 router.get('/payment-gateways', GatewayController.list);
 router.put('/payment-gateways/:code', GatewayController.configure);

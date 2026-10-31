@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const ResultController = require('../controllers/ResultController');
+const ResultController = require('../../controllers/srms-school/ResultController');
 
 router.get('/', ResultController.listResults);
 router.get('/:id', ResultController.getResult);

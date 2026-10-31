@@ -1,9 +1,11 @@
 "use strict";
 
-const SchoolService = require("../services/SchoolService");
-const { ValidationError, NotFoundError, ConflictError } = require("../utils/applicationErrors");
-const { asyncHandler } = require("../middleware/errorHandler");
-const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
+const SchoolService = require("../../services/SchoolService");
+const { ValidationError, NotFoundError, ConflictError } = require("../../utils/applicationErrors");
+const { asyncHandler } = require("../../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
+
+const { brandingAssetUrl } = require("../../utils/brandingUrls");
 
 const register = asyncHandler(async (req, res, next) => {
   const { school: schoolData, admin: adminData } = req.body;
@@ -87,4 +89,28 @@ const update = asyncHandler(async (req, res, next) => {
   return sendSuccessJsonResponse(res, { statusCode: 200, message: "School updated successfully", data: result.data });
 });
 
-module.exports = { register, me, getById, update };
+const getSchoolBrand = asyncHandler(async (req, res, next) => {
+  const school = req.school;
+  if (!school) {
+    throw new NotFoundError("School");
+  }
+
+  const brandData = {
+    schoolCode: school.school_code,
+    name: school.name || school.school_name,
+    abbreviation: school.abbreviation || school.school_code,
+    address: school.address || "",
+    phone: school.phone || school.contact_number || "",
+    email: school.email || "",
+    website: school.website || "",
+    logoUrl: brandingAssetUrl(school, "logo") || school.logo_url || school.logo_path || "",
+    campusImageUrl: brandingAssetUrl(school, "welcome-image") || school.campus_image_url || "",
+    tagline: school.branding?.tagline || "A place to learn, grow, and succeed.",
+    description: school.branding?.description || "A welcoming place to support learning, academic progress, and student success.",
+  };
+
+  res.set("Cache-Control", "private, no-store");
+  return sendSuccessJsonResponse(res, { statusCode: 200, message: "School brand retrieved", data: brandData });
+});
+
+module.exports = { register, me, getById, update, getSchoolBrand };

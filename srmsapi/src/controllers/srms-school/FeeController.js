@@ -1,9 +1,9 @@
 "use strict";
 
-const FeeService = require("../services/FeeService");
-const { asyncHandler } = require("../middleware/errorHandler");
-const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
-const { ValidationError } = require("../utils/applicationErrors");
+const FeeService = require("../../services/FeeService");
+const { asyncHandler } = require("../../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
+const { ValidationError } = require("../../utils/applicationErrors");
 
 const send = (res, next, result, message, statusCode = 200) => {
   if (result.error) return next(result.error);

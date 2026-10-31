@@ -39,7 +39,7 @@ export default {
       logoUrl.value = school.logo_url || school.logo_path || ""
 
       // Refresh tenant branding so a logo uploaded after this session began is shown.
-      fetch('/api/student/school/brand', { cache: 'no-store', headers: { Accept: 'application/json' } })
+      fetch('/api/school/brand', { cache: 'no-store', headers: { Accept: 'application/json' } })
         .then((response) => response.ok ? response.json() : null)
         .then((result) => {
           const currentBrand = result?.data

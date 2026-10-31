@@ -1,6 +1,6 @@
 "use strict";
 
-const FeeController = require("../FeeController");
+const FeeController = require("../srms-school/FeeController");
 
 const getFees = FeeController.studentFees;
 const getReceipt = FeeController.studentReceipt;

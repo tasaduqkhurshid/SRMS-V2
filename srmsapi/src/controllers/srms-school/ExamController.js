@@ -1,10 +1,10 @@
 "use strict";
 
-const ExamService = require("../services/ExamService");
-const logger = require("../utils/logger");
-const { ValidationError, NotFoundError } = require("../utils/applicationErrors");
-const { asyncHandler } = require("../middleware/errorHandler");
-const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
+const ExamService = require("../../services/ExamService");
+const logger = require("../../utils/logger");
+const { ValidationError, NotFoundError } = require("../../utils/applicationErrors");
+const { asyncHandler } = require("../../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
 
 const listExams = asyncHandler(async (req, res, next) => {
   const { page, limit, q } = req.query;

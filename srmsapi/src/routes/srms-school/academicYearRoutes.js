@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const AcademicYearController = require('../controllers/AcademicYearController');
+const AcademicYearController = require('../../controllers/srms-school/AcademicYearController');
 
 router.get('/all', AcademicYearController.getAllAcademicYears);
 router.get('/', AcademicYearController.listAcademicYears);

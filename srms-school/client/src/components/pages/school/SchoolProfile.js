@@ -38,22 +38,17 @@ export default {
     })
 
     // Load school data
+    // Load school data
     const loadSchoolData = async () => {
       try {
         loading.value = true
         errorMessage.value = ''
 
-        // Get school ID from session or local storage
-        const schoolId = user.value?.school_id || schoolData.value?._id
-        if (!schoolId) {
-          errorMessage.value = 'School ID not found'
-          return
-        }
-
-        const response = await api.get(`/school/${schoolId}`)
+        // Use /me endpoint to get school from authenticated session
+        const response = await api.get(`/admin/school/me`)
         
         if (response.data.success) {
-          const schoolInfo = response.data.data
+          const schoolInfo = response.data.data.school || response.data.data
           form.value = {
             school_name: schoolInfo.school_name || schoolInfo.name || '',
             abbreviation: schoolInfo.abbreviation || '',
@@ -92,7 +87,8 @@ export default {
           return
         }
 
-        const response = await api.put(`/school/${schoolId}`, form.value)
+        // Use admin/school endpoint
+        const response = await api.put(`/admin/school/${schoolId}`, form.value)
 
         if (response.data.success) {
           successMessage.value = 'School profile updated successfully!'

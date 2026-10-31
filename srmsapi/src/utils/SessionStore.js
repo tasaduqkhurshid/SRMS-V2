@@ -71,12 +71,15 @@ class SessionStore {
    * Clear session data
    */
   static clearSession(req) {
-    if (req.session) {
+    if (req.session && typeof req.session.destroy === 'function') {
       req.session.destroy((err) => {
         if (err) {
           console.error('Error clearing session:', err);
         }
       });
+    } else if (req.session) {
+      // For non-express-session implementations, just clear the data
+      req.session = null;
     }
   }
 

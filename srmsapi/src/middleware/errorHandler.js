@@ -93,6 +93,9 @@ const errorHandler = (err, req, res, next) => {
 };
 
 const notFoundHandler = (req, res) => {
+  if (res.headersSent) {
+    return;
+  }
   return sendFailedJSonResponse(res, {
     statusCode: 404,
     code: "NOT_FOUND",

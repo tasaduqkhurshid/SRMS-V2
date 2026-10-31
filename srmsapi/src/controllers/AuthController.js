@@ -9,6 +9,7 @@ const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
 const { ValidationError, AuthenticationError, AuthorizationError } = require("../utils/applicationErrors");
 
 const login = asyncHandler(async (req, res, next) => {
+  logger.debug("srms Login ============= Login request body:", req.body);
   const { username, email, password } = req.body || {};
   const identifier = (username || email || "").trim();
 
@@ -19,7 +20,7 @@ const login = asyncHandler(async (req, res, next) => {
   const result = req.isPlatformHost
     ? await AuthService.loginSuperAdmin(identifier, password)
     : await AuthService.login(identifier, password, req.schoolId);
-
+  logger.debug("srms Login ============= Login result:", result);
   if (result.error) return next(result.error);
   if (!result.data) {
     throw new AuthenticationError("Invalid credentials");

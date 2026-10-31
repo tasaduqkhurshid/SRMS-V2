@@ -1,9 +1,9 @@
 const router = require('express').Router();
-const CourseController = require('../controllers/CourseController');
-const ExamController = require('../controllers/ExamController');
-const SubjectController = require('../controllers/SubjectController');
-const AcademicYearController = require('../controllers/AcademicYearController');
-const logger = require('../utils/logger');
+const CourseController = require('../../controllers/srms-school/CourseController');
+const ExamController = require('../../controllers/srms-school/ExamController');
+const SubjectController = require('../../controllers/srms-school/SubjectController');
+const AcademicYearController = require('../../controllers/srms-school/AcademicYearController');
+const logger = require('../../utils/logger');
 
 /**
  * Dynamic Option Routes

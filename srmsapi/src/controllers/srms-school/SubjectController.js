@@ -1,11 +1,11 @@
 "use strict";
 
-const SubjectService = require("../services/SubjectService");
-const { STATUS } = require("../constants/status");
-const logger = require("../utils/logger");
-const { ValidationError, NotFoundError } = require("../utils/applicationErrors");
-const { asyncHandler } = require("../middleware/errorHandler");
-const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
+const SubjectService = require("../../services/SubjectService");
+const { STATUS } = require("../../constants/status");
+const logger = require("../../utils/logger");
+const { ValidationError, NotFoundError } = require("../../utils/applicationErrors");
+const { asyncHandler } = require("../../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
 
 const listSubjects = asyncHandler(async (req, res, next) => {
   const reqParams = { ...req.query, ...req.body, ...req.params };

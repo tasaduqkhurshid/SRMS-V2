@@ -4,7 +4,7 @@ const { authenticateJwt, requireStudentAuth, requireStudentPortalAuth } = requir
 const authController = require('../../controllers/student/auth.controller');
 const profileController = require('../../controllers/student/profile.controller');
 const brandingController = require('../../controllers/platformBrandingController');
-const FeeController = require('../../controllers/FeeController');
+const FeeController = require('../../controllers/srms-school/FeeController');
 
 router.get('/school/brand', authController.getSchoolBrand);
 router.get('/school/branding/:asset', brandingController.getBrandingAsset);

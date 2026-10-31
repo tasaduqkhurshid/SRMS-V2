@@ -1,11 +1,11 @@
 "use strict";
 
-const ResultService = require("../services/ResultService");
-const logger = require("../utils/logger");
-const { STATUS } = require("../constants/status");
-const { ValidationError, NotFoundError } = require("../utils/applicationErrors");
-const { asyncHandler } = require("../middleware/errorHandler");
-const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
+const ResultService = require("../../services/ResultService");
+const logger = require("../../utils/logger");
+const { STATUS } = require("../../constants/status");
+const { ValidationError, NotFoundError } = require("../../utils/applicationErrors");
+const { asyncHandler } = require("../../middleware/errorHandler");
+const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
 
 const listResults = asyncHandler(async (req, res, next) => {
   const { page, limit, student_id, course_id, subject_id, exam_id, academic_year_id } = req.query;

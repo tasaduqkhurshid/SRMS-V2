@@ -5,7 +5,7 @@ const {
   getSubjectDetails,
   updateSubject,
   deleteSubject,
-} = require("../controllers/SubjectController");
+} = require("../../controllers/srms-school/SubjectController");
 
 // List + search + paginate
 router.get("/", listSubjects);

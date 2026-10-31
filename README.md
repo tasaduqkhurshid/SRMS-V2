@@ -188,19 +188,53 @@ Use `./start-client.sh -e local down`, `./start-admin.sh -e local down`, `./star
 
 Set `DB_TYPE` in the root `.env` to choose the one MongoDB target for the shared API. The default is `docker`. Mongo settings are centralized in `srmsapi/src/config/database.js`; the same models, migrations, seeders, and services are used in either mode.
 
+### Docker Mode (`DB_TYPE=docker`)
+
 ```dotenv
 DB_TYPE=docker
 DB_HOST=
 DB_PORT=27017
 DB_NAME=school-system
-DB_USERNAME=admin
-DB_PASSWORD=replace-this-password
+DB_USERNAME=srms_admin
+DB_PASSWORD=password
 DB_AUTH_SOURCE=admin
+DB_REPLICA_SET=rs0
 ```
 
 With `DB_TYPE=docker`, the startup scripts activate the `docker` profile, start the MongoDB service, and the API connects to `mongodb:27017` as replica set `rs0`. The database port is not published to the host. Connect GUI tools to the Docker database only if you deliberately publish that port.
 
+**Connection string for MongoDB Compass (Docker Mode):**
+```
+mongodb://srms_admin:password@localhost:27017/school-system?authSource=admin&replicaSet=rs0
+```
+(Requires publishing port 27017 in docker-compose.yml)
+
+### Local Mode (`DB_TYPE=local`)
+
+```dotenv
+DB_TYPE=local
+DB_HOST=
+DB_PORT=27017
+DB_NAME=school-system
+DB_USERNAME=srms_admin
+DB_PASSWORD=password
+DB_AUTH_SOURCE=admin
+DB_REPLICA_SET=
+```
+
 With `DB_TYPE=local`, the startup scripts do not start MongoDB. The API container connects to the host through `host.docker.internal`; the API running directly on the host uses `127.0.0.1`. On Docker Desktop for Windows, install MongoDB Community Server, start its Windows service, and make sure it listens on port `27017` (or set `DB_PORT`); create the configured user/database and match the `.env` credentials and auth source. On Linux, Compose maps `host.docker.internal` to the host gateway. The host MongoDB must listen on an address reachable from Docker's bridge and the host firewall must permit it. Fee and payment transactions require MongoDB replica-set mode; configure the host accordingly and set `DB_REPLICA_SET` to that set's name. MongoDB Compass can connect to the host instance at `mongodb://127.0.0.1:27017/school-system?authSource=admin` using the `.env` credentials. The local database is not placed behind Docker or exposed by Compose.
+
+**Connection string for MongoDB Compass (Local Mode):**
+```
+mongodb://srms_admin:password@127.0.0.1:27017/school-system?authSource=admin
+```
+
+### Default Credentials
+
+| Mode | Host | Port | Username | Password | Auth Database | Replica Set |
+|------|------|------|----------|----------|---------------|-------------|
+| Docker | mongodb (container) / localhost (if published) | 27017 | srms_admin | password | admin | rs0 |
+| Local | host.docker.internal (container) / 127.0.0.1 (host) | 27017 | srms_admin | password | admin | (none) |
 
 To verify the API target, run `./start-all.sh logs` and inspect the API's `Database configuration` log entry (type, host, port, database; no credentials). To switch databases, change only `DB_TYPE` and restart with `./start-all.sh up`; the scripts select the MongoDB profile from this value without changing the app runtime. Set `DB_HOST` only when you need to override the mode's default host. The API does not fall back to the other mode if a connection fails. Docker and Windows MongoDB are separate databases; data is not copied or synchronized when switching.
 

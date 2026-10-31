@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const ExamController = require('../controllers/ExamController');
+const ExamController = require('../../controllers/srms-school/ExamController');
 
 // list & search (paginated)
 router.get('/', ExamController.listExams);

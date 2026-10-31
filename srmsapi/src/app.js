@@ -1,5 +1,8 @@
 const express = require("express");
 const cors = require("cors");
+const session = require("express-session");
+const RedisStore = require("connect-redis").default;
+const { createClient } = require("redis");
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -8,6 +11,7 @@ const { resolveTenant, requirePlatformHost } = require("./middleware/tenantResol
 const PlatformAdminRoutes = require("./routes/platformAdminRoutes");
 const { errorHandler, notFoundHandler, asyncHandler } = require("./middleware/errorHandler");
 const logger = require("./utils/logger");
+const RedisCacheService = require("./services/RedisCacheService");
 
 const SENSITIVE_QUERY_PARAMS = new Set([
   "password",
@@ -36,9 +40,19 @@ const sanitizeUrl = (url) => {
 };
 
 // Initialize Redis cache
-const RedisCacheService = require("./services/RedisCacheService");
 RedisCacheService.initializeRedis().catch(err => {
   logger.error("Failed to initialize Redis cache", err);
+});
+
+// Initialize Redis client for session store
+const redisClient = createClient({ url: process.env.REDIS_URL || "redis://redis:6379" });
+redisClient.connect().catch(err => {
+  logger.error("Failed to connect Redis for sessions", err);
+});
+
+const redisStore = new RedisStore({
+  client: redisClient,
+  prefix: "srms:session:",
 });
 
 const app = express();
@@ -47,6 +61,20 @@ app.use(cors({
   origin: ["http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:8080", "http://127.0.0.1:3000"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+}));
+
+app.use(session({
+  store: redisStore,
+  secret: process.env.JWT_SECRET || "dev_secret_change_me",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 12, // 12 hours
+    sameSite: "lax",
+  },
+  name: "srms.sid",
 }));
 
 // Request logging middleware
@@ -64,39 +92,30 @@ app.use(express.json({ limit: "10mb", verify: (req, _res, buffer) => { req.rawBo
 app.use(resolveTenant);
 
 const AuthRoutes = require("./routes/authRoutes");
-const SchoolRoutes = require("./routes/schoolRoutes");
-const StudentRoutes = require("./routes/studentRoutes");
-const SubjectRoutes = require("./routes/subjectRoutes");
-const CourseRoutes = require("./routes/courseRoutes");
-const ExamRoutes = require("./routes/examRoutes");
-const AcademicYearRoutes = require("./routes/academicYearRoutes");
-const ResultRoutes = require("./routes/resultRoutes");
-const MarksheetTemplateRoutes = require("./routes/marksheetTemplateRoutes");
-const FeeRoutes = require("./routes/feeRoutes");
-const DynamicOptionRoutes = require("./routes/DynamicOptionRoutes");
+const SchoolPortalRoutes = require("./routes/srms-school");
 const StudentPortalRoutes = require("./routes/studentPortalRoutes");
 
 app.get("/api/health", (_req, res) => {
   res.status(200).json({ status: "healthy" });
 });
 
+// School-specific auth routes (accessible via school subdomain like hanfia.sms.local)
+app.use('/auth', AuthRoutes);
+
+// Public school branding route (no auth required, uses tenant resolution)
+app.use('/school', require("./routes/srms-school/schoolRoutes"));
+app.use('/api/school', require("./routes/srms-school/schoolRoutes"));
+
 const mountAdminApi = (prefix) => {
   app.use(`${prefix}/auth`, AuthRoutes);
-  app.use(`${prefix}/options`, authenticateJwt, requireSchoolAdmin, DynamicOptionRoutes);
-  app.use(`${prefix}/students`, authenticateJwt, requireSchoolAdmin, StudentRoutes);
-  app.use(`${prefix}/subjects`, authenticateJwt, requireSchoolAdmin, SubjectRoutes);
-  app.use(`${prefix}/courses`, authenticateJwt, requireSchoolAdmin, CourseRoutes);
-  app.use(`${prefix}/exams`, authenticateJwt, requireSchoolAdmin, ExamRoutes);
-  app.use(`${prefix}/academic-years`, authenticateJwt, requireSchoolAdmin, AcademicYearRoutes);
-  app.use(`${prefix}/results`, authenticateJwt, requireSchoolAdmin, ResultRoutes);
-  app.use(`${prefix}/fees`, authenticateJwt, requireSchoolAdmin, FeeRoutes);
-  app.use(`${prefix}/marksheet-templates`, authenticateJwt, requireSchoolAdmin, MarksheetTemplateRoutes);
-  app.use(`${prefix}/school`, authenticateJwt, requireSchoolAdmin, SchoolRoutes);
+  app.use(`${prefix}`, authenticateJwt, requireSchoolAdmin, SchoolPortalRoutes);
 };
 
 app.use('/api/admin/auth', requirePlatformHost, AuthRoutes);
-app.use('/api/admin', authenticateJwt, require("./middleware/AuthService").requireSuperAdmin, PlatformAdminRoutes);
-mountAdminApi("");
+app.use('/api/admin', authenticateJwt, requireSchoolAdmin, SchoolPortalRoutes);
+app.use('/api/platform', authenticateJwt, require("./middleware/AuthService").requireSuperAdmin, PlatformAdminRoutes);
+mountAdminApi("/admin");
+mountAdminApi("");  // Also mount at root for nginx rewrites
 app.use("/api/student", StudentPortalRoutes);
 
 app.use("/api", notFoundHandler);
