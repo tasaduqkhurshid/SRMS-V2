@@ -10,12 +10,14 @@ const { sendSuccessJsonResponse } = require("../utils/responseHelpers");
 const listCourses = asyncHandler(async (req, res, next) => {
   const params = { page: req.query.page, limit: req.query.limit, query: req.query.q };
   const result = await CourseService.listCourses(params);
+  logger.debug("CourseController.listCourses: result", {result});
   if (result.error) return next(result.error);
 
   return sendSuccessJsonResponse(res, { statusCode: STATUS.OK, message: "Courses retrieved", data: result.data });
 });
 
 const getAllCourses = asyncHandler(async (req, res, next) => {
+  logger.debug("CourseController.getAllCourses: Fetching all courses");
   const result = await CourseService.getAllCourses();
   if (result.error) return next(result.error);
 

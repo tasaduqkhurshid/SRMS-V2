@@ -2,9 +2,10 @@
 set -e
 
 API_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$API_DIR/.." && pwd)"
 
-SERVER_CONTAINER="srms-server"
-MONGO_CONTAINER="srms-mongodb"
+SERVER_CONTAINER="sms-api-local"
+MONGO_CONTAINER="srms-v2-mongodb-1"
 API_URL="${API_URL:-http://localhost:5000}"
 
 RED="\033[0;31m"
@@ -79,7 +80,7 @@ require_docker() {
 }
 
 compose() {
-  docker compose --project-directory "$API_DIR" -f "$API_DIR/docker-compose.yml" "$@"
+  docker compose --project-directory "$ROOT_DIR" -f "$ROOT_DIR/docker-compose.yml" --env-file "$ROOT_DIR/.env" --env-file "$ROOT_DIR/.env.local" "$@"
 }
 
 container_exists() {
@@ -135,7 +136,7 @@ wait_for_container_health() {
 
 ensure_services() {
   require_container "$MONGO_CONTAINER" "mongodb"
-  require_container "$SERVER_CONTAINER" "server"
+  require_container "$SERVER_CONTAINER" "api"
 }
 
 run_migrate() {
@@ -186,7 +187,7 @@ run_status() {
 run_logs() {
   local service="${2:-}"
   case "$service" in
-    sms-api|api) service=server ;;
+    sms-api|api|api-local) service=sms-api-local ;;
   esac
 
   if [[ -n "$service" ]]; then
@@ -197,18 +198,18 @@ run_logs() {
 }
 
 run_shell() {
-  require_container "$SERVER_CONTAINER" "server"
+  require_container "$SERVER_CONTAINER" "api"
 
-  if compose exec server sh -lc 'command -v bash >/dev/null 2>&1'; then
-    compose exec server bash
+  if compose exec "$SERVER_CONTAINER" sh -lc 'command -v bash >/dev/null 2>&1'; then
+    compose exec "$SERVER_CONTAINER" bash
   else
-    compose exec server sh
+    compose exec "$SERVER_CONTAINER" sh
   fi
 }
 
 run_mongo() {
   require_container "$MONGO_CONTAINER" "mongodb"
-  compose exec mongodb mongosh "mongodb://admin:password@localhost:27017/school-system?authSource=admin"
+  compose exec "$MONGO_CONTAINER" mongosh "mongodb://admin:password@localhost:27017/school-system?authSource=admin"
 }
 
 main() {

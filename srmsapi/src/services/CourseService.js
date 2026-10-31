@@ -28,23 +28,62 @@ const listCourses = async ({ page = 1, limit = 50, query = "" } = {}) => {
       ];
     }
 
-    const result = await ModelUtils.findAndCountAll(Course, where, { limit: lim, skip, sort: { _id: -1 } });
+    const options = { 
+      limit: lim, 
+      skip, 
+      sort: { _id: -1 },
+      include: [
+        {
+          model: CourseSubject,
+          as: "courseSubjects",
+          attributes: ["_id", "subject_id"],
+          include: [
+            {
+              model: Subject,
+              as: "subject",
+              attributes: ["_id", "subject_name"]
+            }
+          ]
+        }
+      ]
+    };
+
+    const result = await ModelUtils.findAndCountAll(Course, where, options);
     return success({ meta: { page: pg, limit: lim, total: result.count }, courses: result.rows });
   } catch (error) {
     return failure(error);
   }
 };
 
-const getAllCourses = async () => {
+const getAllCourses = async ({ includeSubjects = false } = {}) => {
   try {
     logger.debug("CourseService.getAllCourses: Fetching all courses");
+    const options = { sort: { course_name: 1 } };
+
+    if (includeSubjects) {
+      options.include = [
+        {
+          model: CourseSubject,
+          as: "subjects",
+          attributes: ["_id", "subject_id"],
+          include: [
+            {
+              model: Subject,
+              as: "subject",
+              attributes: ["_id", "subject_name", "subject_code", "has_theory", "has_lab", "has_attendance", "has_activity"]
+            }
+          ]
+        }
+      ];
+    }
+
     const courses = await RedisCacheService.getOrSet(
       CACHE_KEYS.COURSES_LIST,
       async () => {
         logger.debug("CourseService.getAllCourses: Cache miss, querying database");
-        const coursesData = await ModelUtils.findAll(Course, {}, { sort: { course_name: 1 } });
-        logger.info(`CourseService.getAllCourses: Found ${coursesData ? coursesData.length : 0} courses`);
-        return coursesData || [];
+        const result = await ModelUtils.findAndCountAll(Course, {}, options);
+        logger.info(`CourseService.getAllCourses: Found ${result.rows ? result.rows.length : 0} courses`);
+        return result || [];
       },
       3600
     );

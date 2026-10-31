@@ -26,4 +26,12 @@ const CourseSchema = new mongoose.Schema(
   }
 );
 
+// Virtual for CourseSubject relationship
+CourseSchema.virtual('courseSubjects', {
+  ref: 'CourseSubject',
+  localField: '_id',
+  foreignField: 'course_id',
+  justOne: false
+});
+
 module.exports = mongoose.model('Course', CourseSchema);

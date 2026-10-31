@@ -159,10 +159,23 @@ case "$command" in
   status) compose ps ;;
   logs)
     if [[ -n "${2:-}" ]]; then
-      if [[ "$2" == *-local ]]; then
-        compose_with_local_profile logs -f --tail=200 "$2"
+      service="$2"
+      if [[ "$service" == "api-local" ]]; then
+        service="sms-api-local"
+      fi
+      if [[ "$service" == "school-local" ]]; then
+        service="sms-school-local"
+      fi
+      if [[ "$service" == "student-local" ]]; then
+        service="sms-student-local"
+      fi
+      if [[ "$service" == "admin-local" ]]; then
+        service="sms-admin-local"
+      fi
+      if [[ "$service" == *-local ]]; then
+        compose_with_local_profile logs -f --tail=200 "$service"
       else
-        compose logs -f --tail=200 "$2"
+        compose logs -f --tail=200 "$service"
       fi
     else
       compose logs -f --tail=200

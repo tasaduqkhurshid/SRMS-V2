@@ -1,281 +1,504 @@
 "use strict";
+
 /**
  * ModelUtils.js
  *
  * Generic model utilities for Mongoose models.
  *
- * Usage:
- *   const ModelUtils = require('./utils/ModelUtils');
- *   const users = await ModelUtils.findAll(User, { active: true }, { populate: [...] });
- *
  * Supported call signatures:
- *   - (model, where = {}, options = {})
- *   - (model, options = {}) // where may be inside options.where or just be the filter
  *
- * Notes:
- *  - These helpers intentionally let Mongoose errors bubble so callers can handle them; wrap in try/catch where needed.
+ * 1. findOne(model, where, options)
+ * 2. findOne(model, options)
+ *
+ * 3. findAll(model, where, options)
+ * 4. findAll(model, options)
+ *
+ * Supports:
+ * - Sequelize-style include
+ * - Mongoose populate
+ * - Nested include
+ * - attributes / select
+ * - Pagination
+ * - Sorting
+ * - ObjectId normalization
+ *
+ * Example:
+ *
+ * ModelUtils.findAll(Course, {
+ *   where: { status: true },
+ *   attributes: ["_id", "name"],
+ *   include: [
+ *     {
+ *       model: CourseSubject,
+ *       as: "subjects",
+ *       attributes: ["_id", "subject_id"],
+ *       include: [
+ *         {
+ *           model: Subject,
+ *           as: "subject",
+ *           attributes: ["_id", "name"]
+ *         }
+ *       ]
+ *     }
+ *   ]
+ * });
  */
 
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const normalizeObjectIds = (value, key = '', idContext = false) => {
-  const isIdField = idContext || key === '_id' || key.endsWith('_id');
-  if (Array.isArray(value)) return value.map(item => normalizeObjectIds(item, key, isIdField));
-  if (!value || typeof value !== 'object' || value instanceof mongoose.Types.ObjectId) {
+/* --------------------------------------------------
+ * OBJECT ID NORMALIZATION
+ * -------------------------------------------------- */
+
+const normalizeObjectIds = (value, key = "", idContext = false) => {
+  const isIdField = idContext || key === "_id" || key.endsWith("_id");
+
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeObjectIds(item, key, isIdField));
+  }
+
+  if (
+    !value ||
+    typeof value !== "object" ||
+    value instanceof mongoose.Types.ObjectId
+  ) {
     if (isIdField && mongoose.isValidObjectId(value)) {
       return new mongoose.Types.ObjectId(value);
     }
+
     return value;
   }
 
   return Object.fromEntries(
     Object.entries(value).map(([entryKey, entryValue]) => [
       entryKey,
-      normalizeObjectIds(entryValue, entryKey, isIdField)
-    ])
+      normalizeObjectIds(entryValue, entryKey, isIdField),
+    ]),
   );
 };
 
-/* ------------------ Helpers ------------------ */
+/* --------------------------------------------------
+ * HELPERS
+ * -------------------------------------------------- */
 
 /**
- * Helper: Detect whether second argument is an options object (contains populate/select/limit/sort/skip etc.)
- * and normalize to { where, options }.
+ * Detect whether the second argument is an options object.
+ *
+ * Supports:
+ * - (model, where, options)
+ * - (model, options)
  */
 const normalizeWhereAndOptions = (maybeWhere = {}, maybeOptions = {}) => {
+  const optionKeys = [
+    "populate",
+    "include",
+    "attributes",
+    "select",
+    "limit",
+    "sort",
+    "skip",
+    "where",
+    "offset",
+  ];
+
   const looksLikeOptions =
     maybeWhere &&
-    typeof maybeWhere === 'object' &&
-    (maybeWhere.populate ||
-      maybeWhere.select ||
-      maybeWhere.limit ||
-      maybeWhere.sort ||
-      maybeWhere.skip ||
-      maybeWhere.where);
+    typeof maybeWhere === "object" &&
+    !Array.isArray(maybeWhere) &&
+    optionKeys.some((key) =>
+      Object.prototype.hasOwnProperty.call(maybeWhere, key),
+    );
 
   if (looksLikeOptions) {
     const opts = { ...maybeWhere };
-    return { where: opts.where || {}, options: opts };
+
+    return {
+      where: opts.where || {},
+      options: opts,
+    };
   }
 
-  return { where: maybeWhere || {}, options: { ...(maybeOptions || {}) } };
+  return {
+    where: maybeWhere || {},
+    options: { ...(maybeOptions || {}) },
+  };
 };
 
 /**
- * Convert Mongoose result(s) to plain JS object(s) safely.
+ * Convert attributes to Mongoose select.
+ *
+ * Sequelize:
+ * attributes: ["_id", "name", "code"]
+ *
+ * Mongoose:
+ * select: "_id name code"
  */
-const toPlain = (instance) => {
-  if (!instance) return null;
-  if (Array.isArray(instance)) {
-    return instance.map((r) => (r && typeof r.toObject === 'function' ? r.toObject() : r));
+const normalizeAttributes = (attributes) => {
+  if (!attributes) return undefined;
+
+  if (Array.isArray(attributes)) {
+    return attributes.join(" ");
   }
-  return typeof instance.toObject === 'function' ? instance.toObject() : instance;
+
+  if (typeof attributes === "string") {
+    return attributes;
+  }
+
+  return undefined;
 };
 
-/* ------------------ CRUD Utilities ------------------ */
+/**
+ * Convert Sequelize-style include to Mongoose populate.
+ *
+ * Supported:
+ * - model
+ * - as
+ * - path
+ * - attributes
+ * - where
+ * - include
+ * - options
+ */
+const normalizeInclude = (include) => {
+  if (!include) return [];
+
+  const includes = Array.isArray(include) ? include : [include];
+
+  return includes
+    .map((item) => {
+      // Native populate path shorthand
+      if (typeof item === "string") {
+        return { path: item };
+      }
+
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const path = item.as || item.path;
+
+      if (!path) {
+        return null;
+      }
+
+      const populate = {
+        path,
+      };
+
+      // Mongoose model reference
+      if (item.model) {
+        populate.model = item.model;
+      }
+
+      // Field selection
+      const select = normalizeAttributes(item.attributes);
+
+      if (select) {
+        populate.select = select;
+      }
+
+      // Relationship filtering
+      if (item.where) {
+        populate.match = normalizeObjectIds(item.where);
+      }
+
+      // Nested relationships
+      if (item.include) {
+        populate.populate = normalizeInclude(item.include);
+      }
+
+      // Native Mongoose populate options
+      if (item.options) {
+        populate.options = item.options;
+      }
+
+      if (item.match) {
+        populate.match = normalizeObjectIds(item.match);
+      }
+
+      if (item.select) {
+        populate.select = item.select;
+      }
+
+      return populate;
+    })
+    .filter(Boolean);
+};
 
 /**
- * Create a record and return the created plain object.
+ * Apply both native populate and Sequelize-style include.
+ */
+const applyPopulate = (query, options = {}) => {
+  const populate = [
+    ...(options.populate
+      ? Array.isArray(options.populate)
+        ? options.populate
+        : [options.populate]
+      : []),
+
+    ...normalizeInclude(options.include),
+  ];
+
+  populate.forEach((item) => {
+    query = query.populate(item);
+  });
+
+  return query;
+};
+
+/**
+ * Apply root-level attributes/select.
+ */
+const applySelect = (query, options = {}) => {
+  const select = normalizeAttributes(options.attributes) || options.select;
+
+  if (select) {
+    query = query.select(select);
+  }
+
+  return query;
+};
+
+/**
+ * Apply common query options.
+ */
+const applyQueryOptions = (query, options = {}) => {
+  query = applyPopulate(query, options);
+
+  query = applySelect(query, options);
+
+  if (options.sort) {
+    query = query.sort(options.sort);
+  }
+
+  if (options.limit !== undefined && options.limit !== null) {
+    query = query.limit(options.limit);
+  }
+
+  // Sequelize offset compatibility
+  const skip = options.skip !== undefined ? options.skip : options.offset;
+
+  if (skip !== undefined && skip !== null) {
+    query = query.skip(skip);
+  }
+
+  return query;
+};
+
+/* --------------------------------------------------
+ * CREATE
+ * -------------------------------------------------- */
+
+/**
+ * Create a record and return a plain JS object.
  */
 const createAndReturn = async (model, data) => {
   const created = await model.create(data);
-  return toPlain(created);
+
+  return created ? created.toObject() : null;
 };
 
+/* --------------------------------------------------
+ * FIND ONE
+ * -------------------------------------------------- */
+
 /**
- * findOne supports two call signatures:
- *  - findOne(model, where = {}, options = {})
- *  - findOne(model, options = {}) where options may contain `where`, `populate`, `select`, etc.
+ * Find one document.
  *
- * Returns a plain object or null.
+ * Returns:
+ * Object | null
  */
 const findOne = async (model, where = {}, options = {}) => {
   const normalized = normalizeWhereAndOptions(where, options);
+
   const normalizedWhere = normalizeObjectIds(normalized.where);
+
   let query = model.findOne(normalizedWhere);
 
-  // Apply populate if provided
-  if (normalized.options.populate) {
-    if (Array.isArray(normalized.options.populate)) {
-      normalized.options.populate.forEach(pop => {
-        query = query.populate(pop);
-      });
-    } else {
-      query = query.populate(normalized.options.populate);
-    }
-  }
+  query = applyQueryOptions(query, normalized.options);
 
-  // Apply select if provided
-  if (normalized.options.select) {
-    query = query.select(normalized.options.select);
-  }
+  const result = await query.lean();
 
-  const res = await query.lean();
-  return res || null;
+  return result || null;
 };
 
+/* --------------------------------------------------
+ * FIND ALL
+ * -------------------------------------------------- */
+
 /**
- * findAll supports both (model, where, options) and (model, options) signatures.
+ * Find multiple documents.
  *
- * Returns an array of plain objects (possibly empty).
+ * Returns:
+ * Array
  */
 const findAll = async (model, where = {}, options = {}) => {
   const normalized = normalizeWhereAndOptions(where, options);
+
   const normalizedWhere = normalizeObjectIds(normalized.where);
+
   let query = model.find(normalizedWhere);
 
-  // Apply populate if provided
-  if (normalized.options.populate) {
-    if (Array.isArray(normalized.options.populate)) {
-      normalized.options.populate.forEach(pop => {
-        query = query.populate(pop);
-      });
-    } else {
-      query = query.populate(normalized.options.populate);
-    }
-  }
-
-  // Apply select if provided
-  if (normalized.options.select) {
-    query = query.select(normalized.options.select);
-  }
-
-  // Apply sort if provided
-  if (normalized.options.sort) {
-    query = query.sort(normalized.options.sort);
-  }
-
-  // Apply limit if provided
-  if (normalized.options.limit) {
-    query = query.limit(normalized.options.limit);
-  }
-
-  // Apply skip if provided
-  if (normalized.options.skip) {
-    query = query.skip(normalized.options.skip);
-  }
+  query = applyQueryOptions(query, normalized.options);
 
   const rows = await query.lean();
+
   return rows || [];
 };
 
+/* --------------------------------------------------
+ * FIND AND COUNT ALL
+ * -------------------------------------------------- */
+
 /**
- * findAndCountAll supports both (model, where, options) and (model, options) signatures.
+ * Find documents and count total matching documents.
  *
- * Returns { count, rows } where rows is array of plain objects.
+ * Returns:
+ * {
+ *   count: Number,
+ *   rows: Array
+ * }
+ *
+ * Count is calculated without pagination.
  */
 const findAndCountAll = async (model, where = {}, options = {}) => {
   const normalized = normalizeWhereAndOptions(where, options);
-  
-  // Count total matching documents
+
   const normalizedWhere = normalizeObjectIds(normalized.where);
+
   const count = await model.countDocuments(normalizedWhere);
-  
-  // Build the find query
+
   let query = model.find(normalizedWhere);
 
-  // Apply populate if provided
-  if (normalized.options.populate) {
-    if (Array.isArray(normalized.options.populate)) {
-      normalized.options.populate.forEach(pop => {
-        query = query.populate(pop);
-      });
-    } else {
-      query = query.populate(normalized.options.populate);
-    }
-  }
-
-  // Apply select if provided
-  if (normalized.options.select) {
-    query = query.select(normalized.options.select);
-  }
-
-  // Apply sort if provided
-  if (normalized.options.sort) {
-    query = query.sort(normalized.options.sort);
-  }
-
-  // Apply limit if provided
-  if (normalized.options.limit) {
-    query = query.limit(normalized.options.limit);
-  }
-
-  // Apply skip if provided
-  if (normalized.options.skip) {
-    query = query.skip(normalized.options.skip);
-  }
+  query = applyQueryOptions(query, normalized.options);
 
   const rows = await query.lean();
 
   return {
     count,
-    rows: rows || []
+    rows: rows || [],
   };
 };
 
+/* --------------------------------------------------
+ * COUNT
+ * -------------------------------------------------- */
+
 /**
- * count supports (model, where, options) and (model, options).
- * Returns a number.
+ * Count matching documents.
+ *
+ * Returns:
+ * Number
  */
 const count = async (model, where = {}, options = {}) => {
   const normalized = normalizeWhereAndOptions(where, options);
+
   return await model.countDocuments(normalizeObjectIds(normalized.where));
 };
 
+/* --------------------------------------------------
+ * REMOVE
+ * -------------------------------------------------- */
+
 /**
- * remove (deleteMany) supports (model, where, options) and (model, options).
- * Returns number of deleted documents.
+ * Delete multiple documents.
+ *
+ * Returns:
+ * Number of deleted documents.
  */
 const remove = async (model, where = {}, options = {}) => {
   const normalized = normalizeWhereAndOptions(where, options);
+
   const result = await model.deleteMany(normalizeObjectIds(normalized.where));
+
   return result.deletedCount || 0;
 };
 
+/* --------------------------------------------------
+ * UPDATE AND RETURN
+ * -------------------------------------------------- */
+
 /**
- * updateAndReturn supports:
- *  - (model, where, values, options)
- *  - (model, options) where options may include { where, values, ... }
+ * Update multiple documents and return updated rows.
  *
- * Returns a consistent shape: { affectedCount, rows }.
- * - affectedCount: number of affected documents
- * - rows: array of plain JS objects (updated documents)
+ * Supported:
+ *
+ * updateAndReturn(model, where, values, options)
+ *
+ * updateAndReturn(model, {
+ *   where,
+ *   values,
+ *   include,
+ *   attributes,
+ *   sort
+ * })
+ *
+ * Returns:
+ * {
+ *   affectedCount: Number,
+ *   rows: Array
+ * }
  */
-const updateAndReturn = async (model, where = {}, values = {}, options = {}) => {
-  // If caller passed (model, options) with values inside
-  if (
+const updateAndReturn = async (
+  model,
+  where = {},
+  values = {},
+  options = {},
+) => {
+  // Handle (model, options) signature
+  const optionKeys = [
+    "populate",
+    "include",
+    "attributes",
+    "select",
+    "limit",
+    "sort",
+    "where",
+    "values",
+  ];
+
+  const looksLikeOptions =
     where &&
-    typeof where === 'object' &&
-    (where.populate ||
-      where.select ||
-      where.limit ||
-      where.sort ||
-      where.where ||
-      where.values) &&
-    (values == null || (typeof values === 'object' && Object.keys(values).length === 0))
-  ) {
+    typeof where === "object" &&
+    !Array.isArray(where) &&
+    optionKeys.some((key) =>
+      Object.prototype.hasOwnProperty.call(where, key),
+    ) &&
+    (!values || Object.keys(values).length === 0);
+
+  if (looksLikeOptions) {
     options = { ...where };
+
     where = options.where || {};
+
     values = options.values || {};
   }
 
   const { _id, id, ...updateValues } = values || {};
-  const result = await model.updateMany(
-    normalizeObjectIds(where || {}),
-    { $set: updateValues },
-    { new: true }
-  );
+
+  const normalizedWhere = normalizeObjectIds(where || {});
+
+  const result = await model.updateMany(normalizedWhere, {
+    $set: updateValues,
+  });
 
   const affectedCount = result.modifiedCount || 0;
 
-  // Fetch the updated documents to return them
   let rows = [];
+
   if (affectedCount > 0) {
-    rows = await findAll(model, normalizeObjectIds(where || {}));
+    rows = await findAll(model, normalizedWhere, options);
   }
 
-  return { affectedCount, rows };
+  return {
+    affectedCount,
+    rows,
+  };
 };
+
+/* --------------------------------------------------
+ * EXPORTS
+ * -------------------------------------------------- */
 
 module.exports = {
   createAndReturn,
@@ -285,5 +508,11 @@ module.exports = {
   count,
   remove,
   updateAndReturn,
-  mongoose
+
+  // Expose helpers if needed
+  normalizeObjectIds,
+  normalizeInclude,
+  applyPopulate,
+
+  mongoose,
 };

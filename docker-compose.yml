@@ -60,6 +60,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-${MONGO_ROOT_PASSWORD:-password}}
       DB_AUTH_SOURCE: ${DB_AUTH_SOURCE:-admin}
       DB_REPLICA_SET: ${DB_REPLICA_SET-rs0}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       PAYMENT_CREDENTIALS_ENCRYPTION_KEY: ${PAYMENT_CREDENTIALS_ENCRYPTION_KEY:-}
       SMS_API_IN_DOCKER: "true"
       ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
@@ -72,7 +73,6 @@ services:
       SCHOOLB_ADMIN_PASSWORD: ${SCHOOLB_ADMIN_PASSWORD:-schoolb-admin-local-only}
       SCHOOLB_STUDENT_PASSWORD: ${SCHOOLB_STUDENT_PASSWORD:-schoolb-student-local-only}
       SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-}
-      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       R2_ENABLED: ${R2_ENABLED:-false}
       R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
@@ -121,6 +121,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-${MONGO_ROOT_PASSWORD:-password}}
       DB_AUTH_SOURCE: ${DB_AUTH_SOURCE:-admin}
       DB_REPLICA_SET: ${DB_REPLICA_SET-rs0}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       SMS_API_IN_DOCKER: "true"
       ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
       JWT_SECRET: ${JWT_SECRET:-dev_secret_change_me}

@@ -20,10 +20,10 @@ export default {
         if (res.data && res.data.status === 'success') {
           const data = res.data.data || {};
           courses.value = data.courses || [];
-          // initialize subjects array placeholder
+          // initialize subjects array placeholder from courseSubjects
           for (const c of courses.value) {
             const cid = c._id;
-            c.subjects = c.subjects || [];
+            c.subjects = (c.courseSubjects || []).map(cs => cs.subject).filter(Boolean);
             expandedRows[cid] = expandedRows[cid] || false;
             loadingSubjects[cid] = false;
           }
@@ -45,6 +45,11 @@ export default {
     };
 
     const loadSubjects = async (courseId) => {
+      // subjects already loaded in getCourseList via courseSubjects
+      const course = courses.value.find(c => c._id == courseId);
+      if (course && course.subjects && course.subjects.length > 0) {
+        return;
+      }
       loadingSubjects[courseId] = true;
       try {
         const res = await api.get(`/courses/${courseId}/subjects`);

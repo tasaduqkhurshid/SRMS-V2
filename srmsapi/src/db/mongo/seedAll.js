@@ -9,8 +9,6 @@ async function run() {
   try {
     await db.connectDB();
     await seedSystem(db);
-    const provisionedSchools = await seedExistingSchools(db);
-    console.log(`School defaults checked for ${provisionedSchools} tenant(s)`);
 
     if (process.env.NODE_ENV === 'production') {
       console.log('Production seed completed (system and school defaults only)');
@@ -22,6 +20,8 @@ async function run() {
     }
 
     await seedDemo();
+    const provisionedSchools = await seedExistingSchools(db);
+    console.log(`School defaults checked for ${provisionedSchools} tenant(s)`);
   } catch (error) {
     console.error('Mongo seed failed:', error);
     process.exitCode = 1;
