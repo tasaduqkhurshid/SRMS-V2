@@ -131,13 +131,26 @@ const configuredLevel = SUPPORTED_LEVELS.hasOwnProperty(requestedLevel)
   ? requestedLevel
   : "info";
 
+const isTerminal = process.stdout.isTTY;
+
 const baseLogger = winston.createLogger({
   level: configuredLevel,
   levels: SUPPORTED_LEVELS,
   format: winston.format.combine(
-    winston.format.timestamp(),
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.errors({ stack: true }),
-    winston.format.json()
+    isTerminal 
+      ? winston.format.combine(
+          winston.format.colorize(),
+          winston.format.printf(({ level, message, timestamp, ...metadata }) => {
+            let msg = `${timestamp} [${level}]: ${message}`;
+            if (Object.keys(metadata).length > 0) {
+              msg += `\n${JSON.stringify(metadata, null, 2)}`;
+            }
+            return msg;
+          })
+        )
+      : winston.format.json()
   ),
   transports: [
     new winston.transports.Console({

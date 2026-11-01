@@ -4,7 +4,7 @@ export default `
   <div class="page-header mb-4">
     <div class="d-flex align-items-center justify-content-between">
       <div>
-        <h1 class="mb-1">
+        <h1 class="mb-1" style="font-size: 1.75rem;">
           <i class="fa-solid fa-landmark me-2"></i>School Profile
         </h1>
         <p class="text-muted mb-0">Manage your school details and information</p>
@@ -45,18 +45,27 @@ export default `
 
   <!-- Profile Content -->
   <div v-if="!loading" class="row">
-    <!-- Logo Section -->
-    <div class="col-lg-3 mb-4">
-      <div class="card sticky-top" style="top: 20px;">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <i v-if="!form.logo_url" class="fa-solid fa-school fa-5x text-secondary"></i>
-            <img v-else :src="form.logo_url" :alt="form.school_name" class="img-fluid" style="max-height: 180px;">
+    <!-- Left Column: Logo & Welcome Image -->
+    <div class="col-lg-3 mb-4 d-flex flex-column">
+      <!-- Logo Section -->
+      <div class="card sticky-top mb-3 flex-fill" style="top: 20px; min-height: 0;">
+        <div class="card-body text-center d-flex flex-column py-3">
+          <div class="mb-2 position-relative flex-fill d-flex align-items-center justify-content-center">
+            <i v-if="!logoPreview" class="fa-solid fa-school fa-4x text-secondary"></i>
+            <img v-else :src="logoPreview" :alt="form.school_name" class="img-fluid" style="max-height: 140px;">
           </div>
-          <h5>{{ form.school_name || 'School Name' }}</h5>
-          <p class="text-muted small mb-0">{{ form.abbreviation || 'N/A' }}</p>
-          <hr>
-          <p class="small text-muted mb-0">
+          <!-- Edit mode buttons below image -->
+          <div v-if="editMode" class="d-flex justify-content-center gap-2 mb-2">
+            <label class="btn btn-outline-secondary btn-sm p-2" title="Upload new logo">
+              <i class="fa-solid fa-upload"></i>
+              <input type="file" accept="image/jpeg,image/png,image/webp" @change="handleFileSelect($event, 'logo')" style="display: none;">
+            </label>
+            <button v-if="logoPreview" type="button" class="btn btn-outline-danger btn-sm p-2" @click="deleteBrandingAsset('logo')" title="Remove logo">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+          <hr class="my-2">
+          <p class="small text-muted mb-1">
             <i class="fa-solid fa-calendar me-2"></i>Established {{ form.year_established || 'N/A' }}
           </p>
           <p class="small text-muted mb-0">
@@ -64,17 +73,43 @@ export default `
           </p>
         </div>
       </div>
+
+      <!-- Welcome Image Section -->
+      <div class="card sticky-top flex-fill" style="top: 20px; min-height: 0;">
+        <div class="card-body text-center d-flex flex-column py-3">
+          <div class="mb-2 position-relative flex-fill d-flex align-items-center justify-content-center">
+            <i v-if="!welcomeImagePreview" class="fa-solid fa-image fa-4x text-secondary"></i>
+            <img v-else :src="welcomeImagePreview" :alt="form.school_name + ' Campus'" class="img-fluid" style="max-height: 140px; object-fit: cover;">
+          </div>
+          <!-- Edit mode buttons below image -->
+          <div v-if="editMode" class="d-flex justify-content-center gap-2 mb-2">
+            <label class="btn btn-outline-secondary btn-sm p-2" title="Upload new welcome image">
+              <i class="fa-solid fa-upload"></i>
+              <input type="file" accept="image/jpeg,image/png,image/webp" @change="handleFileSelect($event, 'welcome')" style="display: none;">
+            </label>
+            <button v-if="welcomeImagePreview" type="button" class="btn btn-outline-danger btn-sm p-2" @click="deleteBrandingAsset('welcome')" title="Remove welcome image">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+          <hr class="my-2">
+          <p class="small text-muted mb-1">Welcome / Campus Image</p>
+          <p class="small text-muted mb-0">Displayed on portals & marksheets</p>
+        </div>
+      </div>
     </div>
 
     <!-- Form Section -->
-    <div class="col-lg-9">
-      <div class="card">
-        <div class="card-header bg-light">
+    <div class="col-lg-9 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-light py-3 d-flex align-items-center justify-content-between">
           <h5 class="mb-0">
             <i class="fa-solid fa-info-circle me-2"></i>School Information
           </h5>
+          <span class="badge bg-primary rounded-pill" style="font-size: 0.75rem;">
+            <i class="fa-solid fa-users me-1"></i>{{ form.activeUsersCount || 0 }} Active Users
+          </span>
         </div>
-        <div class="card-body">
+        <div class="card-body py-3">
           <form @submit.prevent="saveSchoolData">
             <!-- Row 1: School Name & Abbreviation -->
             <div class="row mb-3">
@@ -85,6 +120,7 @@ export default `
                   type="text" 
                   class="form-control"
                   :readonly="!editMode"
+                  :tabindex="!editMode ? -1 : 0"
                   placeholder="Enter school name"
                   required
                 >
@@ -258,17 +294,28 @@ export default `
                       </div>
                     </div>
 
-                    <!-- Row 7: Logo URL -->
-                    <div class="mb-0">
+                    <!-- Row 7: Logo URL (only in edit mode) -->
+                    <div class="mb-3" v-if="editMode">
                       <label class="form-label"><strong>Logo URL</strong></label>
                       <input 
                         v-model="form.logo_url" 
                         type="url" 
                         class="form-control"
-                        :readonly="!editMode"
                         placeholder="https://example.com/logo.png"
                       >
                       <small class="form-text text-muted">Enter the URL of your school logo</small>
+                    </div>
+
+                    <!-- Row 8: Welcome/Campus Image URL (only in edit mode) -->
+                    <div class="mb-0" v-if="editMode">
+                      <label class="form-label"><strong>Welcome / Campus Image URL</strong></label>
+                      <input 
+                        v-model="form.campus_image_url" 
+                        type="url" 
+                        class="form-control"
+                        placeholder="https://example.com/campus.jpg"
+                      >
+                      <small class="form-text text-muted">Enter the URL of your school welcome/campus image</small>
                     </div>
                   </div>
                 </div>
@@ -299,11 +346,13 @@ export default `
               </button>
             </div>
           </form>
-        </div>
+</div>
       </div>
+    </div>
 
-      <!-- Additional Details Card - Accordion -->
-      <div class="card mt-4">
+    <!-- Quick Info Card - Full Width -->
+    <div class="col-12 mb-4">
+      <div class="card">
         <div class="accordion" id="accordionQuickInfo">
           <div class="accordion-item">
             <h2 class="accordion-header">
@@ -312,28 +361,28 @@ export default `
               </button>
             </h2>
             <div id="collapseQuickInfo" class="accordion-collapse collapse show" data-bs-parent="#accordionQuickInfo">
-              <div class="accordion-body">
+              <div class="accordion-body py-3">
                 <div class="row text-center">
                   <div class="col-md-4 border-end">
-                    <p class="text-muted small mb-2">Founded</p>
-                    <h5><i class="fa-solid fa-calendar me-2"></i>{{ form.year_established || '-' }}</h5>
+                    <p class="text-muted small mb-1">Founded</p>
+                    <h6 class="mb-0"><i class="fa-solid fa-calendar me-1"></i>{{ form.year_established || '-' }}</h6>
                   </div>
                   <div class="col-md-4 border-end">
-                    <p class="text-muted small mb-2">Board</p>
-                    <h5><i class="fa-solid fa-graduation-cap me-2"></i>{{ form.board || '-' }}</h5>
+                    <p class="text-muted small mb-1">Board</p>
+                    <h6 class="mb-0"><i class="fa-solid fa-graduation-cap me-1"></i>{{ form.board || '-' }}</h6>
                   </div>
                   <div class="col-md-4">
-                    <p class="text-muted small mb-2">Principal</p>
-                    <h5><i class="fa-solid fa-user-tie me-2"></i>{{ form.principal_name || '-' }}</h5>
+                    <p class="text-muted small mb-1">Principal</p>
+                    <h6 class="mb-0"><i class="fa-solid fa-user-tie me-1"></i>{{ form.principal_name || '-' }}</h6>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
     </div>
   </div>
-</div>
 
 <style scoped>
 .school-profile-container {
@@ -398,6 +447,23 @@ export default `
 
 input[readonly], textarea[readonly] {
   background-color: #f8f9fa !important;
+  cursor: not-allowed;
+  user-select: none;
+  pointer-events: none;
+  border-color: #dee2e6;
+  box-shadow: none !important;
+}
+
+input[readonly]:focus, textarea[readonly]:focus {
+  border-color: #dee2e6 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Prevent label from focusing readonly input */
+label:has(input[readonly]),
+label:has(textarea[readonly]) {
+  pointer-events: none;
   cursor: not-allowed;
 }
 
