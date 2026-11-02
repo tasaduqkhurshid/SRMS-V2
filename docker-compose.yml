@@ -7,25 +7,41 @@ services:
       - bash
       - -lc
       - |
-        keyfile=/tmp/mongodb-keyfile
-        if [ ! -f "$$keyfile" ]; then
-          dd if=/dev/urandom bs=756 count=1 2>/dev/null | base64 | tr -d '\n' > "$$keyfile"
-        fi
-        chmod 400 "$$keyfile"
-        chown mongodb:mongodb "$$keyfile"
-        exec /usr/local/bin/docker-entrypoint.sh mongod --replSet rs0 --keyFile "$$keyfile" --bind_ip_all --quiet
+        # Start mongod without auth first
+        /usr/local/bin/docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --noauth &
+        MONGOD_PID=$!
+        
+        # Wait for mongod to start
+        sleep 10
+        
+        # Initialize replica set and create user
+        mongosh --quiet --eval '
+          try { rs.status() } catch { 
+            rs.initiate({_id: "rs0", members: [{_id: 0, host: "mongodb:27017"}]});
+          }
+          db = db.getSiblingDB("admin");
+          try {
+            db.createUser({user: "admin", pwd: "password", roles: [{role: "root", db: "admin"}]});
+          } catch (e) {}
+        '
+        
+        # Restart with auth
+        kill $MONGOD_PID
+        wait $MONGOD_PID 2>/dev/null || true
+        
+        # Start with auth (no keyFile needed for single node)
+        exec /usr/local/bin/docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --auth
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${DB_USERNAME:-${MONGO_ROOT_USER:-admin}}
-      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:-${MONGO_ROOT_PASSWORD:-password}}
       MONGO_INITDB_DATABASE: ${DB_NAME:-school-system}
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval 'try { if (rs.status().myState === 1) quit(0); } catch (error) { try { rs.initiate({_id: \"rs0\", members: [{_id: 0, host: \"mongodb:27017\"}]}); } catch (initError) {} } quit(1)'"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 30s
     networks: [srms-internal]
 
   redis:

@@ -27,6 +27,8 @@ if [[ "$environment" != local && "$environment" != docker ]]; then
 fi
 
 environment_file="$ROOT_DIR/.env.local"
+# Allow running without .env.local if .env has all required values
+if [[ ! -f "$environment_file" ]]; then environment_file="$ROOT_DIR/.env"; fi
 API_SERVICE=sms-api-local
 if [[ "$environment" == docker ]]; then
   environment_file="$ROOT_DIR/.env.production"

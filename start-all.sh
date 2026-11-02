@@ -105,7 +105,11 @@ print_portal_urls() {
 case "$command" in
   up)
     if [[ "$environment" == local ]]; then
-      compose up --build -d --wait --remove-orphans sms-api-local sms-school-local sms-admin-local sms-student-local sms-nginx
+      if [[ "$db_type" == docker ]]; then
+        compose up --build -d --wait --remove-orphans mongodb sms-api-local sms-school-local sms-admin-local sms-student-local sms-nginx
+      else
+        compose up --build -d --wait --remove-orphans sms-api-local sms-school-local sms-admin-local sms-student-local sms-nginx
+      fi
     else
       compose up --build -d --wait --remove-orphans mongodb redis sms-api sms-school sms-admin sms-student sms-nginx
     fi
@@ -120,7 +124,11 @@ case "$command" in
     ;;
   restart)
     if [[ "$environment" == local ]]; then
-      compose up --build -d --force-recreate --wait --remove-orphans sms-api-local sms-school-local sms-admin-local sms-student-local sms-nginx
+      if [[ "$db_type" == docker ]]; then
+        compose up --build -d --force-recreate --wait --remove-orphans mongodb sms-api-local sms-school-local sms-admin-local sms-student-local sms-nginx
+      else
+        compose up --build -d --force-recreate --wait --remove-orphans sms-api-local sms-school-local sms-admin-local sms-student-local sms-nginx
+      fi
     else
       compose up --build -d --force-recreate --wait --remove-orphans mongodb redis sms-api sms-school sms-admin sms-student sms-nginx
     fi
