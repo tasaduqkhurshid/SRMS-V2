@@ -1,6 +1,6 @@
 import template from './SupportTicketDetailAdminTemplate.js'
-import { ref, reactive, computed, onMounted } from 'vue'
-const { useRoute, useRouter } = VueRouter
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 export default {
   name: 'SupportTicketDetailAdmin',

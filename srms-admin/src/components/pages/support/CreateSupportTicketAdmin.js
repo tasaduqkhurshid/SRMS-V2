@@ -1,5 +1,5 @@
-import { ref, reactive, onMounted } from 'vue'
-const { useRouter } = VueRouter
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 export default {
   name: 'CreateSupportTicketAdmin',
