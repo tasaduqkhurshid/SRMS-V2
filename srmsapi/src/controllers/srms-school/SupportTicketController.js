@@ -1,6 +1,6 @@
 "use strict";
 
-const SupportTicketService = require("../../services/SupportTicketService");
+const SupportTicketService = require("../../services/common/SupportTicketService");
 const { asyncHandler } = require("../../middleware/errorHandler");
 const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
 const { ValidationError, NotFoundError, AuthorizationError } = require("../../utils/applicationErrors");

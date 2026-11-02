@@ -1,6 +1,6 @@
 "use strict";
 
-const AcademicYearService = require("../../services/AcademicYearService");
+const AcademicYearService = require("../../services/srms-school/AcademicYearService");
 const logger = require("../../utils/logger");
 const { ValidationError, NotFoundError } = require("../../utils/applicationErrors");
 const { asyncHandler } = require("../../middleware/errorHandler");

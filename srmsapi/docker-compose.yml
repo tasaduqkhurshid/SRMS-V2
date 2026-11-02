@@ -10,8 +10,8 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?Set MONGO_ROOT_USER for the legacy API Compose stack}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD for the legacy API Compose stack}
       MONGO_INITDB_DATABASE: school-system
     volumes:
       - mongodb_data:/data/db
@@ -59,8 +59,8 @@ services:
       DB_HOST: mongodb
       DB_PORT: 27017
       DB_NAME: school-system
-      DB_USERNAME: admin
-      DB_PASSWORD: password
+      DB_USERNAME: ${MONGO_ROOT_USER:?Set MONGO_ROOT_USER for the legacy API Compose stack}
+      DB_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD for the legacy API Compose stack}
       DB_AUTH_SOURCE: admin
       # This legacy stack runs MongoDB standalone (no --replSet flag).
       DB_REPLICA_SET: ""
@@ -72,7 +72,7 @@ services:
       PORT: 5000
       ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
       DEFAULT_TENANT_SLUG: ${DEFAULT_TENANT_SLUG:-hanfia}
-      JWT_SECRET: ${JWT_SECRET:-dev_secret_change_me}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET for the legacy API Compose stack}
     volumes:
       - .:/app
       # A named volume is initialized from the image's installed dependencies.

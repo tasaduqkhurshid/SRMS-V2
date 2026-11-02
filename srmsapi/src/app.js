@@ -6,12 +6,12 @@ const { createClient } = require("redis");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const { authenticateJwt, requireSchoolAdmin } = require("./middleware/AuthService");
-const { resolveTenant, requirePlatformHost } = require("./middleware/tenantResolver");
-const PlatformAdminRoutes = require("./routes/platformAdminRoutes");
+const { resolveTenant } = require("./middleware/tenantResolver");
+const registerRoutes = require("./routes");
 const { errorHandler, notFoundHandler, asyncHandler } = require("./middleware/errorHandler");
 const logger = require("./utils/logger");
-const RedisCacheService = require("./services/RedisCacheService");
+const RedisCacheService = require("./services/common/RedisCacheService");
+const { getJwtSecret } = require("./config/jwt");
 
 const SENSITIVE_QUERY_PARAMS = new Set([
   "password",
@@ -65,7 +65,7 @@ app.use(cors({
 
 app.use(session({
   store: redisStore,
-  secret: process.env.JWT_SECRET || "dev_secret_change_me",
+  secret: getJwtSecret(),
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -91,32 +91,17 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "10mb", verify: (req, _res, buffer) => { req.rawBody = Buffer.from(buffer); } }));
 app.use(resolveTenant);
 
-const AuthRoutes = require("./routes/authRoutes");
-const SchoolPortalRoutes = require("./routes/srms-school");
-const StudentPortalRoutes = require("./routes/studentPortalRoutes");
-
 app.get("/api/health", (_req, res) => {
-  res.status(200).json({ status: "healthy" });
+  const databaseReady = require("mongoose").connection.readyState === 1;
+  const redisReady = redisClient.isReady;
+  const ready = databaseReady && redisReady;
+  res.status(ready ? 200 : 503).json({
+    status: ready ? "healthy" : "not_ready",
+    checks: { database: databaseReady, redis: redisReady },
+  });
 });
 
-// School-specific auth routes (accessible via school subdomain like hanfia.sms.local)
-app.use('/auth', AuthRoutes);
-
-// Public school branding route (no auth required, uses tenant resolution)
-app.use('/school', require("./routes/srms-school/schoolRoutes"));
-app.use('/api/school', require("./routes/srms-school/schoolRoutes"));
-
-const mountAdminApi = (prefix) => {
-  app.use(`${prefix}/auth`, AuthRoutes);
-  app.use(`${prefix}`, authenticateJwt, requireSchoolAdmin, SchoolPortalRoutes);
-};
-
-app.use('/api/admin/auth', requirePlatformHost, AuthRoutes);
-app.use('/api/admin', authenticateJwt, requireSchoolAdmin, SchoolPortalRoutes);
-app.use('/api/platform', authenticateJwt, require("./middleware/AuthService").requireSuperAdmin, PlatformAdminRoutes);
-mountAdminApi("/admin");
-mountAdminApi("");  // Also mount at root for nginx rewrites
-app.use("/api/student", StudentPortalRoutes);
+registerRoutes(app);
 
 app.use("/api", notFoundHandler);
 app.use(errorHandler);

@@ -4,15 +4,15 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const mongoose = require("mongoose");
-const { asMinor, accountDue, accountAvailable, schoolFilter, effectiveInstallments, allocateToInstallment, reverseCollectionAllocation, synchronizeAccountStructure } = require("../src/services/feeMath");
-const { assertPortalStudentAccess } = require("../src/services/feeAuthorization");
+const { asMinor, accountDue, accountAvailable, schoolFilter, effectiveInstallments, allocateToInstallment, reverseCollectionAllocation, synchronizeAccountStructure } = require("../src/services/common/feeMath");
+const { assertPortalStudentAccess } = require("../src/services/common/feeAuthorization");
 const PaymentProvider = require("../src/services/payment/PaymentProvider");
 const CredentialCrypto = require("../src/services/payment/credentialCrypto");
 const tenantScopePlugin = require("../src/middleware/tenantScopePlugin");
 const { runWithTenant } = require("../src/middleware/tenantContext");
 const { Gateway, SchoolGateway } = require("../src/db/models");
 const { GATEWAY_CATALOG, seedGatewayCatalog } = require("../src/db/mongo/seeders/gateway.seeder");
-const SchoolGatewayService = require("../src/services/SchoolGatewayService");
+const SchoolGatewayService = require("../src/services/common/SchoolGatewayService");
 
 test("money calculations use integer minor units and account for concessions, refunds, and reservations", () => {
   assert.equal(asMinor("12550"), 12550);

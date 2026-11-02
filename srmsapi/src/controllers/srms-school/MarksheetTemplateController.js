@@ -1,6 +1,6 @@
 "use strict";
 
-const MarksheetTemplateService = require("../../services/MarksheetTemplateService");
+const MarksheetTemplateService = require("../../services/srms-school/MarksheetTemplateService");
 const logger = require("../../utils/logger");
 const { ValidationError, NotFoundError } = require("../../utils/applicationErrors");
 const { asyncHandler } = require("../../middleware/errorHandler");

@@ -36,11 +36,20 @@ const getDatabaseConfig = () => {
   }
 
   const authSource = String(process.env.DB_AUTH_SOURCE || 'admin').trim();
+  if (username && !authSource) throw new Error('DB_AUTH_SOURCE is required when MongoDB authentication is enabled');
   // Respect an explicit empty value for standalone MongoDB. If unset, the
   // root Compose stack's Docker MongoDB uses rs0; host mode defaults to none.
   const replicaSet = process.env.DB_REPLICA_SET !== undefined
     ? String(process.env.DB_REPLICA_SET).trim()
     : type === 'docker' ? 'rs0' : '';
+  const directConnectionRaw = String(process.env.DB_DIRECT_CONNECTION || "false").trim().toLowerCase();
+  if (!["true", "false"].includes(directConnectionRaw)) {
+    throw new Error('DB_DIRECT_CONNECTION must be "true" or "false"');
+  }
+  const directConnection = directConnectionRaw === "true";
+  if (directConnection && replicaSet) {
+    throw new Error("DB_DIRECT_CONNECTION=true cannot be combined with DB_REPLICA_SET; set DB_REPLICA_SET empty for a direct host connection");
+  }
   const credentials = username
     ? `${encodeURIComponent(username)}:${encodeURIComponent(password)}@`
     : '';
@@ -48,6 +57,7 @@ const getDatabaseConfig = () => {
   const queryParams = new URLSearchParams();
   if (username) queryParams.set('authSource', authSource);
   if (replicaSet) queryParams.set('replicaSet', replicaSet);
+  if (directConnection) queryParams.set('directConnection', 'true');
   const authQuery = queryParams.size ? `?${queryParams.toString()}` : '';
   const uri = `mongodb://${credentials}${safeHost}:${port}/${encodeURIComponent(name)}${authQuery}`;
 
@@ -60,6 +70,7 @@ const getDatabaseConfig = () => {
     password,
     authSource,
     replicaSet,
+    directConnection,
     uri,
     summary: { type, host, port, database: name },
   });

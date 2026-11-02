@@ -1,4 +1,5 @@
 require("dotenv").config();
+require("./src/config/jwt").validateRuntimeConfig();
 const logger = require("./src/utils/logger");
 const app = require("./src/app");
 const db = require("./src/db/models");

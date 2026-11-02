@@ -16,6 +16,6 @@ export default defineConfig({
     allowedHosts: [`.${process.env.ROOT_DOMAIN || 'sms.local'}`],
     watch: { usePolling: process.env.CHOKIDAR_USEPOLLING === 'true' },
     port: 5173,
-    proxy: { '/api': { target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:5000', changeOrigin: true } },
+    proxy: { '/api': { target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:5000', changeOrigin: false } },
   },
 });

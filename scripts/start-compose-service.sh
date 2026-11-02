@@ -28,7 +28,10 @@ done
 
 case "$environment" in docker|local) ;; *) echo "Invalid environment '$environment'; choose docker or local." >&2; exit 2 ;; esac
 environment_file="$ROOT_DIR/.env.production"
-if [[ "$environment" == local ]]; then environment_file="$ROOT_DIR/.env.local"; fi
+if [[ "$environment" == local ]]; then
+  environment_file="$ROOT_DIR/.env.local"
+  [[ -f "$environment_file" ]] || environment_file="$ROOT_DIR/.env"
+fi
 [[ -f "$ROOT_DIR/.env" ]] || { echo 'Missing .env. Copy .env.example to .env and configure local credentials.' >&2; exit 2; }
 [[ -f "$environment_file" ]] || { echo "Missing environment config: $environment_file" >&2; exit 2; }
 case "$service_key" in

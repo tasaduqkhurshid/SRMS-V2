@@ -1,6 +1,6 @@
 "use strict";
 
-const ExamService = require("../../services/ExamService");
+const ExamService = require("../../services/srms-school/ExamService");
 const logger = require("../../utils/logger");
 const { ValidationError, NotFoundError } = require("../../utils/applicationErrors");
 const { asyncHandler } = require("../../middleware/errorHandler");

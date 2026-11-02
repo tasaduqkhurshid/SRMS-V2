@@ -24,19 +24,29 @@ if [[ "$environment" != docker && "$environment" != local && "$environment" != p
   echo "Invalid environment '$environment'; choose local, docker, or production." >&2
   exit 2
 fi
-# For production, use docker profile with production Nginx config
-if [[ "$environment" == production ]]; then
-  environment_file="$ROOT_DIR/.env.production"
-else
-  environment_file="$ROOT_DIR/.env"
+# Production uses its own routing file and never reads the local .env file.
+case "$environment" in
+  production|docker) environment_file="$ROOT_DIR/.env.production" ;;
+  local)
+    environment_file="$ROOT_DIR/.env.local"
+    [[ -f "$environment_file" ]] || environment_file="$ROOT_DIR/.env"
+    ;;
+esac
+if [[ "$environment" != production ]]; then
+  [[ -f "$ROOT_DIR/.env" ]] || { echo 'Missing .env. Copy .env.example to .env and configure credentials.' >&2; exit 2; }
 fi
-[[ -f "$ROOT_DIR/.env" ]] || { echo 'Missing .env. Copy .env.example to .env and configure credentials.' >&2; exit 2; }
 [[ -f "$environment_file" ]] || { echo "Missing environment config: $environment_file" >&2; exit 2; }
 command -v docker >/dev/null 2>&1 || { echo 'Docker is required.' >&2; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo 'Docker Compose v2 is required.' >&2; exit 1; }
 case "$command" in config|services|help|-h|--help) ;; *) docker info >/dev/null 2>&1 || { echo 'Docker is not running or your user cannot access the Docker daemon.' >&2; exit 1; } ;; esac
 
-compose_base() { docker compose --env-file "$ROOT_DIR/.env" --env-file "$environment_file" "$@"; }
+compose_base() {
+  if [[ "$environment" == production ]]; then
+    NODE_ENV=production docker compose --env-file "$environment_file" "$@"
+  else
+    docker compose --env-file "$ROOT_DIR/.env" --env-file "$environment_file" "$@"
+  fi
+}
 compose_environment="$(compose_base config --environment)"
 compose_env_value() {
   local name="$1"
@@ -50,7 +60,7 @@ if [[ "$db_type" != docker && "$db_type" != local ]]; then
   exit 2
 fi
 profiles=()
-if [[ "$db_type" == docker || "$environment" == production ]]; then
+if [[ "$db_type" == docker ]]; then
   profiles+=(--profile docker)
 fi
 if [[ "$environment" == local ]]; then
@@ -111,7 +121,11 @@ case "$command" in
         compose up --build -d --wait --remove-orphans sms-api-local sms-school-local sms-admin-local sms-student-local sms-nginx
       fi
     else
-      compose up --build -d --wait --remove-orphans mongodb redis sms-api sms-school sms-admin sms-student sms-nginx
+      if [[ "$db_type" == docker ]]; then
+        compose up --build -d --wait --remove-orphans mongodb redis sms-api sms-school sms-admin sms-student sms-nginx
+      else
+        compose up --build -d --wait --remove-orphans redis sms-api sms-school sms-admin sms-student sms-nginx
+      fi
     fi
     # Nginx expands the mounted config template only when its container starts.
     # Recreate just the proxy so edits to that template take effect on every run.
@@ -130,7 +144,11 @@ case "$command" in
         compose up --build -d --force-recreate --wait --remove-orphans sms-api-local sms-school-local sms-admin-local sms-student-local sms-nginx
       fi
     else
-      compose up --build -d --force-recreate --wait --remove-orphans mongodb redis sms-api sms-school sms-admin sms-student sms-nginx
+      if [[ "$db_type" == docker ]]; then
+        compose up --build -d --force-recreate --wait --remove-orphans mongodb redis sms-api sms-school sms-admin sms-student sms-nginx
+      else
+        compose up --build -d --force-recreate --wait --remove-orphans redis sms-api sms-school sms-admin sms-student sms-nginx
+      fi
     fi
     compose ps
     print_portal_urls

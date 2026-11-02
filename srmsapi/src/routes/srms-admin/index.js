@@ -1,0 +1,48 @@
+const router = require('express').Router();
+const GatewayController = require('../../controllers/srms-admin/platformGatewayController');
+const controller = require('../../controllers/srms-admin/platformSchoolController');
+const brandingController = require('../../controllers/common/platformBrandingController');
+const FeeController = require('../../controllers/srms-school/FeeController');
+const supportTicketAdminRoutes = require('./supportTicketAdminRoutes');
+const multer = require('multer');
+
+const allowedBrandingTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const brandingUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, callback) => callback(
+    allowedBrandingTypes.has(file.mimetype)
+      ? null
+      : new Error('Only JPEG, PNG, and WebP images are allowed'),
+    allowedBrandingTypes.has(file.mimetype),
+  ),
+}).single('file');
+
+const uploadBrandingImage = (req, res, next) => brandingUpload(req, res, (error) => {
+  if (!error) return next();
+  const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+  return res.status(status).json({ success: false, message: status === 413 ? 'Branding images must be 5 MB or smaller' : error.message });
+});
+
+router.get('/payment-gateways', GatewayController.list);
+router.patch('/payment-gateways/:code', GatewayController.update);
+router.get('/schools', controller.listSchools);
+router.post('/schools', controller.createSchool);
+router.get('/schools/:id', controller.getSchool);
+router.patch('/schools/:id', controller.updateSchool);
+router.get('/schools/:id/payment-settings', FeeController.onlineSettings);
+router.patch('/schools/:id/payment-settings', FeeController.updateOnlineSettings);
+router.get('/schools/:id/payment-gateways', GatewayController.schoolGateways);
+router.put('/schools/:id/payment-gateways/:code', GatewayController.configureSchoolGateway);
+router.patch('/schools/:id/payment-gateways/:code/enabled', GatewayController.setSchoolGatewayEnabled);
+router.post('/schools/:id/payment-gateways/:code/validate', GatewayController.validateSchoolGateway);
+router.get('/schools/:id/admins', controller.listAdministrators);
+router.post('/schools/:id/admins', controller.createAdministrator);
+router.patch('/schools/:id/admins/:adminId', controller.updateAdministrator);
+router.delete('/schools/:id/admins/:adminId', controller.deleteAdministrator);
+router.patch('/schools/:id/admins/:adminId/password', controller.updateAdministratorPassword);
+router.post('/schools/:schoolId/branding/:asset', uploadBrandingImage, brandingController.uploadBranding);
+router.delete('/schools/:schoolId/branding/:asset', brandingController.deleteBrandingAsset);
+router.use('/', supportTicketAdminRoutes);
+
+module.exports = router;

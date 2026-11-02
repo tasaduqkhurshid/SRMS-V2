@@ -1,5 +1,5 @@
 "use strict";
-const Service = require("../../services/SchoolGatewayService");
+const Service = require("../../services/common/SchoolGatewayService");
 const { asyncHandler } = require("../../middleware/errorHandler");
 const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
 const send = (res, next, promise, message, statusCode = 200) => promise.then((data) => sendSuccessJsonResponse(res, { statusCode, message, data })).catch(next);

@@ -1,11 +1,11 @@
 "use strict";
 
-const StudentService = require("../../services/StudentService");
+const StudentService = require("../../services/common/StudentService");
 const { STATUS } = require("../../constants/status");
 const logger = require("../../utils/logger");
 const bcrypt = require("bcryptjs");
 const { Student } = require("../../db/models");
-const { normalizeImageToFile } = require("../../services/ImageService");
+const { normalizeImageToFile } = require("../../services/common/ImageService");
 const { ValidationError, NotFoundError } = require("../../utils/applicationErrors");
 const { asyncHandler } = require("../../middleware/errorHandler");
 const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");

@@ -1,6 +1,6 @@
 "use strict";
 
-const SchoolService = require("../../services/SchoolService");
+const SchoolService = require("../../services/common/SchoolService");
 const storage = require("../../services/storage/storage.service");
 const { School } = require("../../db/models");
 const logger = require("../../utils/logger");

@@ -23,6 +23,6 @@ router.use('/results', resultRoutes);
 router.use('/marksheet-templates', marksheetTemplateRoutes);
 router.use('/fees', feeRoutes);
 router.use('/options', dynamicOptionRoutes);
-router.use('/support-tickets', supportTicketRoutes);
+router.use('/', supportTicketRoutes);
 
 module.exports = router;

@@ -139,9 +139,11 @@ Linux/macOS: `/etc/hosts`. Windows: `C:\Windows\System32\drivers\etc\hosts` (edi
 
 ```sh
 cp .env.example .env
-# Edit .env before production; all example credentials are local-only.
+# Configure local development values; these defaults are not for production.
 ./start-all.sh up
 ```
+
+For production, `./start-all.sh -e production up` reads routing values from `.env.production` and does not load the local `.env`. Inject production database credentials, `JWT_SECRET`, `SUPER_ADMIN_PASSWORD`, and any enabled integration secrets through the deployment environment/secret manager. The `.env.production` file in this repository contains non-secret Nginx routing defaults only.
 
 Equivalent direct Docker-mode commands:
 
@@ -160,7 +162,9 @@ The same root `docker-compose.yml` supports local development. Local is the defa
 
 The app runtime defaults to `local`; `-e docker` selects the production-style runtime. `DB_TYPE` independently selects Docker MongoDB (`docker`, the default) or host MongoDB (`local`).
 
-The startup scripts accept `local` (default) or `docker` through `-e`/`--env` or `ENVIRONMENT`. They load shared credentials and application settings from `.env`, then load one routing file: `.env.local` for `local` or `.env.production` for `docker`. Both files use the same `NGINX_*` names. Update the selected file if a Compose service name or internal port changes. `DB_TYPE` is independent: `docker` uses the Compose MongoDB service, while `local` uses host MongoDB.
+The startup scripts accept `local` (default) or `docker` through `-e`/`--env` or `ENVIRONMENT`. They load shared credentials and application settings from `.env`, then load one routing file: `.env.local` for `local` (if present; otherwise `.env`) or `.env.production` for `docker`. Both files use the same `NGINX_*` names. Update the selected file if a Compose service name or internal port changes. `DB_TYPE` is independent: `docker` uses the Compose MongoDB service, while `local` uses host MongoDB.
+
+For `./start-all.sh -e production`, the runner forces `NODE_ENV=production` and does not load the local `.env`. API startup then requires a non-placeholder `JWT_SECRET` of at least 32 characters, non-default MongoDB credentials (password at least 16 characters), and `DB_REPLICA_SET`; when R2 is enabled, its account, access key, secret key, and private bucket are required. Set `DB_TYPE=docker` for the Compose replica set, or `DB_TYPE=local` plus an explicit reachable `DB_HOST` for an external/hosted database. Keep production credentials in the deployment's secret/environment injection, not in tracked templates. Production Nginx in this repository is HTTP-only; terminate TLS at an external load balancer or configure certificates at the edge.
 
 | Variable | Purpose and valid values |
 | --- | --- |
@@ -196,12 +200,12 @@ DB_HOST=
 DB_PORT=27017
 DB_NAME=school-system
 DB_USERNAME=srms_admin
-DB_PASSWORD=password
+DB_PASSWORD=YOUR_UNIQUE_DATABASE_PASSWORD
 DB_AUTH_SOURCE=admin
 DB_REPLICA_SET=rs0
 ```
 
-With `DB_TYPE=docker`, the startup scripts activate the `docker` profile, start the MongoDB service, and the API connects to `mongodb:27017` as replica set `rs0`. The database port is not published to the host. Connect GUI tools to the Docker database only if you deliberately publish that port.
+With `DB_TYPE=docker`, the startup scripts activate the `docker` profile, start MongoDB, and a containerized API connects to `mongodb:27017` as replica set `rs0`. For a host-run API or local database GUI, the optional `MONGO_HOST_PORT` mapping (default 27018) binds only to `127.0.0.1`. Configure the host API with `DB_TYPE=local`, `DB_HOST=127.0.0.1`, `DB_PORT` equal to `MONGO_HOST_PORT`, `DB_DIRECT_CONNECTION=true`, and an empty `DB_REPLICA_SET`; this bypasses Docker-only replica-set member DNS discovery. Keep `DB_DIRECT_CONNECTION=false` and `DB_REPLICA_SET=rs0` for the containerized API so transaction-aware replica-set discovery remains enabled. For host-run API session/cache readiness, use `REDIS_HOST=127.0.0.1`, `REDIS_PORT` equal to `REDIS_HOST_PORT`, and `REDIS_URL=redis://127.0.0.1:6380` when using its default published port. Inside the Docker network, MongoDB and Redis use ports 27017 and 6379 respectively.
 
 **Connection string for MongoDB Compass (Docker Mode):**
 ```
@@ -217,7 +221,7 @@ DB_HOST=
 DB_PORT=27017
 DB_NAME=school-system
 DB_USERNAME=srms_admin
-DB_PASSWORD=password
+DB_PASSWORD=YOUR_UNIQUE_DATABASE_PASSWORD
 DB_AUTH_SOURCE=admin
 DB_REPLICA_SET=
 ```
@@ -289,7 +293,9 @@ Only `sms-nginx` publishes a port (default HTTP port 80). Set `HTTP_PORT` if por
 - Student API: `http://hanfia.sms.local/api/student/...`
 - School B routes use `schoolb.sms.local` with the same apps and containers. `admin.sms.local` serves the Super Admin Portal and its `/api/admin/*` API.
 
-Nginx selects apps by path/hostname. `admin.<ROOT_DOMAIN>` is routed to `sms-admin` and preserves `/api/admin/*` to `sms-api`; `/admin/*` is forwarded to `sms-school` with the `/admin` prefix removed; `/api/student/*` is preserved and sent to `sms-api`; legacy school-admin `/api/*` requests have only `/api` stripped to reach the existing Express route paths; other tenant-host paths go to the student SPA. Unknown hostnames are rejected by the default Nginx server. `/api/*` has no SPA fallback.
+Nginx selects apps by path/hostname. `admin.<ROOT_DOMAIN>` is routed to `sms-admin` and preserves `/api/admin/*` to platform-only Express routes; `/admin/*` is forwarded to `sms-school` with the `/admin` prefix removed; `/api/student/*` is preserved and sent to `sms-api`. Legacy school-admin `/api/admin/*` requests on tenant hosts are rewritten to the school-only `/admin/*` Express mount, while the canonical school API namespace is `/api/school-admin/*`. Other legacy school `/api/*` calls retain their existing rewrites. Other tenant-host paths go to the student SPA. Unknown hostnames are rejected by the default Nginx server. `/api/*` has no SPA fallback. The three Vite proxies preserve the incoming Host header so tenant resolution and platform-host authorization continue to work in development.
+
+Portal API boundaries are enforced in Express as well as by the host-based proxy: `/api/admin/*` requires the `admin.<ROOT_DOMAIN>` platform host and a Super Admin JWT; `/api/school-admin/*` requires a school-admin JWT matching the resolved tenant; and `/api/student/*` is reserved for student/linked-parent endpoints. School support-ticket endpoints are exposed once at `/support-tickets/*` and `/support-ticket-subjects`, `/support-ticket-services`, and `/support-ticket-statuses` behind the school-admin guard.
 
 The edge proxy preserves `Host` and sets `X-Forwarded-Host`, `X-Forwarded-Proto`, `X-Real-IP`, and `X-Forwarded-For`. Express trusts exactly one configured proxy hop (`TRUST_PROXY=1`). `ROOT_DOMAIN` defaults to `sms.local` and is configurable; do not bake `.local` or a school name into application code.
 
@@ -303,14 +309,15 @@ Migration backfills legacy school slugs and associates legacy results with the s
 
 ## Local seeded accounts
 
-With the default local `.env.example` and `SEED_DEMO_DATA=true`:
+After copying `.env.example` to `.env`, configure unique local-only passwords/PINs for every demo account, then opt in with `SEED_DEMO_DATA=true`:
 
-- Hanfia School Admin: `hanfia-admin` / `hanfia-admin-local-only`
-- Hanfia demo Student: `STU001` / `student-local-only` (DOB: `14-05-2012`)
-- School B School Admin: `schoolb-admin` / `schoolb-admin-local-only`
-- School B demo Student: `STU001` / `schoolb-student-local-only` (DOB: `22-09-2011`)
+- Hanfia School Admin username: `hanfia-admin` (password: `HANFIA_ADMIN_PASSWORD`)
+- Hanfia demo Student ID: `STU001` (password: `DEMO_STUDENT_PASSWORD`; DOB: `14-05-2012`)
+- School B School Admin username: `schoolb-admin` (password: `SCHOOLB_ADMIN_PASSWORD`)
+- School B demo Student ID: `STU001` (password: `SCHOOLB_STUDENT_PASSWORD`; DOB: `22-09-2011`)
+- Legacy HIT School Admin username: `admin` (password: `HIT_ADMIN_PASSWORD`; PIN: `HIT_ADMIN_PIN`)
 
-These passwords are deliberately for local testing only. Set strong secrets in `.env`, use `SEED_DEMO_DATA=false` for production, and provision real user credentials. The existing legacy seed also includes a development `HIT` school/admin; do not use its default credentials in production.
+The tracked environment template contains placeholders only. Set local test passwords in the ignored `.env`; seeded credentials are not printed to logs. Use `SEED_DEMO_DATA=false` for production and provision real user credentials. The existing legacy seed also includes a development `HIT` school/admin; do not use its default credentials in production.
 
 Student passwords are bcrypt-hashed in `students.password_hash` (excluded from normal Mongoose reads/responses). School Admins can provide/reset a student's portal password in the existing Student form. Student login resolves Student ID/admission number/roll number inside the hostname-resolved school only.
 
@@ -318,7 +325,7 @@ School slugs cannot be changed through school edit. Reserved names include `admi
 
 ## Super Admin access
 
-With `SEED_DEMO_DATA=true`, sign in at `http://admin.sms.local` using `platform-admin` and `SUPER_ADMIN_PASSWORD` (the local example password is `platform-admin-local-only`). Change this password before deployment. The portal calls only `/api/admin/*`; API authorization requires a Super Admin JWT and the `admin.<ROOT_DOMAIN>` hostname.
+With `SEED_DEMO_DATA=true`, sign in at `http://admin.sms.local` using `platform-admin` and the local `SUPER_ADMIN_PASSWORD` value. The tracked environment template supplies a placeholder only. The portal calls only `/api/admin/*`; API authorization requires a Super Admin JWT and the `admin.<ROOT_DOMAIN>` hostname.
 
 ## Cloudflare R2 school branding
 

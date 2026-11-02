@@ -8,36 +8,67 @@ services:
       - -lc
       - |
         # Start mongod without auth first
+        if [[ -z "$$MONGO_APP_USERNAME" || -z "$$MONGO_APP_PASSWORD" ]]; then
+          echo "DB_USERNAME and DB_PASSWORD (or MONGO_ROOT_USER and MONGO_ROOT_PASSWORD) are required for the Docker MongoDB profile." >&2
+          exit 1
+        fi
         /usr/local/bin/docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --noauth &
         MONGOD_PID=$!
         
         # Wait for mongod to start
         sleep 10
         
-        # Initialize replica set and create user
-        mongosh --quiet --eval '
+        # Initialize replica set and create the same configurable account used by the API
+        MONGO_APP_USERNAME_B64="$$(printf '%s' "$$MONGO_APP_USERNAME" | base64 | tr -d '\n')"
+        MONGO_APP_PASSWORD_B64="$$(printf '%s' "$$MONGO_APP_PASSWORD" | base64 | tr -d '\n')"
+        MONGO_APP_AUTH_SOURCE_B64="$$(printf '%s' "$$MONGO_APP_AUTH_SOURCE" | base64 | tr -d '\n')"
+        mongosh --quiet --eval "
           try { rs.status() } catch { 
-            rs.initiate({_id: "rs0", members: [{_id: 0, host: "mongodb:27017"}]});
+            rs.initiate({_id: \"rs0\", members: [{_id: 0, host: \"mongodb:27017\"}]});
           }
-          db = db.getSiblingDB("admin");
-          try {
-            db.createUser({user: "admin", pwd: "password", roles: [{role: "root", db: "admin"}]});
-          } catch (e) {}
-        '
+          let primaryReady = false;
+          for (let attempt = 0; attempt < 30; attempt += 1) {
+            try { if (db.hello().isWritablePrimary) { primaryReady = true; break; } } catch (e) {}
+            sleep(1000);
+          }
+          if (!primaryReady) quit(1);
+          const appUsername = Buffer.from('$${MONGO_APP_USERNAME_B64}', 'base64').toString('utf8');
+          const appPassword = Buffer.from('$${MONGO_APP_PASSWORD_B64}', 'base64').toString('utf8');
+          const authSource = Buffer.from('$${MONGO_APP_AUTH_SOURCE_B64}', 'base64').toString('utf8');
+          db = db.getSiblingDB(authSource);
+          const appRoles = [{role: \"root\", db: \"admin\"}];
+          if (db.getUser(appUsername)) {
+            db.updateUser(appUsername, {pwd: appPassword, roles: appRoles});
+          } else {
+            db.createUser({user: appUsername, pwd: appPassword, roles: appRoles});
+          }
+        "
         
         # Restart with auth
-        kill $MONGOD_PID
-        wait $MONGOD_PID 2>/dev/null || true
+        kill $$MONGOD_PID
+        wait $$MONGOD_PID 2>/dev/null || true
         
-        # Start with auth (no keyFile needed for single node)
-        exec /usr/local/bin/docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --auth
+        # Replica-set members require a shared keyfile when authorization is enabled.
+        KEYFILE=/data/configdb/replica.key
+        if [[ ! -s "$$KEYFILE" ]]; then
+          umask 077
+          openssl rand -base64 756 > "$$KEYFILE"
+          chown mongodb:mongodb "$$KEYFILE"
+          chmod 400 "$$KEYFILE"
+        fi
+        exec /usr/local/bin/docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --auth --keyFile "$$KEYFILE"
     environment:
+      MONGO_APP_USERNAME: ${DB_USERNAME:-${MONGO_ROOT_USER:-srms_admin}}
+      MONGO_APP_PASSWORD: ${DB_PASSWORD:-${MONGO_ROOT_PASSWORD:-}}
+      MONGO_APP_AUTH_SOURCE: ${DB_AUTH_SOURCE:-admin}
       MONGO_INITDB_DATABASE: ${DB_NAME:-school-system}
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
+    ports:
+      - "127.0.0.1:${MONGO_HOST_PORT:-27018}:27017"
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD-SHELL", "mongosh --quiet --username \"$$MONGO_APP_USERNAME\" --password \"$$MONGO_APP_PASSWORD\" --authenticationDatabase \"$$MONGO_APP_AUTH_SOURCE\" --eval 'const s=rs.status(); if (db.adminCommand(\"ping\").ok !== 1 || s.ok !== 1 || !db.hello().isWritablePrimary) quit(1)' "]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -50,6 +81,8 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6380}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -62,7 +95,7 @@ services:
       context: ./srmsapi
       dockerfile: Dockerfile
     restart: unless-stopped
-    command: ["sh", "-c", "npm run migrate && npm run seed && npm start"]
+    command: ["sh", "-c", "node -e 'require(\"./src/config/jwt\").validateRuntimeConfig()' && npm run migrate && npm run seed && npm start"]
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -72,22 +105,28 @@ services:
       DB_HOST: ${DB_HOST:-}
       DB_PORT: ${DB_PORT:-27017}
       DB_NAME: ${DB_NAME:-school-system}
-      DB_USERNAME: ${DB_USERNAME:-${MONGO_ROOT_USER:-admin}}
-      DB_PASSWORD: ${DB_PASSWORD:-${MONGO_ROOT_PASSWORD:-password}}
+      DB_USERNAME: ${DB_USERNAME:-${MONGO_ROOT_USER:-srms_admin}}
+      DB_PASSWORD: ${DB_PASSWORD:-${MONGO_ROOT_PASSWORD:-}}
       DB_AUTH_SOURCE: ${DB_AUTH_SOURCE:-admin}
       DB_REPLICA_SET: ${DB_REPLICA_SET-rs0}
+      DB_DIRECT_CONNECTION: ${DB_DIRECT_CONNECTION:-false}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-platform-admin@sms.local}
+      DEFAULT_TIMEZONE: ${DEFAULT_TIMEZONE:-Asia/Kolkata}
+      DEBUG_ERRORS: ${DEBUG_ERRORS:-false}
       PAYMENT_CREDENTIALS_ENCRYPTION_KEY: ${PAYMENT_CREDENTIALS_ENCRYPTION_KEY:-}
       SMS_API_IN_DOCKER: "true"
       ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
-      JWT_SECRET: ${JWT_SECRET:-dev_secret_change_me}
+      JWT_SECRET: ${JWT_SECRET:-}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0
-      HANFIA_ADMIN_PASSWORD: ${HANFIA_ADMIN_PASSWORD:-hanfia-admin-local-only}
-      DEMO_STUDENT_PASSWORD: ${DEMO_STUDENT_PASSWORD:-student-local-only}
-      SCHOOLB_ADMIN_PASSWORD: ${SCHOOLB_ADMIN_PASSWORD:-schoolb-admin-local-only}
-      SCHOOLB_STUDENT_PASSWORD: ${SCHOOLB_STUDENT_PASSWORD:-schoolb-student-local-only}
+      HANFIA_ADMIN_PASSWORD: ${HANFIA_ADMIN_PASSWORD:-}
+      DEMO_STUDENT_PASSWORD: ${DEMO_STUDENT_PASSWORD:-}
+      SCHOOLB_ADMIN_PASSWORD: ${SCHOOLB_ADMIN_PASSWORD:-}
+      SCHOOLB_STUDENT_PASSWORD: ${SCHOOLB_STUDENT_PASSWORD:-}
+      HIT_ADMIN_PASSWORD: ${HIT_ADMIN_PASSWORD:-}
+      HIT_ADMIN_PIN: ${HIT_ADMIN_PIN:-}
       SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-}
       R2_ENABLED: ${R2_ENABLED:-false}
       R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
@@ -132,17 +171,27 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       PORT: 5000
       DB_TYPE: ${DB_TYPE:-local}
-      DB_HOST: ${DB_HOST}
+      DB_HOST: ${DB_HOST:-}
       DB_PORT: ${DB_PORT:-27017}
       DB_NAME: ${DB_NAME:-school-system}
       DB_USERNAME: ${DB_USERNAME:-srms_admin}
-      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_PASSWORD: ${DB_PASSWORD:-}
       DB_AUTH_SOURCE: ${DB_AUTH_SOURCE:-school-system}
       DB_REPLICA_SET: ${DB_REPLICA_SET:-}
+      DB_DIRECT_CONNECTION: ${DB_DIRECT_CONNECTION:-false}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      HANFIA_ADMIN_PASSWORD: ${HANFIA_ADMIN_PASSWORD:-}
+      DEMO_STUDENT_PASSWORD: ${DEMO_STUDENT_PASSWORD:-}
+      SCHOOLB_ADMIN_PASSWORD: ${SCHOOLB_ADMIN_PASSWORD:-}
+      SCHOOLB_STUDENT_PASSWORD: ${SCHOOLB_STUDENT_PASSWORD:-}
+      HIT_ADMIN_PASSWORD: ${HIT_ADMIN_PASSWORD:-}
+      HIT_ADMIN_PIN: ${HIT_ADMIN_PIN:-}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-platform-admin@sms.local}
+      DEFAULT_TIMEZONE: ${DEFAULT_TIMEZONE:-Asia/Kolkata}
+      DEBUG_ERRORS: ${DEBUG_ERRORS:-false}
       SMS_API_IN_DOCKER: "true"
       ROOT_DOMAIN: ${ROOT_DOMAIN:-sms.local}
-      JWT_SECRET: ${JWT_SECRET:-dev_secret_change_me}
+      JWT_SECRET: ${JWT_SECRET:-}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0
@@ -161,6 +210,9 @@ services:
       - ./srmsapi:/app
       - api_node_modules:/app/node_modules
     depends_on:
+      mongodb:
+        condition: service_healthy
+        required: false
       redis:
         condition: service_healthy
     healthcheck:

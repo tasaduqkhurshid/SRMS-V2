@@ -1,6 +1,6 @@
 "use strict";
 
-const FeeService = require("../../services/FeeService");
+const FeeService = require("../../services/common/FeeService");
 const { asyncHandler } = require("../../middleware/errorHandler");
 const { sendSuccessJsonResponse } = require("../../utils/responseHelpers");
 const { ValidationError } = require("../../utils/applicationErrors");

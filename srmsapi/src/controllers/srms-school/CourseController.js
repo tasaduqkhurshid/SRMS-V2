@@ -1,6 +1,6 @@
 "use strict";
 
-const CourseService = require("../../services/CourseService");
+const CourseService = require("../../services/common/CourseService");
 const { STATUS } = require("../../constants/status");
 const logger = require("../../utils/logger");
 const { ValidationError, NotFoundError } = require("../../utils/applicationErrors");

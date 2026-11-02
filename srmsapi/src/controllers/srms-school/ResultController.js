@@ -1,6 +1,6 @@
 "use strict";
 
-const ResultService = require("../../services/ResultService");
+const ResultService = require("../../services/srms-school/ResultService");
 const logger = require("../../utils/logger");
 const { STATUS } = require("../../constants/status");
 const { ValidationError, NotFoundError } = require("../../utils/applicationErrors");

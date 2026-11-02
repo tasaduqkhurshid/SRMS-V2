@@ -12,6 +12,8 @@ const db = {};
 const schemas = require("../schemas");
 Object.assign(db, schemas);
 
+const redactMongoUri = (message) => String(message || "").replace(/mongodb(?:\+srv)?:\/\/[^\s"']+/gi, "[MongoDB URI redacted]");
+
 const connectDB = async () => {
   let config;
   try {
@@ -21,7 +23,7 @@ const connectDB = async () => {
     logger.info("Connected to MongoDB successfully.");
   } catch (error) {
     const target = config ? ` (${config.type} at ${config.host}:${config.port}/${config.name})` : '';
-    logger.error(`MongoDB connection failed${target}:`, error.message);
+    logger.error(`MongoDB connection failed${target}:`, redactMongoUri(error.message));
     throw error;
   }
 };
@@ -31,7 +33,7 @@ mongoose.connection.on("disconnected", () => {
 });
 
 mongoose.connection.on("error", (error) => {
-  logger.error("MongoDB connection error:", error.message);
+  logger.error("MongoDB connection error:", redactMongoUri(error.message));
 });
 
 db.connectDB = connectDB;

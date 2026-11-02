@@ -2,7 +2,7 @@
 const jwt = require("jsonwebtoken");
 const { User, Student } = require("../db/models");
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
+const { getJwtSecret } = require("../config/jwt");
 
 const getToken = (req) => {
   const auth = req.headers.authorization || "";
@@ -14,7 +14,7 @@ const authenticateJwt = async (req, res, next) => {
   if (!token) return res.status(401).json({ error: "Authentication required" });
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
+    const payload = jwt.verify(token, getJwtSecret());
 
     if (payload.token_type === "student") {
       const student = await Student.findById(payload.student_id || payload.id).lean();

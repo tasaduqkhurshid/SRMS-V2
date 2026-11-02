@@ -5,9 +5,6 @@ const bcrypt = require("bcryptjs");
 const { seedNewSchool } = require("./seeders/school.seeder");
 
 const SCHOOL_CODE = "HIT";
-const ADMIN_PASSWORD = "password";
-const ADMIN_PIN = "1234";
-
 const courses = [
   ["Pre Nursery", "pre_nursery", "Pre Nursery"],
   ["Nursery", "nursery", "Nursery"],
@@ -62,6 +59,26 @@ const upsertBy = async (Model, filter, update) => {
 };
 
 const seedDemo = async () => {
+    const requiredCredentials = [
+      "HANFIA_ADMIN_PASSWORD",
+      "SCHOOLB_ADMIN_PASSWORD",
+      "DEMO_STUDENT_PASSWORD",
+      "SCHOOLB_STUDENT_PASSWORD",
+      "HIT_ADMIN_PASSWORD",
+      "HIT_ADMIN_PIN",
+    ];
+    const missingCredentials = requiredCredentials.filter((name) => !String(process.env[name] || "").trim());
+    if (missingCredentials.length) {
+      throw new Error(`SEED_DEMO_DATA requires configured credentials: ${missingCredentials.join(", ")}`);
+    }
+    const weakCredentials = requiredCredentials.filter((name) => {
+      const value = String(process.env[name] || "");
+      return value.length < 8 || /^(password|1234|change|set_|generate|replace|your_|example|placeholder)/i.test(value);
+    });
+    if (weakCredentials.length) {
+      throw new Error(`SEED_DEMO_DATA credentials must be non-placeholder values of at least 8 characters: ${weakCredentials.join(", ")}`);
+    }
+
     const school = await upsertBy(
       db.School,
       { school_code: SCHOOL_CODE },
@@ -96,19 +113,19 @@ const seedDemo = async () => {
     await upsertBy(db.User, { username: 'hanfia-admin' }, {
       username: 'hanfia-admin',
       email: 'admin@hanfia.srms.local',
-      password: bcrypt.hashSync(process.env.HANFIA_ADMIN_PASSWORD || 'hanfia-admin-local-only', 10),
+      password: bcrypt.hashSync(process.env.HANFIA_ADMIN_PASSWORD, 10),
       role: 'ADMIN',
       school_id: hanfiaSchool._id,
     });
     await upsertBy(db.User, { username: 'schoolb-admin' }, {
       username: 'schoolb-admin',
       email: 'admin@schoolb.srms.local',
-      password: bcrypt.hashSync(process.env.SCHOOLB_ADMIN_PASSWORD || 'schoolb-admin-local-only', 10),
+      password: bcrypt.hashSync(process.env.SCHOOLB_ADMIN_PASSWORD, 10),
       role: 'ADMIN',
       school_id: schoolB._id,
     });
 
-    const demoStudentPassword = process.env.DEMO_STUDENT_PASSWORD || 'student-local-only';
+    const demoStudentPassword = process.env.DEMO_STUDENT_PASSWORD;
     await upsertBy(db.Student, { school_id: hanfiaSchool._id, student_code: 'STU001' }, {
       school_id: hanfiaSchool._id,
       student_code: 'STU001',
@@ -129,7 +146,7 @@ const seedDemo = async () => {
       dob: new Date('2011-09-22T00:00:00.000Z'),
       class: '1st',
       section: 'A',
-      password_hash: bcrypt.hashSync(process.env.SCHOOLB_STUDENT_PASSWORD || 'schoolb-student-local-only', 10),
+      password_hash: bcrypt.hashSync(process.env.SCHOOLB_STUDENT_PASSWORD, 10),
     });
 
     await upsertBy(
@@ -138,8 +155,8 @@ const seedDemo = async () => {
       {
         username: "admin",
         email: "admin@hubiinfotech.com",
-        password: bcrypt.hashSync(ADMIN_PASSWORD, 10),
-        pin: bcrypt.hashSync(ADMIN_PIN, 10),
+        password: bcrypt.hashSync(process.env.HIT_ADMIN_PASSWORD, 10),
+        pin: bcrypt.hashSync(process.env.HIT_ADMIN_PIN, 10),
         role: "ADMIN",
         school_id: school._id
       }
@@ -192,11 +209,7 @@ const seedDemo = async () => {
     }
 
     console.log("Mongo demo seed completed");
-    console.log(`Admin login: admin / ${ADMIN_PASSWORD}`);
-    console.log(`Admin PIN login: admin@hubiinfotech.com / ${ADMIN_PIN}`);
-    console.log(`Hanfia school admin: hanfia-admin / ${process.env.HANFIA_ADMIN_PASSWORD || 'hanfia-admin-local-only'}`);
-    console.log(`Hanfia demo student: STU001 / ${demoStudentPassword}`);
-    console.log(`School B test tenant: schoolb / ${process.env.SCHOOLB_ADMIN_PASSWORD || 'schoolb-admin-local-only'}`);
+      console.log('Demo accounts seeded. Credentials are configured through the local environment and are not written to logs.');
 };
 
 module.exports = { seedDemo };
