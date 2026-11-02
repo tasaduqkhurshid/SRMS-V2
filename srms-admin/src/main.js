@@ -16,6 +16,12 @@ const router = createRouter({
     { path: '/schools/:id', name: 'school-detail', component: AdminDashboard },
     { path: '/schools/:id/gateways', name: 'school-gateways', component: AdminDashboard },
     { path: '/payment-gateways', name: 'payment-gateways', component: AdminDashboard },
+    { path: '/support/tickets', name: 'support-tickets', component: AdminDashboard },
+    { path: '/support/tickets/create', name: 'support-tickets-create', component: AdminDashboard },
+    { path: '/support/tickets/:id', name: 'support-ticket-detail', component: AdminDashboard },
+    { path: '/support/subjects', name: 'support-subjects', component: AdminDashboard },
+    { path: '/support/services', name: 'support-services', component: AdminDashboard },
+    { path: '/support/statuses', name: 'support-statuses', component: AdminDashboard },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
 });

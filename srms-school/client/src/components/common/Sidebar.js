@@ -30,6 +30,7 @@ export default {
       updateTemplatesOpenState()
       updateResultBookOpenState()
       updateFeesOpenState()
+      updateSupportOpenState()
     })
 
     onUnmounted(() => {
@@ -42,6 +43,7 @@ export default {
       updateTemplatesOpenState()
       updateResultBookOpenState()
       updateFeesOpenState()
+      updateSupportOpenState()
     })
 
     const toggle = () => {
@@ -89,6 +91,17 @@ export default {
       }
     }
 
+    // Support submenu state
+    const supportOpen = ref(false)
+    const toggleSupport = () => {
+      if (!supportOpen.value) {
+        supportOpen.value = true
+        if (!route.path.startsWith('/support/')) router.push('/support/tickets')
+      } else {
+        supportOpen.value = false
+      }
+    }
+
     // Auto-open Results if current route is a Results sub-route
     const updateResultsOpenState = () => {
       if (route.path.startsWith('/results') && route.path !== '/results') {
@@ -113,6 +126,10 @@ export default {
 
     const updateFeesOpenState = () => {
       feesOpen.value = route.path.startsWith('/fees/')
+    }
+
+    const updateSupportOpenState = () => {
+      supportOpen.value = route.path.startsWith('/support/')
     }
 
     const closeMobile = () => {
@@ -176,6 +193,15 @@ export default {
         if (path === '/backup') {
           return route.path === '/backup'
         }
+        if (path === '/support') {
+          return route.path === '/support' || route.path.startsWith('/support/')
+        }
+        if (path === '/support/tickets') {
+          return route.path === '/support/tickets'
+        }
+        if (path === '/support/tickets/create') {
+          return route.path === '/support/tickets/create'
+        }
         return route.path === path
       } catch (e) {
         return false
@@ -197,6 +223,8 @@ export default {
       toggleResultBook,
       feesOpen,
       toggleFees,
+      supportOpen,
+      toggleSupport,
       currentYear: new Date().getFullYear()
     }
   }

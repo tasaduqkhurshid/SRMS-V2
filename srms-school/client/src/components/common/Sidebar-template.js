@@ -144,6 +144,29 @@ export default `
 
       <hr class="sidebar-divider" />
 
+      <!-- Support Section -->
+      <div class="sidebar-section" v-if="!collapsed">
+        <span class="sidebar-section-title">Support</span>
+      </div>
+
+      <div class="sidebar-group">
+        <a class="nav-link" href="#" :class="{ 'nav-link-active': isActive('/support') }" @click.prevent="toggleSupport">
+          <i class="fa-solid fa-headset"></i>
+          <span class="flex-grow-1" v-if="!collapsed">Support</span>
+          <i :class="['fa-solid fa-chevron-down nav-caret', { open: supportOpen }]" v-if="!collapsed"></i>
+        </a>
+        <div :class="{ 'collapse': !supportOpen && !collapsed }" style="overflow: hidden;">
+          <router-link class="nav-link nav-link-sm" :class="{ 'nav-link-active': isActive('/support/tickets') }" to="/support/tickets">
+            <i class="fa-solid fa-ticket"></i><span v-if="!collapsed">All Tickets</span>
+          </router-link>
+          <router-link class="nav-link nav-link-sm" :class="{ 'nav-link-active': isActive('/support/tickets/create') }" to="/support/tickets/create">
+            <i class="fa-solid fa-plus"></i><span v-if="!collapsed">Create Ticket</span>
+          </router-link>
+        </div>
+      </div>
+
+      <hr class="sidebar-divider" />
+
       <!-- Templates Section -->
       <div class="sidebar-section" v-if="!collapsed">
         <span class="sidebar-section-title">Templates</span>

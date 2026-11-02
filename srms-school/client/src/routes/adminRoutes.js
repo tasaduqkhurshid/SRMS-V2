@@ -19,6 +19,10 @@ import SchoolProfile from '../components/pages/school/SchoolProfile.js';
 import FeeManagement from '../components/pages/fees/FeeManagement.js';
 import PaymentGateways from '../components/pages/fees/PaymentGateways.js';
 import PaymentGatewayTest from '../components/pages/fees/PaymentGatewayTest.js';
+import SupportDashboard from '../components/pages/support/SupportDashboard.js';
+import SupportTicketList from '../components/pages/support/SupportTicketList.js';
+import CreateSupportTicket from '../components/pages/support/CreateSupportTicket.js';
+import SupportTicketDetail from '../components/pages/support/SupportTicketDetail.js';
 
 const feeSections = ['overview', 'types', 'structures', 'assign', 'parents', 'accounts', 'payments', 'reports', 'audit'];
 
@@ -56,7 +60,11 @@ const routes = [
   { path: "/templates/marksheets/:id/edit", component: AddEditMarksheetTemplate },
   // school profile
   { path: "/school/profile", component: SchoolProfile },
-
+  // support
+  { path: "/support", component: SupportDashboard },
+  { path: "/support/tickets", component: SupportTicketList },
+  { path: "/support/tickets/create", component: CreateSupportTicket },
+  { path: "/support/tickets/:id", component: SupportTicketDetail },
 ];
 
 export default routes;

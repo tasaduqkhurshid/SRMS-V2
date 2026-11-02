@@ -18,4 +18,10 @@ module.exports = {
   FeeAudit: require('./FeeAudit'),
   Gateway: require('./Gateway'),
   SchoolGateway: require('./SchoolGateway'),
+  SupportTicketSubject: require('./SupportTicketSubject'),
+  SupportTicketService: require('./SupportTicketService'),
+  SupportTicketStatus: require('./SupportTicketStatus'),
+  SupportTicket: require('./SupportTicket'),
+  SupportTicketMessage: require('./SupportTicketMessage'),
+  SupportTicketCounter: require('./SupportTicketCounter'),
 };

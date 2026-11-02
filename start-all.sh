@@ -20,13 +20,17 @@ while (($#)); do
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-if [[ "$environment" != docker && "$environment" != local ]]; then
-  echo "Invalid environment '$environment'; choose docker or local." >&2
+if [[ "$environment" != docker && "$environment" != local && "$environment" != production ]]; then
+  echo "Invalid environment '$environment'; choose local, docker, or production." >&2
   exit 2
 fi
-environment_file="$ROOT_DIR/.env.production"
-if [[ "$environment" == local ]]; then environment_file="$ROOT_DIR/.env.local"; fi
-[[ -f "$ROOT_DIR/.env" ]] || { echo 'Missing .env. Copy .env.example to .env and configure local credentials.' >&2; exit 2; }
+# For production, use docker profile with production Nginx config
+if [[ "$environment" == production ]]; then
+  environment_file="$ROOT_DIR/.env.production"
+else
+  environment_file="$ROOT_DIR/.env"
+fi
+[[ -f "$ROOT_DIR/.env" ]] || { echo 'Missing .env. Copy .env.example to .env and configure credentials.' >&2; exit 2; }
 [[ -f "$environment_file" ]] || { echo "Missing environment config: $environment_file" >&2; exit 2; }
 command -v docker >/dev/null 2>&1 || { echo 'Docker is required.' >&2; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo 'Docker Compose v2 is required.' >&2; exit 1; }
@@ -46,7 +50,9 @@ if [[ "$db_type" != docker && "$db_type" != local ]]; then
   exit 2
 fi
 profiles=()
-if [[ "$db_type" == docker ]]; then profiles+=(--profile docker); fi
+if [[ "$db_type" == docker || "$environment" == production ]]; then
+  profiles+=(--profile docker)
+fi
 if [[ "$environment" == local ]]; then
   profiles+=(--profile local)
 fi
@@ -62,7 +68,7 @@ usage() {
   cat <<'EOF'
 SRMS unified multi-portal stack
 
-Usage: ./start-all.sh [-e|--env docker|local] [up|down|restart|status|logs|config]
+Usage: ./start-all.sh [-e|--env local|docker|production] [up|down|restart|status|logs|config]
 
   up       Build and start the selected stack; local development is the default
   down     Stop containers, keep database volumes
@@ -71,6 +77,11 @@ Usage: ./start-all.sh [-e|--env docker|local] [up|down|restart|status|logs|confi
   logs     Follow all service logs
   config   Validate the merged Docker Compose configuration
   services Print Compose service names
+
+ENVIRONMENT (set in .env or -e flag):
+  local       - Local development (Vite/Nodemon, host MongoDB)
+  docker      - Production-style with containerized MongoDB
+  production  - Production deployment (uses .env.production)
 
 Use -e docker for the production-style runtime. Local Vite and Nodemon mode is the default.
 EOF

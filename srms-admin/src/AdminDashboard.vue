@@ -9,6 +9,13 @@ import SchoolDetails from './components/pages/school/SchoolDetails.js';
 import SchoolGateways from './components/pages/school/SchoolGateways.vue';
 import SchoolModalComponent from './components/pages/school/SchoolModalComponent.js';
 import AddUserModal from './components/pages/school/AddUserModal.js';
+import SupportDashboard from './components/pages/support/SupportDashboard.js';
+import SupportTicketList from './components/pages/support/SupportTicketList.js';
+import CreateSupportTicketAdmin from './components/pages/support/CreateSupportTicketAdmin.js';
+import SupportTicketDetailAdmin from './components/pages/support/SupportTicketDetailAdmin.js';
+import SupportSubjectManagement from './components/pages/support/SupportSubjectManagement.js';
+import SupportServiceManagement from './components/pages/support/SupportServiceManagement.js';
+import SupportStatusManagement from './components/pages/support/SupportStatusManagement.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -40,6 +47,19 @@ const platformGateways = ref([]);
 const gatewaySaving = ref('');
 const schoolGateways = ref([]);
 const schoolGatewaySaving = ref('');
+
+// Support ticket state
+const supportTickets = ref([]);
+const supportSubjects = ref([]);
+const supportServices = ref([]);
+const supportStatuses = ref([]);
+const supportStatistics = ref({ total: 0, by_status: {}, created_today: 0 });
+const selectedTicket = ref(null);
+const supportLoading = ref(false);
+const supportSaving = ref(false);
+const supportError = ref('');
+const supportSuccess = ref('');
+
 // Modal state
 const modalOpen = ref(false);
 const modalMode = ref('create'); // 'create' | 'edit'
@@ -115,6 +135,67 @@ const togglePlatformGateway = async (gateway) => {
     await loadPlatformGateways();
   } catch (cause) { error.value = cause.message || 'Gateway availability could not be updated.'; }
   finally { gatewaySaving.value = ''; }
+};
+
+// Support ticket functions
+const loadSupportDashboard = async () => {
+  supportLoading.value = true; supportError.value = '';
+  try {
+    supportStatistics.value = await api('/support-tickets/statistics');
+  } catch (cause) { supportError.value = cause.message || 'Could not load support statistics.'; }
+  finally { supportLoading.value = false; }
+};
+
+const loadSupportTickets = async () => {
+  supportLoading.value = true; supportError.value = '';
+  try {
+    const data = await api('/support-tickets');
+    supportTickets.value = data.tickets || [];
+  } catch (cause) { supportError.value = cause.message || 'Could not load tickets.'; }
+  finally { supportLoading.value = false; }
+};
+
+const loadSupportConfig = async () => {
+  supportLoading.value = true; supportError.value = '';
+  try {
+    const [subjects, services, statuses] = await Promise.all([
+      api('/support-ticket-subjects'),
+      api('/support-ticket-services'),
+      api('/support-ticket-statuses'),
+    ]);
+    supportSubjects.value = subjects || [];
+    supportServices.value = services || [];
+    supportStatuses.value = statuses || [];
+  } catch (cause) { supportError.value = cause.message || 'Could not load support config.'; }
+  finally { supportLoading.value = false; }
+};
+
+const loadSupportTicketDetail = async (ticketId) => {
+  supportLoading.value = true; supportError.value = '';
+  try {
+    selectedTicket.value = await api(`/support-tickets/${ticketId}`, { params: { include_internal: 'true' } });
+  } catch (cause) { supportError.value = cause.message || 'Could not load ticket.'; }
+  finally { supportLoading.value = false; }
+};
+
+const handleSupportRefresh = async () => {
+  await Promise.all([loadSupportDashboard(), loadSupportTickets(), loadSupportConfig()]);
+};
+
+const handleSupportTicketCreated = (ticket) => {
+  supportTickets.value.unshift(ticket);
+  supportStatistics.value.total = (supportStatistics.value.total || 0) + 1;
+  supportStatistics.value.by_status.pending = (supportStatistics.value.by_status.pending || 0) + 1;
+  supportStatistics.value.created_today = (supportStatistics.value.created_today || 0) + 1;
+};
+
+const handleSupportTicketUpdated = () => {
+  loadSupportTickets();
+  loadSupportDashboard();
+};
+
+const handleSupportConfigRefresh = () => {
+  loadSupportConfig();
 };
 
 const loadSchools = async () => {
@@ -351,7 +432,11 @@ const logout = () => {
   router.replace('/login');
 };
 
-const loadForRoute = () => route.path === '/payment-gateways' ? loadPlatformGateways() : loadSchools();
+const loadForRoute = () => {
+  if (route.path === '/payment-gateways') return loadPlatformGateways();
+  if (route.path.startsWith('/support/')) return handleSupportRefresh();
+  return loadSchools();
+};
 watch(() => route.path, () => { if (token.value) loadForRoute(); });
 onMounted(() => { if (token.value) loadForRoute(); });
 </script>
@@ -363,6 +448,8 @@ onMounted(() => { if (token.value) loadForRoute(); });
       <header class="topbar"><div><p class="eyebrow">PLATFORM OVERVIEW</p><h1>Good day, Administrator</h1></div><span class="admin-pill">Super Admin</span></header>
       <p v-if="error" class="alert error">{{ error }}</p>
       <p v-if="success" class="alert success">{{ success }}</p>
+      <p v-if="supportError" class="alert error">{{ supportError }}</p>
+      <p v-if="supportSuccess" class="alert success">{{ supportSuccess }}</p>
       <section v-if="route.path === '/payment-gateways'" class="platform-gateway-list">
         <article v-for="gateway in platformGateways" :key="gateway._id" class="platform-gateway-card">
           <header><div><p class="eyebrow">{{ gateway.integrationStatus === 'implemented' ? 'INTEGRATION AVAILABLE' : 'NOT YET INTEGRATED' }}</p><h2>{{ gateway.name }}</h2><p>{{ gateway.description }}</p></div><span :class="['status', gateway.isEnabled ? 'on' : 'off']">{{ gateway.isEnabled ? 'Platform enabled' : 'Platform disabled' }}</span></header>
@@ -373,7 +460,7 @@ onMounted(() => { if (token.value) loadForRoute(); });
       <template v-else>
       <PlatformStats :statistics="statistics" />
       <SchoolList
-        v-if="!selectedSchool"
+        v-if="!selectedSchool && !route.path.startsWith('/support/')"
         :loading="loading"
         :schools="schools"
         :paginated-schools="paginatedSchools"
@@ -407,7 +494,7 @@ onMounted(() => { if (token.value) loadForRoute(); });
         @validate="validateSchoolGateway"
       />
       <SchoolDetails
-        v-else-if="selectedSchool"
+        v-else-if="selectedSchool && !route.path.startsWith('/support/')"
         :school="selectedSchool"
         :administrators="administrators"
         :password-reset-admin="passwordResetAdmin"
@@ -428,6 +515,59 @@ onMounted(() => { if (token.value) loadForRoute(); });
         @update-admin-password="adminNewPassword = $event"
         @create-administrator="createAdministrator"
         @toggle-online-payments="toggleOnlinePayments"
+      />
+      <!-- Support Ticket Management -->
+      <SupportDashboard
+        v-if="route.name === 'dashboard' && route.path.startsWith('/support/') === false"
+        :statistics="supportStatistics"
+      />
+      <SupportTicketList
+        v-else-if="route.name === 'support-tickets'"
+        :api="api"
+        :schools="schools"
+        :subjects="supportSubjects"
+        :services="supportServices"
+        :statuses="supportStatuses"
+        @refresh="handleSupportRefresh"
+        @view="loadSupportTicketDetail"
+      />
+      <CreateSupportTicketAdmin
+        v-else-if="route.name === 'support-tickets-create'"
+        :api="api"
+        :schools="schools"
+        :subjects="supportSubjects"
+        :services="supportServices"
+        @created="handleSupportTicketCreated"
+      />
+      <SupportTicketDetailAdmin
+        v-else-if="route.name === 'support-ticket-detail' && selectedTicket"
+        :api="api"
+        :ticket-id="route.params.id"
+        :schools="schools"
+        :subjects="supportSubjects"
+        :services="supportServices"
+        :statuses="supportStatuses"
+        :current-user="currentUser || { username: 'Admin', role: 'SUPER_ADMIN' }"
+        @back="selectedTicket = null"
+        @updated="handleSupportTicketUpdated"
+      />
+      <SupportSubjectManagement
+        v-else-if="route.name === 'support-subjects'"
+        :api="api"
+        :items="supportSubjects"
+        @refresh="handleSupportConfigRefresh"
+      />
+      <SupportServiceManagement
+        v-else-if="route.name === 'support-services'"
+        :api="api"
+        :items="supportServices"
+        @refresh="handleSupportConfigRefresh"
+      />
+      <SupportStatusManagement
+        v-else-if="route.name === 'support-statuses'"
+        :api="api"
+        :items="supportStatuses"
+        @refresh="handleSupportConfigRefresh"
       />
       <SchoolModalComponent
         :is-open="modalOpen"

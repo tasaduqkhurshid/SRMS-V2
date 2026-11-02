@@ -23,6 +23,12 @@ const tableNames = Object.freeze({
   schoolGateways: "school_gateways",
   migrationHistory: "_migrations",
   gatewayPresetAuditLogs: "gateway_preset_audit_logs",
+  supportTicketSubjects: "support_ticket_subjects",
+  supportTicketServices: "support_ticket_services",
+  supportTicketStatuses: "support_ticket_statuses",
+  supportTickets: "support_tickets",
+  supportTicketMessages: "support_ticket_messages",
+  supportTicketCounters: "support_ticket_counters",
 });
 
 module.exports = tableNames;

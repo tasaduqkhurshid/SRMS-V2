@@ -3,6 +3,7 @@ const GatewayController = require('../controllers/platformGatewayController');
 const controller = require('../controllers/platformSchoolController');
 const brandingController = require('../controllers/platformBrandingController');
 const FeeController = require('../controllers/srms-school/FeeController');
+const supportTicketAdminRoutes = require('./srms-admin/supportTicketAdminRoutes');
 const multer = require('multer');
 
 const allowedBrandingTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -43,5 +44,8 @@ router.delete('/schools/:id/admins/:adminId', controller.deleteAdministrator);
 router.patch('/schools/:id/admins/:adminId/password', controller.updateAdministratorPassword);
 router.post('/schools/:schoolId/branding/:asset', uploadBrandingImage, brandingController.uploadBranding);
 router.delete('/schools/:schoolId/branding/:asset', brandingController.deleteBrandingAsset);
+
+// Support Ticket Management
+router.use('/support-tickets', supportTicketAdminRoutes);
 
 module.exports = router;
