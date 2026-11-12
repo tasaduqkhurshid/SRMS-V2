@@ -29,6 +29,7 @@ const tableNames = Object.freeze({
   supportTickets: "support_tickets",
   supportTicketMessages: "support_ticket_messages",
   supportTicketCounters: "support_ticket_counters",
+  notifications: "notifications",
 });
 
 module.exports = tableNames;

@@ -2,6 +2,7 @@
 
 const ModelUtils = require("../../utils/ModelUtils");
 const RedisCacheService = require("../common/RedisCacheService");
+const NotificationService = require("../common/NotificationService");
 const logger = require("../../utils/logger");
 const { Exam, Result, Student, CourseSubject } = require("../../db/models");
 const { ValidationError, NotFoundError } = require("../../utils/applicationErrors");
@@ -72,6 +73,16 @@ const createExam = async (payload) => {
 
     if (created) {
       await RedisCacheService.del(CACHE_KEYS.EXAMS_LIST);
+
+      // Send exam creation notification to school admins
+      NotificationService.createSchoolAdminNotification({
+        schoolId: created.school_id,
+        title: `New Exam Created: ${created.exam_name}`,
+        message: `A new exam "${created.exam_name}" has been scheduled.`,
+        type: 'info',
+        category: 'examination',
+        actionUrl: `/exams/${created._id}`,
+      }).catch(err => console.error("Failed to send exam creation notification:", err.message));
     }
 
     return success(created);
@@ -83,10 +94,25 @@ const createExam = async (payload) => {
 const updateExam = async (id, payload) => {
   try {
     if (!id) throw new ValidationError("examId is required");
+    const existing = await ModelUtils.findOne(Exam, { _id: id });
+    if (!existing) throw new NotFoundError("Exam");
+    
     const updated = await ModelUtils.updateAndReturn(Exam, { _id: id }, payload);
     if (updated && updated.rows && updated.rows.length) {
       await RedisCacheService.del(CACHE_KEYS.EXAM(id));
       await RedisCacheService.del(CACHE_KEYS.EXAMS_LIST);
+      
+      // Send exam schedule change notification to school admins
+      const changes = Object.keys(payload).filter(k => k !== 'school_id').join(', ');
+      NotificationService.createSchoolAdminNotification({
+        schoolId: existing.school_id,
+        title: `Exam Schedule Updated: ${existing.exam_name}`,
+        message: `The exam "${existing.exam_name}" has been updated. Changes: ${changes}`,
+        type: 'warning',
+        category: 'examination',
+        actionUrl: `/exams/${id}`,
+      }).catch(err => console.error("Failed to send exam update notification:", err.message));
+
       return success(updated.rows[0]);
     }
     throw new NotFoundError("Exam");

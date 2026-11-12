@@ -13,6 +13,7 @@
     "axios": "^1",
     "bootstrap": "^5.3.3",
     "just-validate": "^4.3.0",
+    "socket.io-client": "^4.7.5",
     "vue-router": "^4.4.0",
     "xlsx": "^0.18.5",
     "vue": "^3"

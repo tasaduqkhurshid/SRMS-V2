@@ -1,4 +1,4 @@
-import template from './PlatformStatsTemplate.js';
+import template from './PlatformStats.template.js';
 
 export default {
   name: 'PlatformStats',

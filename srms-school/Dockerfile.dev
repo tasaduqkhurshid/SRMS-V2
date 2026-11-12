@@ -1,10 +1,21 @@
-FROM node:18-alpine
+FROM node:20-bookworm-slim
 
 WORKDIR /app/client
 
+# Install wget for healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
+
+# Configure npm for better network resilience
+RUN npm config set fetch-retries 3 && \
+    npm config set fetch-retry-factor 2 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm config set fetch-retry-maxtimeout 60000 && \
+    npm config set registry https://registry.npmjs.org/
+
 # Install dependencies
 COPY client/package*.json ./
-RUN npm install --no-audit --no-fund
+RUN npm install --no-audit --no-fund --prefer-offline || \
+    (sleep 5 && npm install --no-audit --no-fund)
 
 # Expose Vite dev server port
 EXPOSE 5173

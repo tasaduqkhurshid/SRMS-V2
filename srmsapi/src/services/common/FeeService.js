@@ -3,6 +3,7 @@
 const crypto = require("node:crypto");
 const PaymentProvider = require("../payment/PaymentProvider");
 const SchoolGatewayService = require("./SchoolGatewayService");
+const NotificationService = require("./NotificationService");
 const {
   FeeType, FeeStructure, StudentFeeAccount, FeePayment, FeeAudit,
   Student, Course, AcademicYear, School, SchoolGateway, Gateway, User, mongoose,
@@ -281,6 +282,28 @@ const assignStructure = async (schoolId, actorId, payload = {}) => {
       gross_minor: totalAssigned, concession_minor: concession, scheduled_concession_minor: scheduledConcession, adjustment_minor: 0,
       paid_minor: 0, assigned_by: actorId,
     });
+    
+    // Send fee assignment notification to student and parents
+    NotificationService.createStudentNotification({
+      studentId: student._id,
+      schoolId,
+      title: 'New Fee Structure Assigned',
+      message: `A new fee structure "${structure.name}" has been assigned for ${monthsRemaining} months. Total: ${(totalAssigned / 100).toFixed(2)}`,
+      type: 'info',
+      category: 'fees',
+      actionUrl: '/fees',
+    }).catch(err => console.error("Failed to send fee assignment student notification:", err.message));
+
+    NotificationService.createParentNotification({
+      studentId: student._id,
+      schoolId,
+      title: 'New Fee Structure Assigned',
+      message: `A new fee structure "${structure.name}" has been assigned for your ward for ${monthsRemaining} months. Total: ${(totalAssigned / 100).toFixed(2)}`,
+      type: 'info',
+      category: 'fees',
+      actionUrl: '/fees',
+    }).catch(err => console.error("Failed to send fee assignment parent notification:", err.message));
+
     accounts.push(cleanAccount(account));
   }
   if (accounts.length) await audit(schoolId, actorId, "STUDENT_FEES_ASSIGNED", "StudentFeeAccount", accounts[0]._id, { count: accounts.length, structure_id: structure._id, months_remaining: monthsRemaining });
@@ -572,6 +595,28 @@ const handlePaymentWebhook = async (rawBody, signature, body = {}) => {
     await account.save({ session });
     await payment.save({ session });
     await audit(schoolId, null, "ONLINE_PAYMENT_CONFIRMED", "FeePayment", payment._id, { provider_order_id: orderId, provider_payment_id: payment.provider_payment_id }, session);
+
+    // Send fee payment confirmation notification to student and parents
+    NotificationService.createStudentNotification({
+      studentId: account.student_id,
+      schoolId,
+      title: 'Fee Payment Confirmed',
+      message: `Your fee payment of ${(payment.amount_minor / 100).toFixed(2)} has been confirmed. Receipt: ${payment.receipt_number}`,
+      type: 'success',
+      category: 'fees',
+      actionUrl: '/fees',
+    }).catch(err => console.error("Failed to send fee payment student notification:", err.message));
+
+    NotificationService.createParentNotification({
+      studentId: account.student_id,
+      schoolId,
+      title: 'Fee Payment Confirmed',
+      message: `Fee payment of ${(payment.amount_minor / 100).toFixed(2)} for your ward has been confirmed. Receipt: ${payment.receipt_number}`,
+      type: 'success',
+      category: 'fees',
+      actionUrl: '/fees',
+    }).catch(err => console.error("Failed to send fee payment parent notification:", err.message));
+    
     return { accepted: true, status: payment.status };
   });
 };

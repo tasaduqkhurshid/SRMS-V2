@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { portalApi } from '../services/api.js';
+import NotificationBell from '../components/NotificationBell.js';
 
 const props = defineProps({ section: { type: String, required: true } });
 const router = useRouter();
@@ -76,7 +77,7 @@ async function printReceipt(payment, childId = selectedStudentId.value) {
     const receipt = await portalApi.request(`/api/student/fees/receipts/${encodeURIComponent(payment._id)}${query}`);
     const popup = window.open('', '_blank', 'width=720,height=760');
     if (!popup) { actionMessage.value = 'Allow pop-ups to print the receipt.'; return; }
-    const escape = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    const escape = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": ''' }[char]));
     const child = receipt.student_id || student.value;
     popup.document.write(`<title>Fee receipt ${escape(receipt.receipt_number)}</title><style>body{font:15px Arial;color:#132344;padding:40px}.receipt{max-width:620px;margin:auto;border:1px solid #dbe3ee;border-radius:14px;padding:28px}h1{margin:0 0 6px}p{display:flex;justify-content:space-between;border-bottom:1px solid #eef1f6;padding:12px 0}.amount{font-size:24px;font-weight:bold;color:#2058dc}</style><article class="receipt"><h1>${escape(school.value.name || 'School')} · Fee receipt</h1><p><span>Receipt number</span><b>${escape(receipt.receipt_number)}</b></p><p><span>Student</span><b>${escape(child.name)}</b></p><p><span>Admission / roll</span><b>${escape(child.admission_number || child.roll_number)}</b></p><p><span>Payment method</span><b>${escape(receipt.method)}</b></p><p><span>Date</span><b>${escape(new Date(receipt.confirmed_at || receipt.createdAt).toLocaleString())}</b></p><p class="amount"><span>Collected</span><b>${money(receipt.amount_minor)}</b></p><button onclick="window.print()">Print / Save PDF</button></article>`);
     popup.document.close();
@@ -162,7 +163,7 @@ watch(selectedStudentId, () => { if (parentMode.value) { void loadStudentPhoto()
       <button class="mobile-drawer-signout" @click="logout">Sign out</button>
     </aside>
     <aside class="portal-sidebar"><a class="portal-brand" href="/dashboard"><img v-if="school.logoUrl || school.logo_url" :src="school.logoUrl || school.logo_url" alt="School logo" @error="$event.target.hidden = true" /><span v-else>{{ school.abbreviation || 'SR' }}</span><b>{{ school.name || school.school_name || 'Student Portal' }}<small>{{ parentMode ? 'Parent access' : 'Student Portal' }}</small></b></a><nav><RouterLink v-for="item in navigation" :key="item[0]" :to="`/${item[0]}`" :class="{ active: item[0] === section }">{{ item[1] }}</RouterLink></nav><button class="logout-button" @click="logout">Sign out</button></aside>
-    <main class="portal-main"><header class="portal-topbar"><div><small>{{ parentMode ? 'FAMILY FEE PORTAL' : 'STUDENT PORTAL' }}</small><h1>{{ title }}</h1></div><label v-if="section === 'fees' && parentMode && children.length > 1" class="child-selector">Student<select v-model="selectedStudentId"><option v-for="child in children" :key="child.id || child._id" :value="child.id || child._id">{{ child.name }} · {{ child.className || child.class }}</option></select></label><div class="student-chip"><img v-if="photoUrl" :src="photoUrl" alt="Student profile" /><span v-else>{{ (student.name || 'Student').slice(0,1) }}</span>{{ student.name || 'Student' }}</div></header>
+    <main class="portal-main"><header class="portal-topbar"><div><small>{{ parentMode ? 'FAMILY FEE PORTAL' : 'STUDENT PORTAL' }}</small><h1>{{ title }}</h1></div><label v-if="section === 'fees' && parentMode && children.length > 1" class="child-selector">Student<select v-model="selectedStudentId"><option v-for="child in children" :key="child.id || child._id" :value="child.id || child._id">{{ child.name }} · {{ child.className || child.class }}</option></select></label><div class="student-chip"><img v-if="photoUrl" :src="photoUrl" alt="Student profile" /><span v-else>{{ (student.name || 'Student').slice(0,1) }}</span>{{ student.name || 'Student' }}</div><NotificationBell :token="portalApi.getToken()" /></header>
       <div v-if="error" class="portal-error" role="alert"><span>{{ error }}</span><button class="portal-retry" @click="loadSection">Retry</button></div>
       <p v-if="actionMessage" class="portal-message" role="status">{{ actionMessage }}</p>
       <div v-if="loading" class="portal-card portal-loading">Loading {{ title.toLowerCase() }}…</div>

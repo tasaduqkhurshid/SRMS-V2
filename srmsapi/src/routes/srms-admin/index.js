@@ -1,9 +1,11 @@
 const router = require('express').Router();
 const GatewayController = require('../../controllers/srms-admin/platformGatewayController');
 const controller = require('../../controllers/srms-admin/platformSchoolController');
+const DashboardController = require('../../controllers/srms-admin/dashboardController');
 const brandingController = require('../../controllers/common/platformBrandingController');
 const FeeController = require('../../controllers/srms-school/FeeController');
 const supportTicketAdminRoutes = require('./supportTicketAdminRoutes');
+const notificationRoutes = require('./notificationRoutes');
 const multer = require('multer');
 
 const allowedBrandingTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -24,6 +26,7 @@ const uploadBrandingImage = (req, res, next) => brandingUpload(req, res, (error)
   return res.status(status).json({ success: false, message: status === 413 ? 'Branding images must be 5 MB or smaller' : error.message });
 });
 
+router.get('/dashboard', DashboardController.getDashboardStatistics);
 router.get('/payment-gateways', GatewayController.list);
 router.patch('/payment-gateways/:code', GatewayController.update);
 router.get('/schools', controller.listSchools);
@@ -43,6 +46,7 @@ router.delete('/schools/:id/admins/:adminId', controller.deleteAdministrator);
 router.patch('/schools/:id/admins/:adminId/password', controller.updateAdministratorPassword);
 router.post('/schools/:schoolId/branding/:asset', uploadBrandingImage, brandingController.uploadBranding);
 router.delete('/schools/:schoolId/branding/:asset', brandingController.deleteBrandingAsset);
+router.use('/notifications', notificationRoutes);
 router.use('/', supportTicketAdminRoutes);
 
 module.exports = router;

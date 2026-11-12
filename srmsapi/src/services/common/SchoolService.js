@@ -2,6 +2,7 @@
 
 const { School, User } = require("../../db/models");
 const ModelUtils = require("../../utils/ModelUtils");
+const NotificationService = require("./NotificationService");
 const bcrypt = require("bcryptjs");
 const { seedNewSchool } = require("../../db/mongo/seeders/school.seeder");
 const { ValidationError, ConflictError, NotFoundError } = require("../../utils/applicationErrors");
@@ -35,6 +36,16 @@ const registerSchool = async ({ school, admin }) => {
       name: schoolRecord.school_name,
       admin: admin ? { ...admin, role: "ADMIN" } : null,
     });
+
+    // Send school registration notification to super admins
+    NotificationService.createSuperAdminNotification({
+      title: 'New School Registered',
+      message: `${schoolRecord.school_name} (${schoolRecord.school_code}) has been registered.`,
+      type: 'info',
+      category: 'announcement',
+      actionUrl: `/schools/${schoolRecord._id}`,
+    }).catch(err => console.error("Failed to send school registration notification:", err.message));
+
     return success(schoolRecord);
   } catch (error) {
     return failure(error);
@@ -100,8 +111,36 @@ const updatePlatformSchool = async (schoolId, data) => {
     if (update.school_name && !update.name) update.name = update.school_name;
     if (update.name && !update.school_name) update.school_name = update.name;
     if (update.status && !["active", "inactive"].includes(update.status)) throw new ValidationError("Status must be active or inactive");
+    
+    // Get the school before update to check status change
+    const existingSchool = await School.findById(schoolId).lean();
+    const statusChanged = update.status && existingSchool && update.status !== existingSchool.status;
+    
     const updated = await School.findByIdAndUpdate(schoolId, { $set: update }, { new: true, runValidators: true }).lean();
     if (!updated) throw new NotFoundError("School");
+    
+    // Send notification on status change (approval/rejection)
+    if (statusChanged) {
+      const isApproved = update.status === "active";
+      NotificationService.createSuperAdminNotification({
+        title: isApproved ? 'School Approved' : 'School Rejected',
+        message: `${updated.school_name} has been ${isApproved ? 'approved' : 'rejected'}.`,
+        type: isApproved ? 'success' : 'error',
+        category: 'announcement',
+        actionUrl: `/schools/${schoolId}`,
+      }).catch(err => console.error("Failed to send school status notification:", err.message));
+
+      // Also notify the school admins
+      NotificationService.createSchoolAdminNotification({
+        schoolId,
+        title: isApproved ? 'School Approved' : 'School Status Changed',
+        message: `Your school has been ${isApproved ? 'approved and is now active' : 'set to inactive'}.`,
+        type: isApproved ? 'success' : 'warning',
+        category: 'announcement',
+        actionUrl: `/dashboard`,
+      }).catch(err => console.error("Failed to send school admin status notification:", err.message));
+    }
+    
     return success(updated);
   } catch (error) { return failure(error); }
 };

@@ -1,10 +1,14 @@
 import template from "./HeaderTemplate.js"
+import NotificationBell from "./NotificationBell.js"
 const { onMounted, onUnmounted, ref, computed } = Vue
 const { useRouter } = VueRouter
 
 export default {
   name: "Header",
   emits: ['toggle-sidebar'],
+  components: {
+    NotificationBell,
+  },
   props: {
     user: {
       type: Object,
@@ -22,7 +26,6 @@ export default {
     const localUser = ref({})
     const searchQuery = ref("")
     const searchInput = ref(null)
-    const notificationCount = ref(0)
     const userInitials = ref("HA")
 
     // Load user data from localStorage/sessionStorage
@@ -108,10 +111,6 @@ export default {
       }
     }
 
-    const handleNotifications = () => {
-      console.log('Notifications clicked')
-    }
-
     const handleLogout = () => {
       localStorage.removeItem("token")
       localStorage.removeItem("user")
@@ -133,9 +132,7 @@ export default {
       userName,
       searchQuery,
       searchInput,
-      notificationCount,
       handleSearch,
-      handleNotifications,
       handleLogout,
     }
   },

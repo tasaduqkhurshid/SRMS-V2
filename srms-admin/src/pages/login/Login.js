@@ -1,10 +1,10 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import SMSBrand from '../../common/SMSBrand.js';
-import template from './SuperAdminLoginTemplate.js';
+import SMSBrand from '../../components/common/SMSBrand.js';
+import template from './Login.template.js';
 
 export default {
-  name: 'SuperAdminLogin',
+  name: 'Login',
   components: { SMSBrand },
   template,
   setup() {

@@ -1,6 +1,7 @@
 "use strict";
 
 const ModelUtils = require("../../utils/ModelUtils");
+const NotificationService = require("../common/NotificationService");
 const { Result, Student, Subject, Exam, AcademicYear, MarksheetTemplate, School, CourseSubject, Course } = require("../../db/models");
 const { getKeysFromArray } = require("../../helpers/helper");
 const logger = require("../../utils/logger");
@@ -247,6 +248,38 @@ const bulkUpsertResults = async (rows = [], schoolId = null, academicYearId = nu
       } else {
         const createdResult = await ModelUtils.createAndReturn(Result, payload);
         if (createdResult) created.push(createdResult);
+      }
+    }
+
+    // Send result publication notifications
+    const resultStudentIds = [...new Set(created.map(r => String(r.student_id)))];
+    const resultExamIds = [...new Set(created.map(r => String(r.exam_id)))];
+    
+    if (resultStudentIds.length && resultExamIds.length) {
+      const exams = await ModelUtils.findAll(Exam, { _id: { $in: resultExamIds } });
+      const examNames = exams.map(e => e.exam_name).join(', ');
+      
+      // Notify students
+      for (const studentId of resultStudentIds) {
+        NotificationService.createStudentNotification({
+          studentId,
+          schoolId: schoolId || created[0]?.school_id,
+          title: 'Results Published',
+          message: `Your results for ${examNames} have been published.`,
+          type: 'success',
+          category: 'result',
+          actionUrl: '/results',
+        }).catch(err => console.error("Failed to send result publication student notification:", err.message));
+
+        NotificationService.createParentNotification({
+          studentId,
+          schoolId: schoolId || created[0]?.school_id,
+          title: 'Results Published',
+          message: `Results for ${examNames} have been published for your ward.`,
+          type: 'success',
+          category: 'result',
+          actionUrl: '/results',
+        }).catch(err => console.error("Failed to send result publication parent notification:", err.message));
       }
     }
 

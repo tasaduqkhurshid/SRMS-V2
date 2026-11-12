@@ -5,6 +5,9 @@ const ModelUtils = require("../../utils/ModelUtils");
 const { ValidationError, NotFoundError, ConflictError, AuthorizationError } = require("../../utils/applicationErrors");
 const { success, failure } = require("../../utils/serviceResult");
 const storage = require("../storage/storage.service");
+const EmailService = require("./EmailService");
+const NotificationService = require("./NotificationService");
+const logger = require("../../utils/logger");
 
 const TICKET_NUMBER_PREFIX = "SRMS";
 
@@ -62,6 +65,81 @@ const validateSchool = async (schoolId) => {
   return school;
 };
 
+const getNotificationRecipients = async (schoolId, excludeUserId = null) => {
+  const recipients = [];
+  
+  // Get school admin users
+  const schoolAdmins = await ModelUtils.findAll(User, { 
+    school_id: schoolId, 
+    role: { $in: ['admin', 'school_admin', 'principal'] } 
+  });
+  
+  for (const admin of schoolAdmins) {
+    if (admin.email && (!excludeUserId || admin._id.toString() !== excludeUserId.toString())) {
+      recipients.push({
+        email: admin.email,
+        name: admin.username,
+        userId: admin._id,
+      });
+    }
+  }
+  
+  // Also include school email if configured
+  const school = await ModelUtils.findOne(School, { _id: schoolId });
+  if (school?.email) {
+    const existingRecipient = recipients.find(r => r.email === school.email);
+    if (!existingRecipient) {
+      recipients.push({
+        email: school.email,
+        name: school.school_name || school.name || "School",
+        userId: null,
+      });
+    }
+  }
+  
+  return recipients;
+};
+
+const sendTicketCreatedNotifications = async (ticket, createdBy) => {
+  try {
+    const recipients = await getNotificationRecipients(ticket.school_id, createdBy.user_id);
+    const portalUrl = process.env.SUPPORT_PORTAL_URL || process.env.FRONTEND_URL;
+    
+    for (const recipient of recipients) {
+      await EmailService.sendSupportTicketCreatedEmail({
+        ticket,
+        recipientEmail: recipient.email,
+        recipientName: recipient.name,
+        portalUrl,
+      });
+    }
+  } catch (error) {
+    // Log error but don't fail the ticket creation
+    logger.error("Failed to send ticket created notifications:", error.message)
+  }
+};
+
+const sendReplyNotifications = async (ticket, reply, sender) => {
+  try {
+    const recipients = await getNotificationRecipients(ticket.school_id, sender.senderId);
+    const portalUrl = process.env.SUPPORT_PORTAL_URL || process.env.FRONTEND_URL;
+    
+    for (const recipient of recipients) {
+      await EmailService.sendSupportTicketReplyEmail({
+        ticket,
+        reply,
+        recipientEmail: recipient.email,
+        recipientName: recipient.name,
+        senderName: sender.senderName,
+        portalUrl,
+      });
+    }
+  } catch (error) {
+    // Log error but don't fail the reply
+    logger.error("Failed to send reply notifications:", error.message);
+  }
+};
+
 const createTicket = async ({ schoolId, subjectId, serviceId, module, title, description, priority, createdBy, attachments = [] }) => {
   try {
     await validateSchool(schoolId);
@@ -103,6 +181,25 @@ const createTicket = async ({ schoolId, subjectId, serviceId, module, title, des
       { $set: { last_reply_at: new Date(), last_reply_by: createdBy.user_id } }
     );
     
+    // Send email notifications (non-blocking)
+    sendTicketCreatedNotifications(ticket, createdBy).catch(err => 
+      logger.error("Failed to send ticket created email notifications:", err.message)
+    );
+
+    // Send in-app notifications to school admins of the ticket's school
+    const schoolAdminResult = await NotificationService.createSchoolAdminNotification({
+      schoolId: ticket.school_id,
+      title: `New Support Ticket: ${ticket.ticket_number}`,
+      message: `${title} - ${description.substring(0, 100)}${description.length > 100 ? '...' : ''}`,
+      type: 'info',
+      category: 'support',
+      actionUrl: `/support/tickets/${ticket._id}`,
+      excludeUserId: createdBy.user_id,
+    });
+    if (schoolAdminResult.error) {
+      logger.error("Failed to send ticket created in-app notifications:", schoolAdminResult.error.message);
+    }
+
     return success(ticket);
   } catch (error) {
     return failure(error);
@@ -272,6 +369,52 @@ const addReply = async ({ ticketId, schoolId, senderId, senderName, senderRole, 
       { _id: ticketId },
       { $set: updateData }
     );
+    
+    // Send email notifications for replies (non-blocking, skip internal notes)
+    if (messageType !== 'internal_note') {
+      sendReplyNotifications(ticket, reply, { senderId, senderName }).catch(err => 
+        logger.error("Failed to send reply email notifications:", err.message)
+      );
+
+      // Send in-app notifications
+      // If reply is from school, notify admins; if from admin, notify school
+      if (senderPortal === 'school') {
+        NotificationService.createSchoolAdminNotification({
+          schoolId: ticket.school_id,
+          title: `New Reply on Ticket: ${ticket.ticket_number}`,
+          message: `${senderName} replied: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`,
+          type: 'info',
+          category: 'support',
+          actionUrl: `/support/tickets/${ticketId}`,
+          excludeUserId: senderId,
+        }).catch(err => 
+          logger.error("Failed to send reply in-app notifications:", err.message)
+        );
+
+        // Notify super admins of school reply
+        NotificationService.createSuperAdminNotification({
+          title: `New Reply from School: ${ticket.ticket_number}`,
+          message: `${senderName} replied: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`,
+          type: 'info',
+          category: 'support',
+          actionUrl: `/support/tickets/${ticketId}`,
+        }).catch(err => 
+          logger.error("Failed to send school reply notification to super admins:", err.message)
+        );
+      } else if (senderPortal === 'admin') {
+        // Notify the school that created the ticket
+        NotificationService.createSchoolAdminNotification({
+          schoolId: ticket.school_id,
+          title: `Support Team Reply: ${ticket.ticket_number}`,
+          message: `${senderName} replied: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`,
+          type: 'info',
+          category: 'support',
+          actionUrl: `/support/tickets/${ticketId}`,
+        }).catch(err => 
+          logger.error("Failed to send admin reply in-app notifications:", err.message)
+        );
+      }
+    }
     
     return success(reply);
   } catch (error) {

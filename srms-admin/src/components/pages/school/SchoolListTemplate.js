@@ -1,11 +1,12 @@
-export default `<section class="panel">
+export default `<div>
+  <section class="panel" v-if="!isViewing">
     <div class="section-heading">
       <div><p class="eyebrow">TENANT MANAGEMENT</p><h2>Schools</h2></div>
       <div class="section-actions">
-        <button class="secondary icon-btn" @click="$emit('refresh')" aria-label="Refresh" title="Refresh">
+        <button class="secondary icon-btn" @click="handleRefresh" aria-label="Refresh" title="Refresh">
           <i class="fa-solid fa-rotate-right" style="font-size: 16px;"></i>
         </button>
-        <button class="primary btn-add" @click="$emit('add')" aria-label="Add school" title="Add school">
+        <button class="primary btn-add" @click="handleAdd" aria-label="Add school" title="Add school">
           <i class="fa-solid fa-plus" style="font-size: 16px;"></i>
           <span>Add</span>
         </button>
@@ -53,16 +54,16 @@ export default `<section class="panel">
             </div>
           </div>
           <div class="school-actions">
-            <button class="icon-btn" @click.stop="$emit('view', school)" aria-label="View school details" title="View details">
+            <button class="icon-btn" @click.stop="handleView(school)" aria-label="View school details" title="View details">
               <i class="fa-solid fa-eye" style="font-size: 16px;"></i>
             </button>
-            <button class="icon-btn" @click.stop="$emit('edit', school)" aria-label="Edit school" title="Edit school">
+            <button class="icon-btn" @click.stop="handleEdit(school)" aria-label="Edit school" title="Edit school">
               <i class="fa-solid fa-pen-to-square" style="font-size: 16px;"></i>
             </button>
-            <button class="icon-btn" @click.stop="$emit('add-user', school)" aria-label="Add user to {{ school.school_name }}" title="Add administrator">
+            <button class="icon-btn" @click.stop="handleAddUser(school)" aria-label="Add user to {{ school.school_name }}" title="Add administrator">
               <i class="fa-solid fa-user-plus" style="font-size: 16px;"></i>
             </button>
-            <button class="icon-btn" :class="school.status === 'inactive' ? 'activate' : 'deactivate'" @click.stop="$emit('toggle', school)" :aria-label="school.status === 'inactive' ? 'Activate school' : 'Deactivate school'" :title="school.status === 'inactive' ? 'Activate' : 'Deactivate'">
+            <button class="icon-btn" :class="school.status === 'inactive' ? 'activate' : 'deactivate'" @click.stop="handleToggle(school)" :aria-label="school.status === 'inactive' ? 'Activate school' : 'Deactivate school'" :title="school.status === 'inactive' ? 'Activate' : 'Deactivate'">
               <i v-if="school.status === 'inactive'" class="fa-solid fa-power-off" style="font-size: 16px;"></i>
               <i v-else class="fa-solid fa-circle-xmark" style="font-size: 16px;"></i>
             </button>
@@ -103,9 +104,72 @@ export default `<section class="panel">
     <div v-if="schools.length" class="pagination-bar">
       <span>Showing {{ pageStart }}–{{ pageEnd }} of {{ schools.length }} schools</span>
       <div class="pagination-controls">
-        <button class="secondary" type="button" :disabled="currentPage <= 1" @click="$emit('previous')">Previous</button>
+        <button class="secondary" type="button" :disabled="currentPage <= 1" @click="handlePrevious">Previous</button>
         <span>Page {{ currentPage }} of {{ pageCount }}</span>
-        <button class="secondary" type="button" :disabled="currentPage >= pageCount" @click="$emit('next')">Next</button>
+        <button class="secondary" type="button" :disabled="currentPage >= pageCount" @click="handleNext">Next</button>
       </div>
     </div>
-  </section>`;
+  </section>
+
+  <!-- View School (inline tabs, replaces list) -->
+  <div v-if="isViewing" class="school-view-tabs">
+    <div class="tab-bar">
+      <button class="tab-btn" :class="{ active: activeTab === 'details' }" @click="activeTab = 'details'">Details</button>
+      <button class="tab-btn" :class="{ active: activeTab === 'gateways' }" @click="activeTab = 'gateways'; handleGateways(viewSchool)">Gateways</button>
+    </div>
+
+    <div v-if="activeTab === 'details'">
+      <SchoolDetails
+        :school="viewSchool"
+        :administrators="getAdmins(viewSchool) || []"
+        :admin-form="{ username: '', email: '', password: '' }"
+        :saving="false"
+        :school-portal-url="schoolPortalUrl"
+        :payment-settings="null"
+        :payment-settings-saving="false"
+        :gateway-configs="[]"
+        @back="isViewing = false; viewSchool = null; activeTab = 'details'"
+        @edit="(school) => { editingSchool.value = school; isViewing = false; viewSchool = null; editModalOpen = true; activeTab = 'details' }"
+        @upload-branding="null"
+        @start-password-reset="null"
+        @cancel-password-reset="null"
+        @update-password="null"
+        @update-admin-password="null"
+        @create-administrator="null"
+        @toggle-online-payments="null"
+      />
+    </div>
+    <div v-else-if="activeTab === 'gateways'">
+      <SchoolGateways
+        :school="viewSchool"
+        :gateways="gatewaysList"
+        :saving-code="gatewaysSaving"
+        @back="activeTab = 'details'"
+        @save="handleGatewaySave"
+        @toggle-enabled="handleGatewayToggle"
+        @validate="null"
+      />
+    </div>
+  </div>
+
+  <!-- Edit / Create School Modal -->
+  <SchoolModalComponent
+    v-if="editModalOpen || createModalOpen"
+    :is-open="editModalOpen || createModalOpen"
+    :mode="editingSchool ? 'edit' : 'create'"
+    :school="editingSchool || null"
+    :school-portal-url="schoolPortalUrl"
+    @close="editModalOpen = false; createModalOpen = false; editingSchool = null; saveError = ''"
+    @submit="handleSchoolSubmit"
+  />
+  <div v-if="saveError" class="empty" style="color: var(--danger-color, #dc2626); margin-top: 10px;">{{ saveError }}</div>
+
+  <!-- Add User Modal -->
+  <AddUserModal
+    v-if="addUserModalOpen"
+    :is-open="addUserModalOpen"
+    :school="addUserSchool || null"
+    @close="addUserModalOpen = false; addUserSchool = null"
+    @created="handleAddUserCreated"
+  />
+</div>`;

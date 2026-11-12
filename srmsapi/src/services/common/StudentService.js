@@ -4,6 +4,7 @@ const fs = require("fs").promises;
 const { randomInt } = require("crypto");
 
 const ModelUtils = require("../../utils/ModelUtils");
+const NotificationService = require("./NotificationService");
 const logger = require("../../utils/logger");
 const PwpConstants = require("../../constants/PwpConstants");
 const ImageService = require("./ImageService");
@@ -77,6 +78,39 @@ const createStudent = async (payload) => {
           ...payload,
           student_code: studentCode
         });
+        
+        // Send admission notification to student and parents
+        if (created) {
+          NotificationService.createStudentNotification({
+            studentId: created._id,
+            schoolId: payload.school_id,
+            title: 'Admission Confirmed',
+            message: `Welcome ${created.name}! Your admission has been confirmed. Student ID: ${created.student_code}`,
+            type: 'success',
+            category: 'admission',
+            actionUrl: '/profile',
+          }).catch(err => console.error("Failed to send admission student notification:", err.message));
+
+          NotificationService.createParentNotification({
+            studentId: created._id,
+            schoolId: payload.school_id,
+            title: 'Admission Confirmed',
+            message: `Admission confirmed for ${created.name}. Student ID: ${created.student_code}`,
+            type: 'success',
+            category: 'admission',
+            actionUrl: '/fees',
+          }).catch(err => console.error("Failed to send admission parent notification:", err.message));
+
+          NotificationService.createSchoolAdminNotification({
+            schoolId: payload.school_id,
+            title: 'New Student Admission',
+            message: `${created.name} (${created.student_code}) has been admitted.`,
+            type: 'info',
+            category: 'admission',
+            actionUrl: `/students/${created._id}`,
+          }).catch(err => console.error("Failed to send admission admin notification:", err.message));
+        }
+        
         return success(created || null);
       } catch (error) {
         if (!isStudentCodeConflict(error)) throw error;
@@ -94,10 +128,41 @@ const updateStudent = async (id, payload) => {
     if (!id) return success(null);
 
     const whereCondition = { _id: id };
+    const existingStudent = await ModelUtils.findOne(Student, { _id: id });
     const result = await ModelUtils.updateAndReturn(Student, whereCondition, payload);
 
     if (result && result.rows && result.rows.length) {
-      return success(result.rows[0]);
+      const updatedStudent = result.rows[0];
+      
+      // Send update notification if significant fields changed
+      const significantFields = ['name', 'class', 'section', 'roll_number', 'admission_number', 'contact_number', 'email', 'address'];
+      const hasSignificantChange = significantFields.some(field => 
+        payload[field] !== undefined && String(payload[field]) !== String(existingStudent?.[field])
+      );
+      
+      if (hasSignificantChange) {
+        NotificationService.createStudentNotification({
+          studentId: updatedStudent._id,
+          schoolId: updatedStudent.school_id,
+          title: 'Profile Updated',
+          message: 'Your profile information has been updated.',
+          type: 'info',
+          category: 'student',
+          actionUrl: '/profile',
+        }).catch(err => console.error("Failed to send student update notification:", err.message));
+
+        NotificationService.createParentNotification({
+          studentId: updatedStudent._id,
+          schoolId: updatedStudent.school_id,
+          title: 'Student Profile Updated',
+          message: `${updatedStudent.name}'s profile has been updated.`,
+          type: 'info',
+          category: 'student',
+          actionUrl: '/profile',
+        }).catch(err => console.error("Failed to send parent update notification:", err.message));
+      }
+      
+      return success(updatedStudent);
     }
 
     const fresh = await ModelUtils.findOne(Student, { _id: id });
@@ -178,6 +243,27 @@ const promoteStudents = async ({ studentIds = [], targetCourseId, academicYearId
         const assigned = await assignCourseToStudent(studentId, String(studentTargetCourse._id), schoolId);
         if (assigned.error) logger.warn("Could not materialize all target course subjects during promotion:", assigned.error.message);
         promoted.push({ student_id: studentId, name: student.name, target_course: studentTargetCourse.course_name });
+
+        // Send promotion notification
+        NotificationService.createStudentNotification({
+          studentId,
+          schoolId,
+          title: 'Promoted to Next Class',
+          message: `Congratulations! You have been promoted to ${studentTargetCourse.course_name}.`,
+          type: 'success',
+          category: 'academic',
+          actionUrl: '/profile',
+        }).catch(err => console.error("Failed to send promotion student notification:", err.message));
+
+        NotificationService.createParentNotification({
+          studentId,
+          schoolId,
+          title: 'Student Promoted',
+          message: `${student.name} has been promoted to ${studentTargetCourse.course_name}.`,
+          type: 'success',
+          category: 'academic',
+          actionUrl: '/profile',
+        }).catch(err => console.error("Failed to send promotion parent notification:", err.message));
       } catch (error) {
         failed.push({ student_id: studentId, name: student.name, message: error.message || "Promotion failed" });
       }

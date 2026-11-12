@@ -22,7 +22,13 @@ export default {
       try {
         const response = await api.get(`/support-tickets/${route.params.id}`)
         if (response.data && response.data.success) {
-          ticket.value = response.data.data.ticket
+          const t = response.data.data.ticket
+          ticket.value = {
+            ...t,
+            subject: t.subject_id,
+            service: t.service_id,
+            status: t.status_id,
+          }
           messages.value = response.data.data.messages || []
         } else {
           error.value = response.data?.message || 'Failed to load ticket'

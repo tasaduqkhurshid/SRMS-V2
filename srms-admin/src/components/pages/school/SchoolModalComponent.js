@@ -184,6 +184,7 @@ export default {
     };
 
     const populateFormFromSchool = (school) => {
+      console.log('Populating form from school:', school);
       form.value = {
         school_name: school.school_name || '',
         slug: school.slug || '',
@@ -564,7 +565,7 @@ export default {
           URL.revokeObjectURL(welcomePreviewUrl.value);
         }
       }
-    });
+    }, { immediate: true });
 
     // Watch for school/mode changes while modal is open
     watch(() => [props.school, props.mode], () => {

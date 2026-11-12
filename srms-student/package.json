@@ -20,6 +20,7 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-web": "^0.21.2",
+    "socket.io-client": "^4.7.5",
     "zustand": "^5.0.15",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"

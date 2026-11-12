@@ -24,4 +24,5 @@ module.exports = {
   SupportTicket: require('./SupportTicket'),
   SupportTicketMessage: require('./SupportTicketMessage'),
   SupportTicketCounter: require('./SupportTicketCounter'),
+  Notification: require('./Notification'),
 };

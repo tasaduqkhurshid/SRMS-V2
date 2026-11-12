@@ -24,19 +24,22 @@ export default {
     const ticket = ref(null)
     const messages = ref([])
     const replyText = ref('')
-    const replyType = ref('reply') // 'reply' or 'internal_note'
-    const showStatusModal = ref(false)
-    const selectedStatusId = ref('')
 
     const fetchTicket = async () => {
       loading.value = true
       error.value = ''
       try {
-        const response = await props.api(`/support-tickets/${props.ticketId}`, { 
-          params: { include_internal: 'true' } 
+        const response = await props.api(`/support-tickets/${props.ticketId}`, {
+          params: { include_internal: 'true' }
         })
         if (response && response.ticket) {
-          ticket.value = response.ticket
+          const t = response.ticket
+          ticket.value = {
+            ...t,
+            subject: t.subject_id,
+            service: t.service_id,
+            status: t.status_id,
+          }
           messages.value = response.messages || []
         } else {
           error.value = response?.message || 'Failed to load ticket'
@@ -56,98 +59,17 @@ export default {
           method: 'POST',
           body: JSON.stringify({
             message: replyText.value.trim(),
-            message_type: replyType.value,
+            message_type: 'reply',
           }),
         })
         if (response) {
           messages.value.push(response)
           replyText.value = ''
-          alert(replyType.value === 'internal_note' ? 'Internal note added' : 'Reply sent')
         }
       } catch (e) {
         alert(e.message || 'Failed to send reply')
       } finally {
         submitting.value = false
-      }
-    }
-
-    const changeStatus = async () => {
-      if (!selectedStatusId.value) return
-      try {
-        const response = await props.api(`/support-tickets/${props.ticketId}/status`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status_id: selectedStatusId.value }),
-        })
-        if (response) {
-          ticket.value.status = response.newStatus || ticket.value.status
-          ticket.value.status_id = selectedStatusId.value
-          ticket.value.updated_at = new Date().toISOString()
-          messages.value.push({
-            message_type: 'system_activity',
-            message: 'Status changed to "' + (response.newStatus?.name || 'Unknown') + '"',
-            created_at: new Date().toISOString(),
-            sender_name: props.currentUser.username,
-            sender_role: props.currentUser.role,
-            sender_portal: 'admin',
-          })
-          showStatusModal.value = false
-          selectedStatusId.value = ''
-          alert('Status updated')
-        }
-      } catch (e) {
-        alert(e.message || 'Failed to change status')
-      }
-    }
-
-    const resolveTicket = async () => {
-      if (!confirm('Are you sure you want to resolve this ticket?')) return
-      try {
-        const response = await props.api(`/support-tickets/${props.ticketId}/resolve`, {
-          method: 'POST',
-        })
-        if (response) {
-          ticket.value.status = { code: 'resolved', name: 'Resolved', color: '#10B981' }
-          ticket.value.status_id = ticket.value.status._id
-          ticket.value.resolved_at = new Date().toISOString()
-          ticket.value.updated_at = new Date().toISOString()
-          messages.value.push({
-            message_type: 'system_activity',
-            message: 'Ticket resolved',
-            created_at: new Date().toISOString(),
-            sender_name: props.currentUser.username,
-            sender_role: props.currentUser.role,
-            sender_portal: 'admin',
-          })
-          alert('Ticket resolved')
-        }
-      } catch (e) {
-        alert(e.message || 'Failed to resolve ticket')
-      }
-    }
-
-    const reopenTicket = async () => {
-      if (!confirm('Are you sure you want to reopen this ticket?')) return
-      try {
-        const response = await props.api(`/support-tickets/${props.ticketId}/reopen`, {
-          method: 'POST',
-        })
-        if (response) {
-          ticket.value.status = { code: 'pending', name: 'Pending', color: '#F59E0B' }
-          ticket.value.status_id = ticket.value.status._id
-          ticket.value.resolved_at = null
-          ticket.value.updated_at = new Date().toISOString()
-          messages.value.push({
-            message_type: 'system_activity',
-            message: 'Ticket reopened',
-            created_at: new Date().toISOString(),
-            sender_name: props.currentUser.username,
-            sender_role: props.currentUser.role,
-            sender_portal: 'admin',
-          })
-          alert('Ticket reopened')
-        }
-      } catch (e) {
-        alert(e.message || 'Failed to reopen ticket')
       }
     }
 
@@ -202,7 +124,6 @@ export default {
     const getMessageTypeClass = (type) => {
       const classes = {
         'reply': 'message-reply',
-        'internal_note': 'message-internal',
         'system_activity': 'message-system',
       }
       return classes[type] || 'message-reply'
@@ -210,13 +131,6 @@ export default {
 
     const getSenderBadgeClass = (portal) => {
       return portal === 'admin' ? 'badge-admin' : 'badge-school'
-    }
-
-    const openStatusModal = () => {
-      if (ticket.value?.status_id) {
-        selectedStatusId.value = ticket.value.status_id
-      }
-      showStatusModal.value = true
     }
 
     const isResolved = computed(() => {
@@ -238,20 +152,13 @@ export default {
       ticket,
       messages,
       replyText,
-      replyType,
-      showStatusModal,
-      selectedStatusId,
       submitReply,
-      changeStatus,
-      resolveTicket,
-      reopenTicket,
       formatDateTime,
       formatDate,
       getStatusBadgeClass,
       getPriorityBadgeClass,
       getMessageTypeClass,
       getSenderBadgeClass,
-      openStatusModal,
       isResolved,
       goBack,
       statuses: props.statuses,

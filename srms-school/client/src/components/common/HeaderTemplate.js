@@ -34,10 +34,8 @@ export default `
   </div>
 
   <div class="header-right">
-    <button class="btn header-icon-btn header-notifications" type="button" @click="handleNotifications" aria-label="Notifications">
-      <i class="fa-solid fa-bell"></i>
-      <span v-if="notificationCount > 0" class="header-notification-badge">{{ notificationCount }}</span>
-    </button>
+    <NotificationBell :user="user" />
+
     <div class="header-apps" aria-hidden="true"><i class="fa-solid fa-grip"></i></div>
     <span class="header-right-divider" aria-hidden="true"></span>
 

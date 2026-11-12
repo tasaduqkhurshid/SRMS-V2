@@ -1,4 +1,4 @@
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 export default {
@@ -10,7 +10,7 @@ export default {
     services: { type: Array, required: true },
     statuses: { type: Array, required: true },
   },
-  emits: ['refresh', 'view'],
+  emits: ['refresh'],
   setup(props, { emit }) {
     const route = useRoute()
     const router = useRouter()
@@ -53,7 +53,7 @@ export default {
     }
 
     const parseResponse = (response) => {
-      const payload = response?.data?.data ?? response?.data ?? {}
+      const payload = response?.data?.data ?? response?.data ?? response ?? {}
       const ticketsList = payload.tickets ?? payload.results ?? payload.items ?? []
       const totalCount = payload.pagination?.total ?? payload.total ?? payload.count ?? 0
       const pages = payload.pagination?.pages ?? Math.ceil(totalCount / pageSize.value) ?? 1
@@ -167,18 +167,8 @@ export default {
       return classes[statusCode] || 'badge-secondary'
     }
 
-    const getPriorityBadgeClass = (priority) => {
-      const classes = {
-        'low': 'badge-low',
-        'medium': 'badge-medium',
-        'high': 'badge-high',
-        'urgent': 'badge-urgent',
-      }
-      return classes[priority] || 'badge-secondary'
-    }
-
     const viewTicket = (ticketId) => {
-      emit('view', ticketId)
+      router.push(`/support/tickets/${ticketId}`)
     }
 
     const createTicket = () => {
@@ -211,10 +201,6 @@ export default {
       searchTerm,
       schoolFilter,
       statusFilter,
-      subjectFilter,
-      serviceFilter,
-      priorityFilter,
-      assignedFilter,
       dateFrom,
       dateTo,
       sortKey,
@@ -232,7 +218,6 @@ export default {
       changePageSize,
       formatDate,
       getStatusBadgeClass,
-      getPriorityBadgeClass,
       viewTicket,
       createTicket,
       showingRange,
@@ -265,13 +250,13 @@ export default {
                   type="search"
                   class="form-control border-start-0"
                   v-model="searchTerm"
-                  placeholder="Search ticket #, title..."
+                  placeholder="Search ticket #..."
                   @keydown.enter="applyFilters"
                 />
               </div>
             </div>
 
-            <div class="col-md-2">
+            <div class="col-md-3">
               <label class="form-label visually-hidden" for="schoolFilter">School</label>
               <select id="schoolFilter" class="form-select" v-model="schoolFilter" @change="applyFilters">
                 <option value="">All Schools</option>
@@ -284,33 +269,6 @@ export default {
               <select id="statusFilter" class="form-select" v-model="statusFilter" @change="applyFilters">
                 <option value="">All Statuses</option>
                 <option v-for="s in statuses" :key="s._id" :value="s._id">{{ s.name }}</option>
-              </select>
-            </div>
-
-            <div class="col-md-2">
-              <label class="form-label visually-hidden" for="subjectFilter">Subject</label>
-              <select id="subjectFilter" class="form-select" v-model="subjectFilter" @change="applyFilters">
-                <option value="">All Subjects</option>
-                <option v-for="s in subjects" :key="s._id" :value="s._id">{{ s.name }}</option>
-              </select>
-            </div>
-
-            <div class="col-md-2">
-              <label class="form-label visually-hidden" for="serviceFilter">Service</label>
-              <select id="serviceFilter" class="form-select" v-model="serviceFilter" @change="applyFilters">
-                <option value="">All Services</option>
-                <option v-for="s in services" :key="s._id" :value="s._id">{{ s.name }}</option>
-              </select>
-            </div>
-
-            <div class="col-md-2">
-              <label class="form-label visually-hidden" for="priorityFilter">Priority</label>
-              <select id="priorityFilter" class="form-select" v-model="priorityFilter" @change="applyFilters">
-                <option value="">All Priorities</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
               </select>
             </div>
 
@@ -362,39 +320,14 @@ export default {
                     School <i :class="['fa-solid ms-1', sortIndicator('school')]"></i>
                   </button>
                 </th>
-                <th :aria-sort="sortKey === 'subject' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'">
-                  <button class="btn btn-link text-decoration-none text-dark p-0" @click="toggleSort('subject')">
-                    Subject <i :class="['fa-solid ms-1', sortIndicator('subject')]"></i>
-                  </button>
-                </th>
-                <th :aria-sort="sortKey === 'service' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'">
-                  <button class="btn btn-link text-decoration-none text-dark p-0" @click="toggleSort('service')">
-                    Service <i :class="['fa-solid ms-1', sortIndicator('service')]"></i>
-                  </button>
-                </th>
-                <th :aria-sort="sortKey === 'title' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'">
-                  <button class="btn btn-link text-decoration-none text-dark p-0" @click="toggleSort('title')">
-                    Title <i :class="['fa-solid ms-1', sortIndicator('title')]"></i>
-                  </button>
-                </th>
                 <th style="min-width: 130px;" :aria-sort="sortKey === 'status' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'">
                   <button class="btn btn-link text-decoration-none text-dark p-0" @click="toggleSort('status')">
                     Status <i :class="['fa-solid ms-1', sortIndicator('status')]"></i>
                   </button>
                 </th>
-                <th style="min-width: 100px;" :aria-sort="sortKey === 'priority' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'">
-                  <button class="btn btn-link text-decoration-none text-dark p-0" @click="toggleSort('priority')">
-                    Priority <i :class="['fa-solid ms-1', sortIndicator('priority')]"></i>
-                  </button>
-                </th>
                 <th style="min-width: 130px;" :aria-sort="sortKey === 'created_at' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'">
                   <button class="btn btn-link text-decoration-none text-dark p-0" @click="toggleSort('created_at')">
                     Created <i :class="['fa-solid ms-1', sortIndicator('created_at')]"></i>
-                  </button>
-                </th>
-                <th style="min-width: 130px;" :aria-sort="sortKey === 'updated_at' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'">
-                  <button class="btn btn-link text-decoration-none text-dark p-0" @click="toggleSort('updated_at')">
-                    Updated <i :class="['fa-solid ms-1', sortIndicator('updated_at')]"></i>
                   </button>
                 </th>
                 <th class="text-end" style="width: 100px;">Action</th>
@@ -404,22 +337,13 @@ export default {
               <tr v-for="(ticket, index) in tickets" :key="ticket._id">
                 <td class="text-muted fw-medium">{{ (meta.page - 1) * meta.limit + index + 1 }}</td>
                 <td class="fw-monospace">{{ ticket.ticket_number }}</td>
-                <td>{{ ticket.school?.school_name || '—' }}</td>
-                <td>{{ ticket.subject?.name || '—' }}</td>
-                <td>{{ ticket.service?.name || '—' }}</td>
-                <td>{{ ticket.title }}</td>
+                <td>{{ ticket.school_id?.school_name || '—' }}</td>
                 <td>
-                  <span class="badge" :class="getStatusBadgeClass(ticket.status?.code)">
-                    {{ ticket.status?.name || '—' }}
-                  </span>
-                </td>
-                <td>
-                  <span class="badge" :class="getPriorityBadgeClass(ticket.priority)">
-                    {{ ticket.priority }}
+                  <span class="badge" :class="getStatusBadgeClass(ticket.status_id?.code)">
+                    {{ ticket.status_id?.name || '—' }}
                   </span>
                 </td>
                 <td class="text-muted">{{ formatDate(ticket.created_at) }}</td>
-                <td class="text-muted">{{ formatDate(ticket.updated_at) }}</td>
                 <td class="text-end">
                   <button class="btn btn-sm btn-outline-primary" @click="viewTicket(ticket._id)">
                     View
@@ -428,7 +352,7 @@ export default {
               </tr>
 
               <tr v-if="!tickets.length && !loading">
-                <td colspan="12" class="text-center py-5">
+                <td colspan="6" class="text-center py-5">
                   <div class="empty-state">
                     <div class="empty-state-icon"><i class="fa-solid fa-ticket"></i></div>
                     <p class="empty-state-text" v-if="hasActiveFilters">No tickets match your filters</p>

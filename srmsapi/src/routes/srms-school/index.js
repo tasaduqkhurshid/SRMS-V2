@@ -12,6 +12,7 @@ const marksheetTemplateRoutes = require('./marksheetTemplateRoutes');
 const feeRoutes = require('./feeRoutes');
 const dynamicOptionRoutes = require('./DynamicOptionRoutes');
 const supportTicketRoutes = require('./supportTicketRoutes');
+const notificationRoutes = require('./notificationRoutes');
 
 router.use('/school', schoolRoutes);
 router.use('/students', studentRoutes);
@@ -23,6 +24,7 @@ router.use('/results', resultRoutes);
 router.use('/marksheet-templates', marksheetTemplateRoutes);
 router.use('/fees', feeRoutes);
 router.use('/options', dynamicOptionRoutes);
+router.use('/notifications', notificationRoutes);
 router.use('/', supportTicketRoutes);
 
 module.exports = router;
