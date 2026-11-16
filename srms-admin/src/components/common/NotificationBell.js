@@ -45,7 +45,7 @@ export default {
         })
         if (response.ok) {
           const data = await response.json()
-          notifications.value = data.data || []
+          notifications.value = (data.data || []).filter(n => !n.isRead)
         } else {
           error.value = 'Failed to load notifications'
         }
@@ -90,8 +90,8 @@ export default {
         if (response.ok) {
           const notification = notifications.value.find(n => n._id === notificationId)
           if (notification) {
-            notification.is_read = true
-            notification.read_at = new Date().toISOString()
+            notification.isRead = true
+            notification.readAt = new Date().toISOString()
           }
           await fetchUnreadCount()
         }
@@ -111,8 +111,8 @@ export default {
         })
         if (response.ok) {
           notifications.value.forEach(n => {
-            n.is_read = true
-            n.read_at = new Date().toISOString()
+            n.isRead = true
+            n.readAt = new Date().toISOString()
           })
           notificationCount.value = 0
         }
@@ -125,9 +125,10 @@ export default {
       if (!notification.is_read) {
         await markAsRead(notification._id)
       }
-      if (notification.action_url) {
+      const actionUrl = notification.action_url || notification.actionUrl
+      if (actionUrl) {
         showModal.value = false
-        router.push(notification.action_url)
+        router.push(actionUrl)
       }
     }
 
@@ -208,7 +209,7 @@ export default {
     const startPolling = () => {
       pollInterval = setInterval(() => {
         fetchUnreadCount()
-      }, 30000)
+      }, 5000)
     }
 
     const stopPolling = () => {

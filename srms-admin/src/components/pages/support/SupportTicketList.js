@@ -168,7 +168,12 @@ export default {
     }
 
     const viewTicket = (ticketId) => {
-      router.push(`/support/tickets/${ticketId}`)
+      const ticket = tickets.value.find(t => t._id === ticketId)
+      if (ticket) {
+        router.push(`/support/tickets/${ticketId}?ticket=${encodeURIComponent(JSON.stringify(ticket))}`)
+      } else {
+        router.push(`/support/tickets/${ticketId}`)
+      }
     }
 
     const createTicket = () => {

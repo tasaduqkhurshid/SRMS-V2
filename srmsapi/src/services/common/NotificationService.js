@@ -169,7 +169,7 @@ const createBulkNotifications = async (notifications) => {
 const getNotifications = async ({
   recipientId,
   schoolId = null,
-  isRead = null,
+  isRead = false,
   category = null,
   type = null,
   page = 1,
@@ -179,8 +179,8 @@ const getNotifications = async ({
   try {
     const where = { recipient: recipientId };
 
-    if (schoolId) where.school_id = schoolId;
-    if (isRead !== null) where.is_read = isRead;
+    if (schoolId) where.schoolId = schoolId;
+    where.isRead = isRead;
     if (category) where.category = category;
     if (type) where.type = type;
 
@@ -189,6 +189,7 @@ const getNotifications = async ({
       skip: (page - 1) * limit,
       limit,
     });
+   
 
     return success({
       notifications: result.rows,

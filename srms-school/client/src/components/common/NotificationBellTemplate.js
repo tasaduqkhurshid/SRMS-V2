@@ -25,29 +25,32 @@ export default `
     <div v-if="showModal" class="position-fixed top-0 end-0 mt-4 me-4" style="z-index: 1050; min-width: 400px; max-width: 600px;" @click.stop>
       <div class="card border-0 shadow-lg" style="border-radius: 12px !important;">
         <div class="card-header bg-white border-bottom border-secondary py-2">
-          <div class="d-flex align-items-center justify-content-between">
-            <h5 class="mb-0 fw-semibold" style="font-size: 0.9rem;">Notifications</h5>
-            <div class="d-flex gap-2">
-              <button
-                v-if="notificationCount > 0"
-                type="button"
-                class="btn btn-link btn-sm text-primary text-decoration-none fw-medium p-0 me-2"
-                style="font-size: 0.75rem;"
-                @click="markAllAsRead"
-              >
-                Mark all as read
-              </button>
-              <button
-                type="button"
-                class="btn btn-link btn-sm text-primary text-decoration-none fw-medium p-0"
-                style="font-size: 0.75rem;"
-                @click="goToNotificationsPage"
-              >
-                View all
-              </button>
-            </div>
+        <div class="d-flex align-items-center justify-content-between">
+          <h5 class="mb-0 fw-semibold" style="font-size: 0.9rem;">Notifications</h5>
+          <div class="d-flex gap-2">
+            <button
+              v-if="notificationCount > 0"
+              type="button"
+              class="btn btn-link btn-sm text-primary text-decoration-none fw-medium p-0 me-2"
+              style="font-size: 0.75rem;"
+              @click="markAllAsRead"
+            >
+              Mark all as read
+            </button>
+            <button
+              type="button"
+              class="btn btn-link btn-sm text-primary text-decoration-none fw-medium p-0"
+              style="font-size: 0.75rem;"
+              @click="goToNotificationsPage"
+            >
+              View all
+            </button>
+            <button type="button" class="btn btn-link text-decoration-none" @click="closeModal" style="font-size: 0.9rem;">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
           </div>
         </div>
+      </div>
         <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
           <div v-if="loading" class="p-3 text-center text-muted">
             <i class="fa-solid fa-spinner fa-spin me-2"></i> Loading...
@@ -65,11 +68,11 @@ export default `
               v-for="notification in notifications"
               :key="notification._id"
               class="card border cursor-pointer"
-              :class="{ 'border-primary bg-primary bg-opacity-10': !notification.is_read, 'border-light': notification.is_read }"
+              :class="{ 'border-primary bg-primary bg-opacity-10': !notification.isRead, 'border-light': notification.isRead }"
               style="border-radius: 6px !important;"
               @click="handleNotificationClick(notification)"
             >
-              <div class="card-body p-2">
+              <div v-if="!notification.isRead" class="card-body p-2">
                 <div class="d-flex align-items-start gap-2">
                   <div
                     class="notification-icon flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center"
@@ -86,7 +89,7 @@ export default `
                   <div class="flex-1 min-w-0">
                     <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
                       <h6 class="fw-medium text-dark mb-0 truncate" style="font-size: 0.8rem;">{{ notification.title }}</h6>
-                      <span class="text-muted flex-shrink-0" style="font-size: 0.65rem;">{{ formatTimeAgo(notification.created_at) }}</span>
+                      <span class="text-muted flex-shrink-0" style="font-size: 0.65rem;">{{ formatTimeAgo(notification.createdAt) }}</span>
                     </div>
                     <p class="text-muted mb-1" style="font-size: 0.7rem; line-height: 1.3;">{{ notification.message }}</p>
                     <div class="d-flex align-items-center gap-2">
@@ -106,7 +109,7 @@ export default `
                       >
                         {{ notification.category }}
                       </span>
-                      <span v-if="!notification.is_read" class="w-1.5 h-1.5 bg-primary rounded-circle" aria-label="Unread"></span>
+                      <span v-if="!notification.isRead" class="w-1.5 h-1.5 bg-primary rounded-circle" aria-label="Unread"></span>
                     </div>
                   </div>
                 </div>

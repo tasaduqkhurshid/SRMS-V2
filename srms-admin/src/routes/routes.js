@@ -47,7 +47,11 @@ export const routes = [
       {
         path: 'support/tickets/:id',
         name: 'support-ticket-detail',
-        component: SupportTicketDetailAdmin
+        component: SupportTicketDetailAdmin,
+        props: (route) => {
+          const ticket = route.query.ticket ? JSON.parse(route.query.ticket) : null
+          return { ticketId: route.params.id, ticket }
+        }
       }
     ]
   }

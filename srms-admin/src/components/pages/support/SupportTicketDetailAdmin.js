@@ -5,13 +5,8 @@ import { useRoute, useRouter } from 'vue-router'
 export default {
   name: 'SupportTicketDetailAdmin',
   props: {
-    api: { type: Function, required: true },
     ticketId: { type: String, required: true },
-    schools: { type: Array, required: true },
-    subjects: { type: Array, required: true },
-    services: { type: Array, required: true },
-    statuses: { type: Array, required: true },
-    currentUser: { type: Object, required: true },
+    ticket: { type: Object, required: false, default: null },
   },
   emits: ['back', 'updated'],
   template,
@@ -25,11 +20,26 @@ export default {
     const messages = ref([])
     const replyText = ref('')
 
+    const api = async (path, options = {}) => {
+      const token = localStorage.getItem('srms_platform_token') || sessionStorage.getItem('srms_platform_token')
+      const response = await fetch(`/api/admin${path}`, {
+        ...options,
+        headers: {
+          ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(options.headers || {}),
+        },
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.message || `Request failed (${response.status})`)
+      return result.data
+    }
+
     const fetchTicket = async () => {
       loading.value = true
       error.value = ''
       try {
-        const response = await props.api(`/support-tickets/${props.ticketId}`, {
+        const response = await api(`/support-tickets/${props.ticketId}`, {
           params: { include_internal: 'true' }
         })
         if (response && response.ticket) {
@@ -55,7 +65,7 @@ export default {
       if (!replyText.value.trim()) return
       submitting.value = true
       try {
-        const response = await props.api(`/support-tickets/${props.ticketId}/replies`, {
+        const response = await api(`/support-tickets/${props.ticketId}/replies`, {
           method: 'POST',
           body: JSON.stringify({
             message: replyText.value.trim(),
@@ -77,11 +87,8 @@ export default {
       if (!dateString) return '—'
       try {
         return new Date(dateString).toLocaleString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
+          month: 'short', day: 'numeric', year: 'numeric',
+          hour: '2-digit', minute: '2-digit',
         })
       } catch {
         return dateString
@@ -92,9 +99,7 @@ export default {
       if (!dateString) return '—'
       try {
         return new Date(dateString).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric'
+          month: 'short', day: 'numeric', year: 'numeric'
         })
       } catch {
         return dateString
@@ -102,66 +107,47 @@ export default {
     }
 
     const getStatusBadgeClass = (statusCode) => {
-      const classes = {
-        'pending': 'badge-pending',
-        'awaiting': 'badge-awaiting',
-        'underwriting': 'badge-underwriting',
-        'resolved': 'badge-resolved',
-      }
+      const classes = { 'pending': 'badge-pending', 'awaiting': 'badge-awaiting', 'underwriting': 'badge-underwriting', 'resolved': 'badge-resolved' }
       return classes[statusCode] || 'badge-secondary'
     }
 
     const getPriorityBadgeClass = (priority) => {
-      const classes = {
-        'low': 'badge-low',
-        'medium': 'badge-medium',
-        'high': 'badge-high',
-        'urgent': 'badge-urgent',
-      }
+      const classes = { 'low': 'badge-low', 'medium': 'badge-medium', 'high': 'badge-high', 'urgent': 'badge-urgent' }
       return classes[priority] || 'badge-secondary'
     }
 
     const getMessageTypeClass = (type) => {
-      const classes = {
-        'reply': 'message-reply',
-        'system_activity': 'message-system',
-      }
+      const classes = { 'reply': 'message-reply', 'system_activity': 'message-system' }
       return classes[type] || 'message-reply'
     }
 
-    const getSenderBadgeClass = (portal) => {
-      return portal === 'admin' ? 'badge-admin' : 'badge-school'
-    }
+    const getSenderBadgeClass = (portal) => portal === 'admin' ? 'badge-admin' : 'badge-school'
 
-    const isResolved = computed(() => {
-      return ticket.value?.status?.code === 'resolved'
-    })
+    const isResolved = computed(() => ticket.value?.status?.code === 'resolved')
 
-    const goBack = () => {
-      emit('back')
-    }
+    const goBack = () => emit('back')
 
     onMounted(() => {
-      fetchTicket()
+      if (props.ticket) {
+        const t = props.ticket
+        ticket.value = {
+          ...t,
+          subject: t.subject_id,
+          service: t.service_id,
+          status: t.status_id,
+        }
+        loading.value = false
+      } else {
+        fetchTicket()
+      }
     })
 
     return {
-      loading,
-      submitting,
-      error,
-      ticket,
-      messages,
-      replyText,
-      submitReply,
-      formatDateTime,
-      formatDate,
-      getStatusBadgeClass,
-      getPriorityBadgeClass,
-      getMessageTypeClass,
-      getSenderBadgeClass,
-      isResolved,
-      goBack,
-      statuses: props.statuses,
+      loading, submitting, error, ticket, messages, replyText,
+      submitReply, formatDateTime, formatDate,
+      getStatusBadgeClass, getPriorityBadgeClass,
+      getMessageTypeClass, getSenderBadgeClass,
+      isResolved, goBack,
     }
   },
 }

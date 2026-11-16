@@ -53,6 +53,7 @@ export default {
         if (response.ok) {
           const data = await response.json()
           allNotifications.value = data.data || []
+          
         } else {
           error.value = 'Failed to load notifications'
         }
@@ -64,9 +65,7 @@ export default {
       }
     }
 
-    const openModal = () => {
-      showModal.value = true
-    }
+   
 
     const closeModal = () => {
       showModal.value = false
@@ -79,6 +78,7 @@ export default {
     }
 
     const fetchNotifications = async (limit = 10) => {
+      console.log("loading notifications ..................................")
       loading.value = true
       error.value = null
       try {
@@ -87,7 +87,7 @@ export default {
         })
         if (response.ok) {
           const data = await response.json()
-          notifications.value = data.data || []
+          notifications.value = (data.data || []).filter(n => !n.isRead)
         } else {
           error.value = 'Failed to load notifications'
         }
@@ -111,8 +111,8 @@ export default {
         if (response.ok) {
           const notification = notifications.value.find(n => n._id === notificationId)
           if (notification) {
-            notification.is_read = true
-            notification.read_at = new Date().toISOString()
+            notification.isRead = true
+            notification.readAt = new Date().toISOString()
           }
           await fetchUnreadCount()
         }
@@ -131,24 +131,31 @@ export default {
           }
         })
         if (response.ok) {
-          notifications.value.forEach(n => {
-            n.is_read = true
-            n.read_at = new Date().toISOString()
-          })
-          notificationCount.value = 0
+      notifications.value.forEach(n => {
+        n.isRead = true
+        n.readAt = new Date().toISOString()
+      })
+      notificationCount.value = 0
         }
       } catch (err) {
         console.error('Failed to mark all as read:', err)
       }
     }
 
+    const openModal = async () => {
+      console.log("open modal called")
+      await fetchNotifications()
+      showModal.value = true
+    }
+
     const handleNotificationClick = async (notification) => {
       if (!notification.is_read) {
         await markAsRead(notification._id)
       }
-      if (notification.action_url) {
+      const actionUrl = notification.action_url || notification.actionUrl
+      if (actionUrl) {
         showDropdown.value = false
-        router.push(notification.action_url)
+        router.push(actionUrl)
       }
     }
 
@@ -240,7 +247,7 @@ export default {
     const startPolling = () => {
       pollInterval = setInterval(() => {
         fetchUnreadCount()
-      }, 30000)
+      }, 5000)
     }
 
     const stopPolling = () => {
@@ -253,9 +260,9 @@ export default {
       }
     }
 
-    onMounted(() => {
-      fetchUnreadCount()
-      fetchNotifications()
+    onMounted(async () => {
+      await fetchUnreadCount()
+      // await fetchNotifications()
       connectSocket()
       startPolling()
       document.addEventListener('click', handleClickOutside)
