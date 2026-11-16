@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -eu
 
 # sync-deps.sh - Automatic dependency synchronization with fingerprinting for local development
