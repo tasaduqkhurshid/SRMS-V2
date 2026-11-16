@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -e
 
 # sync-deps.sh - Automatic dependency synchronization with fingerprinting for local development
 # Usage: sync-deps.sh <npm-script-to-run> [args...]
