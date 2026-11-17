@@ -151,11 +151,11 @@ compute_fingerprint() {
 CURRENT_FINGERPRINT="$(compute_fingerprint)"
 
 ###############################################################################
-# 6. Optional dependency validation
+# 6. Rollup version detection and native optional dependency validation
 ###############################################################################
 
-# Determine the expected Rollup native optional dependency for the current
-# platform/architecture/libc combination.
+# Determine the expected Rollup native optional dependency package name for the
+# current platform/architecture/libc combination.
 # Rollup packages follow the pattern: @rollup/rollup-<platform>-<arch>-<libc>
 # Examples:
 #   @rollup/rollup-linux-x64-gnu     (Linux x64, glibc)
@@ -185,11 +185,64 @@ expected_rollup_package() {
     esac
 }
 
+# Dynamically detect the installed Rollup version from node_modules.
+detect_rollup_version() {
+    if [ ! -d "node_modules/rollup" ]; then
+        echo ""
+        return
+    fi
+    node -p "require('./node_modules/rollup/package.json').version" 2>/dev/null || echo ""
+}
+
+# Validate that a Rollup native optional package can actually be loaded by
+# Node.js, not merely that its directory exists.
+validate_rollup_native_loadable() {
+    local pkg_name="$1"
+
+    # Try to load the package with Node.js require
+    if node -e "require('$pkg_name')" 2>/dev/null; then
+        log "Native Rollup package loadable: $pkg_name"
+        return 0
+    fi
+
+    log "Native Rollup package NOT loadable: $pkg_name"
+    return 1
+}
+
+# Install the missing Rollup native optional dependency dynamically.
+# Uses --no-save --package-lock=false so package.json/package-lock.json are
+# not modified, and --include=optional to ensure optional deps are fetched.
+install_rollup_native() {
+    local pkg_name="$1"
+    local rollup_version
+    rollup_version="$(detect_rollup_version)"
+
+    if [ -z "$rollup_version" ]; then
+        log "Cannot detect Rollup version; skipping optional dependency install."
+        return 1
+    fi
+
+    log "Installing missing native optional dependency: $pkg_name@$rollup_version"
+
+    if npm install --no-save --package-lock=false --include=optional "$pkg_name@$rollup_version"; then
+        log "Installed: $pkg_name@$rollup_version"
+        return 0
+    else
+        log "Failed to install: $pkg_name@$rollup_version"
+        return 1
+    fi
+}
+
 validate_optional_dependencies() {
     # Skip Rollup validation if this project does not use Rollup.
     if [ ! -d "node_modules/rollup" ]; then
         log "Rollup is not installed in this project. Skipping Rollup validation."
         return 0
+    fi
+
+    # Unknown libc means we cannot determine the expected native package.
+    if [ "$DETECTED_LIBC" = "unknown" ]; then
+        error "Unknown libc detected; cannot validate platform-specific optional dependencies."
     fi
 
     local rollup_pkg
@@ -204,13 +257,24 @@ validate_optional_dependencies() {
     rollup_dir_name="$(basename "$rollup_pkg")"
     local rollup_path="node_modules/@rollup/$rollup_dir_name"
 
-    if [ ! -d "$rollup_path" ]; then
-        log "Missing platform-specific optional dependency: $rollup_pkg"
-        return 1
+    # Check if the package directory exists AND can actually be loaded by Node.js
+    if [ -d "$rollup_path" ] && validate_rollup_native_loadable "$rollup_pkg"; then
+        log "Optional dependency valid: $rollup_pkg"
+        return 0
     fi
 
-    log "Optional dependency present: $rollup_pkg"
-    return 0
+    # Missing or unloadable - try to install it
+    log "Missing or unloadable optional dependency: $rollup_pkg"
+    if install_rollup_native "$rollup_pkg"; then
+        # Re-validate after install
+        if validate_rollup_native_loadable "$rollup_pkg"; then
+            log "Optional dependency installed and validated: $rollup_pkg"
+            return 0
+        fi
+    fi
+
+    log "Optional dependency validation failed: $rollup_pkg"
+    return 1
 }
 
 ###############################################################################
